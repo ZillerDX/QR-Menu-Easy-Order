@@ -1,15 +1,17 @@
-import { Order, MenuItem, StoreConfig } from '../types';
-import { initialMenuItems, initialStoreConfig } from '../data/initialMenu';
+import { Order, MenuItem, MenuCategory, StoreConfig } from '../types';
+import { initialMenuItems, initialCategories, initialStoreConfig } from '../data/initialMenu';
 
-const ORDERS_KEY = 'qr_menu_orders_v1';
-const MENU_KEY = 'qr_menu_items_v1';
-const STORE_KEY = 'qr_menu_store_config_v1';
-const CHANNEL_NAME = 'qr_menu_realtime_sync';
+const ORDERS_KEY = 'qr_menu_orders_v2';
+const MENU_KEY = 'qr_menu_items_v2';
+const CATEGORIES_KEY = 'qr_menu_categories_v2';
+const STORE_KEY = 'qr_menu_store_config_v2';
+const CHANNEL_NAME = 'qr_menu_realtime_sync_v2';
 
 export type SyncEventType = 
   | { type: 'ORDER_CREATED'; payload: Order }
   | { type: 'ORDER_STATUS_UPDATED'; payload: Order }
   | { type: 'MENU_UPDATED'; payload: MenuItem[] }
+  | { type: 'CATEGORIES_UPDATED'; payload: MenuCategory[] }
   | { type: 'SYSTEM_RESET' };
 
 type EventListener = (event: SyncEventType) => void;
@@ -26,7 +28,6 @@ class RealtimeSyncManager {
       };
     }
 
-    // Fallback for storage event across tabs
     if (typeof window !== 'undefined') {
       window.addEventListener('storage', (e) => {
         if (e.key === ORDERS_KEY && e.newValue) {
@@ -103,7 +104,40 @@ class RealtimeSyncManager {
     return updated;
   }
 
-  // --- Menu & Stock ---
+  // --- Menu Categories ---
+  getCategories(): MenuCategory[] {
+    try {
+      const data = localStorage.getItem(CATEGORIES_KEY);
+      return data ? JSON.parse(data) : initialCategories;
+    } catch {
+      return initialCategories;
+    }
+  }
+
+  saveCategory(category: MenuCategory): MenuCategory[] {
+    const categories = this.getCategories();
+    const existingIndex = categories.findIndex((c) => c.id === category.id);
+    let updated: MenuCategory[];
+    if (existingIndex >= 0) {
+      updated = [...categories];
+      updated[existingIndex] = category;
+    } else {
+      updated = [...categories, category];
+    }
+    localStorage.setItem(CATEGORIES_KEY, JSON.stringify(updated));
+    this.broadcast({ type: 'CATEGORIES_UPDATED', payload: updated });
+    return updated;
+  }
+
+  deleteCategory(categoryId: string): MenuCategory[] {
+    const categories = this.getCategories();
+    const updated = categories.filter((c) => c.id !== categoryId);
+    localStorage.setItem(CATEGORIES_KEY, JSON.stringify(updated));
+    this.broadcast({ type: 'CATEGORIES_UPDATED', payload: updated });
+    return updated;
+  }
+
+  // --- Menu Items ---
   getMenuItems(): MenuItem[] {
     try {
       const data = localStorage.getItem(MENU_KEY);
@@ -111,6 +145,29 @@ class RealtimeSyncManager {
     } catch {
       return initialMenuItems;
     }
+  }
+
+  saveMenuItem(item: MenuItem): MenuItem[] {
+    const items = this.getMenuItems();
+    const existingIndex = items.findIndex((i) => i.id === item.id);
+    let updated: MenuItem[];
+    if (existingIndex >= 0) {
+      updated = [...items];
+      updated[existingIndex] = item;
+    } else {
+      updated = [item, ...items];
+    }
+    localStorage.setItem(MENU_KEY, JSON.stringify(updated));
+    this.broadcast({ type: 'MENU_UPDATED', payload: updated });
+    return updated;
+  }
+
+  deleteMenuItem(itemId: string): MenuItem[] {
+    const items = this.getMenuItems();
+    const updated = items.filter((i) => i.id !== itemId);
+    localStorage.setItem(MENU_KEY, JSON.stringify(updated));
+    this.broadcast({ type: 'MENU_UPDATED', payload: updated });
+    return updated;
   }
 
   toggleItemAvailability(itemId: string): MenuItem[] {
@@ -137,6 +194,7 @@ class RealtimeSyncManager {
   resetAll() {
     localStorage.removeItem(ORDERS_KEY);
     localStorage.removeItem(MENU_KEY);
+    localStorage.removeItem(CATEGORIES_KEY);
     localStorage.removeItem(STORE_KEY);
     this.broadcast({ type: 'SYSTEM_RESET' });
   }

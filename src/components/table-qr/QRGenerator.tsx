@@ -1,22 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
-import { Download, Printer, QrCode, Sparkles, Store, ExternalLink } from 'lucide-react';
-import { StoreConfig } from '../../types';
+import { Download, Printer, QrCode, ExternalLink, Sparkles } from 'lucide-react';
+import { StoreConfig, Language } from '../../types';
+import { t } from '../../utils/i18n';
 
 interface QRGeneratorProps {
   storeConfig: StoreConfig;
+  language: Language;
 }
 
-export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig }) => {
+export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language }) => {
   const [selectedTable, setSelectedTable] = useState('01');
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
 
-  // Target URL for scanning
   const getTableUrl = (table: string) => {
     if (typeof window === 'undefined') return '';
     const base = window.location.origin + window.location.pathname;
-    return `${base}?table=${table}`;
+    return `${base}?table=${table}&lang=${language}`;
   };
 
   const currentUrl = getTableUrl(selectedTable);
@@ -27,7 +28,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig }) => {
         width: 260,
         margin: 2,
         color: {
-          dark: '#1e293b',
+          dark: '#1c1917',
           light: '#ffffff',
         },
       });
@@ -39,7 +40,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig }) => {
         setQrDataUrl(url);
       });
     }
-  }, [selectedTable, currentUrl]);
+  }, [selectedTable, currentUrl, language]);
 
   const handlePrint = () => {
     window.print();
@@ -56,30 +57,32 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig }) => {
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 pb-28">
       {/* Header Info */}
-      <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl p-5 border border-stone-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
+          <h2 className="text-xl font-black text-stone-900 flex items-center gap-2">
             <QrCode className="w-6 h-6 text-orange-500" />
-            ตัวสร้าง QR Code ประจำโต๊ะ (Table QR Generator)
+            {t('qrTitle', language)}
           </h2>
-          <p className="text-xs text-gray-500 mt-1">
-            เลือกเลขโต๊ะเพื่อสร้าง QR Code สำหรับพิมพ์ติดการ์ดตั้งโต๊ะให้ลูกค้าสแกนสั่ง
+          <p className="text-xs text-stone-500 mt-1">
+            {t('qrSubtitle', language)}
           </p>
         </div>
 
         {/* Table Selector */}
         <div className="flex items-center gap-2">
-          <label className="text-xs font-bold text-gray-700">เลือกโต๊ะ:</label>
+          <label className="text-xs font-bold text-stone-700">
+            {t('qrSelectTable', language)}
+          </label>
           <select
             value={selectedTable}
             onChange={(e) => setSelectedTable(e.target.value)}
-            className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-orange-500"
+            className="px-3 py-2 bg-stone-50 border border-stone-300 rounded-2xl text-xs sm:text-sm font-bold text-stone-900 focus:outline-none focus:border-orange-500 shadow-2xs"
           >
             {Array.from({ length: storeConfig.tableCount }, (_, i) => {
-              const t = (i + 1).toString().padStart(2, '0');
+              const tNum = (i + 1).toString().padStart(2, '0');
               return (
-                <option key={t} value={t}>
-                  โต๊ะ {t}
+                <option key={tNum} value={tNum}>
+                  {language === 'th' ? `โต๊ะ ${tNum}` : `Table ${tNum}`}
                 </option>
               );
             })}
@@ -92,74 +95,66 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig }) => {
         {/* Printable Card Preview (Styled like Table Stand) */}
         <div className="bg-white rounded-3xl p-8 border-2 border-orange-100 shadow-lg flex flex-col items-center text-center space-y-5 relative overflow-hidden print:border-none print:shadow-none">
           <div className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white py-3 px-4 rounded-2xl shadow-sm">
-            <h3 className="font-extrabold text-lg tracking-wide">
-              {storeConfig.name}
+            <h3 className="font-black text-lg tracking-wide">
+              {language === 'th' ? storeConfig.name : storeConfig.nameEn}
             </h3>
             <p className="text-[11px] text-orange-100 font-medium">
-              สแกนสั่งอาหาร & เครื่องดื่มง่ายๆ ได้ทันที
+              {language === 'th' ? storeConfig.tagline : storeConfig.taglineEn}
             </p>
           </div>
 
-          <div className="p-3 bg-white border-2 border-gray-100 rounded-2xl shadow-inner">
+          <div className="p-3 bg-white border-2 border-stone-100 rounded-2xl shadow-inner">
             <canvas ref={canvasRef} className="rounded-xl mx-auto" />
           </div>
 
           <div className="space-y-1">
-            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            <div className="text-[11px] font-black text-stone-400 uppercase tracking-wider">
               TABLE NUMBER
             </div>
-            <div className="text-4xl font-black text-gray-900 tracking-tight">
-              โต๊ะ {selectedTable}
+            <div className="text-4xl font-black text-stone-900 tracking-tight">
+              {language === 'th' ? `โต๊ะ ${selectedTable}` : `Table ${selectedTable}`}
             </div>
           </div>
 
-          <div className="text-[11px] text-gray-500 max-w-xs leading-relaxed bg-gray-50 p-2.5 rounded-xl">
-            📱 เปิดกล้องมือถือสแกน QR เพื่อดูเมนูทั้งหมด สั่งอาหาร และชำระเงินผ่านมือถือโดยไม่ต้องรอพนักงาน
+          <div className="text-[11px] text-stone-600 max-w-xs leading-relaxed bg-stone-50 p-3 rounded-2xl border border-stone-100 font-medium">
+            {t('qrScanInstruction', language)}
           </div>
         </div>
 
         {/* Actions & Instructions */}
         <div className="space-y-4">
-          <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm space-y-4">
-            <h4 className="font-bold text-gray-900 text-sm">การดำเนินการ</h4>
+          <div className="bg-white rounded-3xl p-5 border border-stone-200 shadow-xs space-y-3">
+            <h4 className="font-bold text-stone-900 text-sm">
+              {language === 'th' ? 'สั่งพิมพ์หรือบันทึกรูปภาพ' : 'Print & Export Options'}
+            </h4>
             
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <button
                 onClick={handleDownload}
-                className="w-full py-3 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-bold text-sm shadow-md shadow-orange-500/25 flex items-center justify-center gap-2 transition"
+                className="w-full py-3 px-4 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-extrabold text-xs sm:text-sm shadow-md shadow-orange-500/25 flex items-center justify-center gap-2 transition"
               >
                 <Download className="w-4 h-4" />
-                <span>ดาวน์โหลดรูป QR Code โต๊ะ {selectedTable}</span>
+                <span>{t('qrDownloadBtn', language)} {selectedTable}</span>
               </button>
 
               <button
                 onClick={handlePrint}
-                className="w-full py-3 px-4 rounded-xl bg-gray-900 hover:bg-black text-white font-bold text-sm flex items-center justify-center gap-2 transition"
+                className="w-full py-3 px-4 rounded-2xl bg-stone-900 hover:bg-black text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 transition shadow-sm"
               >
                 <Printer className="w-4 h-4" />
-                <span>พิมพ์การ์ดตั้งโต๊ะ (Print Stand)</span>
+                <span>{t('qrPrintBtn', language)}</span>
               </button>
 
               <a
                 href={currentUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="w-full py-3 px-4 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold text-sm flex items-center justify-center gap-2 transition"
+                className="w-full py-3 px-4 rounded-2xl border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition"
               >
                 <ExternalLink className="w-4 h-4 text-orange-500" />
-                <span>เปิดทดสอบในมุมมองโต๊ะ {selectedTable} (New Tab)</span>
+                <span>{t('qrOpenTestBtn', language)}</span>
               </a>
             </div>
-          </div>
-
-          <div className="bg-amber-50 border border-amber-200 rounded-3xl p-5 text-xs text-amber-900 space-y-2">
-            <div className="flex items-center gap-1.5 font-bold text-amber-950">
-              <Sparkles className="w-4 h-4 text-amber-600" />
-              <span>เทคนิคการนำไปขายให้ร้านค้า (Sales Tip)</span>
-            </div>
-            <p className="leading-relaxed">
-              คุณสามารถรับบริการพิมพ์การ์ดอะคริลิกตั้งโต๊ะขนาด 4x6 นิ้ว หรือแผ่นสติกเกอร์กันน้ำส่งให้ร้านค้าพร้อมใช้งานทันที ซึ่งช่วยเพิ่มมูลค่าบริการเป็นแพ็กเกจ Setup Fee ได้ถึง <strong>1,500 – 2,500 บาท</strong> ต่อร้าน
-            </p>
           </div>
         </div>
       </div>

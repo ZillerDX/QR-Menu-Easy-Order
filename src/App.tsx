@@ -1,24 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { initialCategories, initialStoreConfig } from './data/initialMenu';
-import { MenuItem, CartItem, Order, OrderStatus, PaymentMethod, SelectedOption, Language } from './types';
+import { MenuItem, MenuCategory, CartItem, Order, OrderStatus, PaymentMethod, SelectedOption, Language } from './types';
 import { syncManager } from './utils/storage';
 import { soundService } from './utils/sound';
+import { t } from './utils/i18n';
 import { Header } from './components/common/Header';
-import { RoleSwitcher } from './components/common/RoleSwitcher';
+import { RoleSwitcher, AppRole } from './components/common/RoleSwitcher';
 import { MenuCard } from './components/customer/MenuCard';
 import { ItemModal } from './components/customer/ItemModal';
 import { CartDrawer } from './components/customer/CartDrawer';
 import { PromptPayModal } from './components/customer/PromptPayModal';
 import { OrderTracker } from './components/customer/OrderTracker';
 import { KitchenDashboard } from './components/kitchen/KitchenDashboard';
+import { MenuAdmin } from './components/admin/MenuAdmin';
 import { QRGenerator } from './components/table-qr/QRGenerator';
-import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, ArrowRight } from 'lucide-react';
+import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight } from 'lucide-react';
 
 export function App() {
-  const [storeConfig] = useState(initialStoreConfig);
+  const [storeConfig] = useState(() => syncManager.getStoreConfig());
   const [language, setLanguage] = useState<Language>('th');
-  const [activeRole, setActiveRole] = useState<'customer' | 'kitchen' | 'qr'>('customer');
+  const [activeRole, setActiveRole] = useState<AppRole>('customer');
   const [tableNumber, setTableNumber] = useState('01');
+  const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -40,14 +42,15 @@ export function App() {
       setTableNumber(tableParam);
     }
     const roleParam = params.get('role');
-    if (roleParam === 'kitchen' || roleParam === 'qr') {
-      setActiveRole(roleParam);
+    if (roleParam === 'kitchen' || roleParam === 'admin' || roleParam === 'qr') {
+      setActiveRole(roleParam as AppRole);
     }
     const langParam = params.get('lang');
     if (langParam === 'en' || langParam === 'th') {
       setLanguage(langParam);
     }
 
+    setCategories(syncManager.getCategories());
     setMenuItems(syncManager.getMenuItems());
     setOrders(syncManager.getOrders());
 
@@ -60,7 +63,10 @@ export function App() {
         setTrackedOrder((prev) => (prev?.id === event.payload.id ? event.payload : prev));
       } else if (event.type === 'MENU_UPDATED') {
         setMenuItems(event.payload);
+      } else if (event.type === 'CATEGORIES_UPDATED') {
+        setCategories(event.payload);
       } else if (event.type === 'SYSTEM_RESET') {
+        setCategories(syncManager.getCategories());
         setMenuItems(syncManager.getMenuItems());
         setOrders([]);
         setCart([]);
@@ -70,6 +76,14 @@ export function App() {
 
     return () => unsubscribe();
   }, []);
+
+  const handleToggleLanguage = () => {
+    const nextLang: Language = language === 'th' ? 'en' : 'th';
+    setLanguage(nextLang);
+    const url = new URL(window.location.href);
+    url.searchParams.set('lang', nextLang);
+    window.history.replaceState({}, '', url.toString());
+  };
 
   const handleAddToCart = (
     item: MenuItem,
@@ -165,6 +179,22 @@ export function App() {
     syncManager.toggleItemAvailability(itemId);
   };
 
+  const handleSaveMenuItem = (item: MenuItem) => {
+    syncManager.saveMenuItem(item);
+  };
+
+  const handleDeleteMenuItem = (itemId: string) => {
+    syncManager.deleteMenuItem(itemId);
+  };
+
+  const handleSaveCategory = (cat: MenuCategory) => {
+    syncManager.saveCategory(cat);
+  };
+
+  const handleDeleteCategory = (catId: string) => {
+    syncManager.deleteCategory(catId);
+  };
+
   const handleResetData = () => {
     if (window.confirm(language === 'th' ? 'ต้องการรีเซ็ตข้อมูลออเดอร์และสต็อกทั้งหมดเพื่อเริ่มทดสอบใหม่หรือไม่?' : 'Reset all orders and stock for testing?')) {
       syncManager.resetAll();
@@ -194,6 +224,7 @@ export function App() {
       case 'Utensils': return <Utensils className="w-4 h-4" />;
       case 'Cake': return <Cake className="w-4 h-4" />;
       case 'Pizza': return <Pizza className="w-4 h-4" />;
+      case 'Heart': return <Heart className="w-4 h-4" />;
       default: return <Coffee className="w-4 h-4" />;
     }
   };
@@ -210,10 +241,10 @@ export function App() {
         tableNumber={tableNumber}
         cartCount={totalCartCount}
         onOpenCart={() => setIsCartOpen(true)}
-        activeRole={activeRole}
+        activeRole={activeRole === 'admin' ? 'kitchen' : activeRole}
         onTableChange={setTableNumber}
         language={language}
-        onToggleLanguage={() => setLanguage(language === 'th' ? 'en' : 'th')}
+        onToggleLanguage={handleToggleLanguage}
       />
 
       {/* Main Content Area */}
@@ -226,20 +257,20 @@ export function App() {
               <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 rounded-3xl p-4 text-white shadow-lg shadow-orange-500/20 flex items-center justify-between animate-pulse-subtle">
                 <div>
                   <span className="text-[11px] font-bold uppercase tracking-wider text-orange-100">
-                    {language === 'th' ? `สถานะออเดอร์ล่าสุด (${trackedOrder.orderNumber})` : `Recent Order Status (${trackedOrder.orderNumber})`}
+                    {t('recentOrderStatus', language)} ({trackedOrder.orderNumber})
                   </span>
                   <h3 className="text-base font-extrabold">
-                    {trackedOrder.status === 'pending' && (language === 'th' ? '⏳ ร้านค้ารับออเดอร์แล้ว' : '⏳ Order Received')}
-                    {trackedOrder.status === 'cooking' && (language === 'th' ? '🍳 กำลังปรุงอาหาร' : '🍳 Preparing in Kitchen')}
-                    {trackedOrder.status === 'ready' && (language === 'th' ? '✨ อาหารพร้อมเสิร์ฟแล้ว!' : '✨ Ready to Serve!')}
-                    {trackedOrder.status === 'completed' && (language === 'th' ? '✅ เสร็จสิ้น ขอบคุณครับ/ค่ะ' : '✅ Completed')}
+                    {trackedOrder.status === 'pending' && `⏳ ${t('trackerStep1', language)}`}
+                    {trackedOrder.status === 'cooking' && `🍳 ${t('trackerStep2', language)}`}
+                    {trackedOrder.status === 'ready' && `✨ ${t('trackerStep3', language)}`}
+                    {trackedOrder.status === 'completed' && `✅ ${t('trackerStep4', language)}`}
                   </h3>
                 </div>
                 <button
                   onClick={() => setTrackedOrder(trackedOrder)}
                   className="px-3.5 py-1.5 rounded-xl bg-white text-orange-600 font-extrabold text-xs shadow hover:bg-orange-50 transition"
                 >
-                  {language === 'th' ? 'ดูสถานะ' : 'View'}
+                  {t('viewStatus', language)}
                 </button>
               </div>
             )}
@@ -247,16 +278,14 @@ export function App() {
             {/* Banner / Store Intro */}
             <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 text-white p-6 shadow-md border border-stone-800">
               <div className="relative z-10 max-w-md space-y-1.5">
-                <span className="bg-orange-500/95 backdrop-blur-xs text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full inline-block mb-1 shadow-xs">
-                  ORDER DIRECTLY • NO APP REQUIRED
+                <span className="bg-orange-500/95 backdrop-blur-xs text-white text-[11px] font-black px-2.5 py-0.5 rounded-full inline-block mb-1 shadow-xs">
+                  {t('heroBadge', language)}
                 </span>
                 <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
-                  {language === 'th' ? 'สั่งอาหารสดใหม่ ส่งตรงถึงโต๊ะคุณ' : 'Freshly Crafted Food & Drinks To Your Table'}
+                  {t('heroTitle', language)}
                 </h2>
                 <p className="text-xs text-stone-300 font-normal">
-                  {language === 'th'
-                    ? 'เลือกเมนูที่ชอบ ปรับแต่งความหวานและท็อปปิ้งได้ตามใจ แล้วกดสั่งได้ทันที'
-                    : 'Browse our menu, customize ingredients & toppings, and place your order instantly.'}
+                  {t('heroSubtitle', language)}
                 </p>
               </div>
             </div>
@@ -268,22 +297,22 @@ export function App() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={language === 'th' ? 'ค้นหาชื่อเมนู, กาแฟ, ชา, พาสต้า...' : 'Search coffee, matcha, pasta, bakery...'}
-                className="w-full pl-11 pr-4 py-3 bg-white border border-stone-200 rounded-2xl text-sm focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 shadow-xs"
+                placeholder={t('searchPlaceholder', language)}
+                className="w-full pl-11 pr-4 py-3 bg-white border border-stone-200 rounded-2xl text-sm focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 shadow-xs font-medium"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-stone-400 hover:text-stone-600 font-bold"
                 >
-                  {language === 'th' ? 'ล้าง' : 'Clear'}
+                  {t('clear', language)}
                 </button>
               )}
             </div>
 
             {/* Category Pills */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {initialCategories.map((cat) => {
+              {categories.map((cat) => {
                 const isActive = selectedCategory === cat.id;
                 return (
                   <button
@@ -307,11 +336,11 @@ export function App() {
               <div className="flex items-center justify-between mb-3 px-1">
                 <h3 className="font-bold text-stone-900 text-sm sm:text-base">
                   {language === 'en'
-                    ? initialCategories.find((c) => c.id === selectedCategory)?.nameEn || 'Menu Items'
-                    : initialCategories.find((c) => c.id === selectedCategory)?.name || 'รายการเมนู'}
+                    ? categories.find((c) => c.id === selectedCategory)?.nameEn || 'Menu Items'
+                    : categories.find((c) => c.id === selectedCategory)?.name || 'รายการเมนู'}
                 </h3>
                 <span className="text-xs text-stone-400 font-medium">
-                  {filteredMenuItems.length} {language === 'th' ? 'รายการ' : 'items'}
+                  {filteredMenuItems.length} {t('items', language)}
                 </span>
               </div>
 
@@ -319,10 +348,10 @@ export function App() {
                 <div className="bg-white rounded-3xl p-12 text-center border border-stone-200 shadow-xs text-stone-400">
                   <Coffee className="w-10 h-10 mx-auto text-stone-300 mb-2" />
                   <p className="font-bold text-stone-600 text-sm">
-                    {language === 'th' ? 'ไม่พบรายการเมนูที่ค้นหา' : 'No items matched your search'}
+                    {t('noMenuItems', language)}
                   </p>
                   <p className="text-xs text-stone-400 mt-1">
-                    {language === 'th' ? 'ลองเปลี่ยนคำค้นหา หรือเลือกหมวดหมู่อื่น' : 'Try searching for other items or choose a different category'}
+                    {t('noMenuItemsDesc', language)}
                   </p>
                 </div>
               ) : (
@@ -351,7 +380,7 @@ export function App() {
                       {totalCartCount}
                     </div>
                     <span className="font-extrabold text-sm">
-                      {language === 'th' ? 'ดูรายการในตะกร้า' : 'View Order Cart'}
+                      {t('viewCart', language)}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 font-black text-sm">
@@ -369,15 +398,30 @@ export function App() {
           <KitchenDashboard
             orders={orders}
             menuItems={menuItems}
+            language={language}
             onUpdateStatus={handleUpdateOrderStatus}
             onToggleStock={handleToggleStock}
             onResetData={handleResetData}
           />
         )}
 
-        {/* VIEW 3: TABLE QR GENERATOR */}
+        {/* VIEW 3: MENU & STORE ADMIN (NEW) */}
+        {activeRole === 'admin' && (
+          <MenuAdmin
+            menuItems={menuItems}
+            categories={categories}
+            language={language}
+            onSaveMenuItem={handleSaveMenuItem}
+            onDeleteMenuItem={handleDeleteMenuItem}
+            onToggleStock={handleToggleStock}
+            onSaveCategory={handleSaveCategory}
+            onDeleteCategory={handleDeleteCategory}
+          />
+        )}
+
+        {/* VIEW 4: TABLE QR GENERATOR */}
         {activeRole === 'qr' && (
-          <QRGenerator storeConfig={storeConfig} />
+          <QRGenerator storeConfig={storeConfig} language={language} />
         )}
       </main>
 
@@ -385,6 +429,7 @@ export function App() {
       <RoleSwitcher
         activeRole={activeRole}
         onSelectRole={setActiveRole}
+        language={language}
         pendingOrdersCount={pendingCount}
       />
 
@@ -401,6 +446,7 @@ export function App() {
         onClose={() => setIsCartOpen(false)}
         items={cart}
         tableNumber={tableNumber}
+        language={language}
         onUpdateQuantity={handleUpdateCartQuantity}
         onRemoveItem={handleRemoveCartItem}
         onCheckout={handleCheckout}
@@ -420,6 +466,7 @@ export function App() {
         promptpayNumber={storeConfig.promptpayNumber}
         promptpayName={storeConfig.promptpayName}
         orderNumber={activePromptPayOrder?.orderNumber || ''}
+        language={language}
         onPaymentConfirmed={handlePromptPayConfirmed}
       />
     </div>
