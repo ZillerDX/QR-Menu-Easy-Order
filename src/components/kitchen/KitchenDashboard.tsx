@@ -46,7 +46,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6 pb-28">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
       {/* Top Controls & Metrics Bar */}
       <div className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
@@ -54,7 +54,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
             <h2 className="text-xl font-black text-stone-900">
               {t('kdsTitle', language)}
             </h2>
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping flex-shrink-0" />
           </div>
           <p className="text-xs text-stone-500 mt-1">
             {t('kdsSubtitle', language)}
@@ -64,7 +64,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
         {/* Quick Metrics */}
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <div className="bg-orange-50 border border-orange-200 rounded-2xl px-4 py-2 text-center flex-1 md:flex-none">
-            <span className="text-[11px] font-bold text-orange-900 uppercase block">
+            <span className="text-[11px] font-black text-orange-950 uppercase block">
               {t('kdsCooking', language)}
             </span>
             <span className="text-xl font-black text-orange-600">
@@ -73,7 +73,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
           </div>
 
           <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-2 text-center flex-1 md:flex-none">
-            <span className="text-[11px] font-bold text-emerald-900 uppercase block">
+            <span className="text-[11px] font-black text-emerald-950 uppercase block">
               {t('kdsTodaySales', language)}
             </span>
             <span className="text-xl font-black text-emerald-700">
@@ -85,7 +85,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
           <div className="flex items-center gap-1.5 ml-auto">
             <button
               onClick={handleTestSound}
-              title="ทดสอบเสียงแจ้งเตือนออเดอร์"
+              title="Test sound notification"
               className="p-2.5 rounded-2xl border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 text-xs font-bold flex items-center gap-1.5 transition"
             >
               <Volume2 className="w-4 h-4 text-orange-500" />
@@ -106,7 +106,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
 
             <button
               onClick={onResetData}
-              title="รีเซ็ตข้อมูลทดสอบ"
+              title="Reset test data"
               className="p-2.5 rounded-2xl border border-stone-200 bg-stone-50 hover:bg-red-50 hover:text-red-600 text-stone-400 text-xs transition"
             >
               <RotateCcw className="w-4 h-4" />
@@ -118,12 +118,13 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
       {showStock && (
         <StockManager
           menuItems={menuItems}
+          language={language}
           onToggleStock={onToggleStock}
         />
       )}
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
         <button
           onClick={() => setFilter('active')}
           className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 flex-shrink-0 ${

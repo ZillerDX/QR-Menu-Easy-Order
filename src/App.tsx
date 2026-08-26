@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MenuItem, MenuCategory, CartItem, Order, OrderStatus, PaymentMethod, SelectedOption, Language } from './types';
 import { syncManager } from './utils/storage';
 import { soundService } from './utils/sound';
-import { t } from './utils/i18n';
+import { t, getInitialLanguage, saveLanguagePreference } from './utils/i18n';
 import { Header } from './components/common/Header';
 import { RoleSwitcher, AppRole } from './components/common/RoleSwitcher';
 import { MenuCard } from './components/customer/MenuCard';
@@ -17,7 +17,7 @@ import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowR
 
 export function App() {
   const [storeConfig] = useState(() => syncManager.getStoreConfig());
-  const [language, setLanguage] = useState<Language>('th');
+  const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
   const [activeRole, setActiveRole] = useState<AppRole>('customer');
   const [tableNumber, setTableNumber] = useState('01');
   const [categories, setCategories] = useState<MenuCategory[]>([]);
@@ -44,10 +44,6 @@ export function App() {
     const roleParam = params.get('role');
     if (roleParam === 'kitchen' || roleParam === 'admin' || roleParam === 'qr') {
       setActiveRole(roleParam as AppRole);
-    }
-    const langParam = params.get('lang');
-    if (langParam === 'en' || langParam === 'th') {
-      setLanguage(langParam);
     }
 
     setCategories(syncManager.getCategories());
@@ -78,8 +74,9 @@ export function App() {
   }, []);
 
   const handleToggleLanguage = () => {
-    const nextLang: Language = language === 'th' ? 'en' : 'th';
+    const nextLang: Language = language === 'en' ? 'th' : 'en';
     setLanguage(nextLang);
+    saveLanguagePreference(nextLang);
     const url = new URL(window.location.href);
     url.searchParams.set('lang', nextLang);
     window.history.replaceState({}, '', url.toString());
@@ -241,7 +238,7 @@ export function App() {
         tableNumber={tableNumber}
         cartCount={totalCartCount}
         onOpenCart={() => setIsCartOpen(true)}
-        activeRole={activeRole === 'admin' ? 'kitchen' : activeRole}
+        activeRole={activeRole}
         onTableChange={setTableNumber}
         language={language}
         onToggleLanguage={handleToggleLanguage}
@@ -251,15 +248,15 @@ export function App() {
       <main className="flex-1">
         {/* VIEW 1: CUSTOMER VIEW */}
         {activeRole === 'customer' && (
-          <div className="max-w-4xl mx-auto px-4 py-5 space-y-6 pb-28">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
             {/* If there is an active tracked order, show tracker bar */}
             {trackedOrder && (
               <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 rounded-3xl p-4 text-white shadow-lg shadow-orange-500/20 flex items-center justify-between animate-pulse-subtle">
                 <div>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-orange-100">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-orange-100">
                     {t('recentOrderStatus', language)} ({trackedOrder.orderNumber})
                   </span>
-                  <h3 className="text-base font-extrabold">
+                  <h3 className="text-base font-black">
                     {trackedOrder.status === 'pending' && `⏳ ${t('trackerStep1', language)}`}
                     {trackedOrder.status === 'cooking' && `🍳 ${t('trackerStep2', language)}`}
                     {trackedOrder.status === 'ready' && `✨ ${t('trackerStep3', language)}`}
@@ -268,7 +265,7 @@ export function App() {
                 </div>
                 <button
                   onClick={() => setTrackedOrder(trackedOrder)}
-                  className="px-3.5 py-1.5 rounded-xl bg-white text-orange-600 font-extrabold text-xs shadow hover:bg-orange-50 transition"
+                  className="px-3.5 py-1.5 rounded-xl bg-white text-orange-600 font-black text-xs shadow hover:bg-orange-50 transition"
                 >
                   {t('viewStatus', language)}
                 </button>
@@ -276,15 +273,15 @@ export function App() {
             )}
 
             {/* Banner / Store Intro */}
-            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 text-white p-6 shadow-md border border-stone-800">
-              <div className="relative z-10 max-w-md space-y-1.5">
+            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 text-white p-6 sm:p-8 shadow-md border border-stone-800">
+              <div className="relative z-10 max-w-xl space-y-2">
                 <span className="bg-orange-500/95 backdrop-blur-xs text-white text-[11px] font-black px-2.5 py-0.5 rounded-full inline-block mb-1 shadow-xs">
                   {t('heroBadge', language)}
                 </span>
-                <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight leading-tight">
                   {t('heroTitle', language)}
                 </h2>
-                <p className="text-xs text-stone-300 font-normal">
+                <p className="text-xs sm:text-sm text-stone-300 font-normal leading-relaxed">
                   {t('heroSubtitle', language)}
                 </p>
               </div>
@@ -318,14 +315,14 @@ export function App() {
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex-shrink-0 ${
+                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex-shrink-0 ${
                       isActive
                         ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25 scale-[1.02]'
                         : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
                     }`}
                   >
                     {getCategoryIcon(cat.icon)}
-                    <span>{language === 'en' ? cat.nameEn : cat.name}</span>
+                    <span>{language === 'en' ? (cat.nameEn || cat.name) : cat.name}</span>
                   </button>
                 );
               })}
@@ -334,12 +331,12 @@ export function App() {
             {/* Menu Items Grid */}
             <div>
               <div className="flex items-center justify-between mb-3 px-1">
-                <h3 className="font-bold text-stone-900 text-sm sm:text-base">
+                <h3 className="font-extrabold text-stone-900 text-sm sm:text-base">
                   {language === 'en'
                     ? categories.find((c) => c.id === selectedCategory)?.nameEn || 'Menu Items'
                     : categories.find((c) => c.id === selectedCategory)?.name || 'รายการเมนู'}
                 </h3>
-                <span className="text-xs text-stone-400 font-medium">
+                <span className="text-xs text-stone-400 font-bold">
                   {filteredMenuItems.length} {t('items', language)}
                 </span>
               </div>
@@ -355,7 +352,7 @@ export function App() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                   {filteredMenuItems.map((item) => (
                     <MenuCard
                       key={item.id}
@@ -405,7 +402,7 @@ export function App() {
           />
         )}
 
-        {/* VIEW 3: MENU & STORE ADMIN (NEW) */}
+        {/* VIEW 3: MENU & STORE ADMIN */}
         {activeRole === 'admin' && (
           <MenuAdmin
             menuItems={menuItems}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
-import { Download, Printer, QrCode, ExternalLink, Sparkles } from 'lucide-react';
+import { Download, Printer, QrCode, ExternalLink } from 'lucide-react';
 import { StoreConfig, Language } from '../../types';
 import { t } from '../../utils/i18n';
 
@@ -55,12 +55,12 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 pb-28">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
       {/* Header Info */}
-      <div className="bg-white rounded-3xl p-5 border border-stone-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-black text-stone-900 flex items-center gap-2">
-            <QrCode className="w-6 h-6 text-orange-500" />
+            <QrCode className="w-6 h-6 text-orange-500 flex-shrink-0" />
             {t('qrTitle', language)}
           </h2>
           <p className="text-xs text-stone-500 mt-1">
@@ -94,12 +94,12 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
         {/* Printable Card Preview (Styled like Table Stand) */}
         <div className="bg-white rounded-3xl p-8 border-2 border-orange-100 shadow-lg flex flex-col items-center text-center space-y-5 relative overflow-hidden print:border-none print:shadow-none">
-          <div className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white py-3 px-4 rounded-2xl shadow-sm">
+          <div className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white py-3.5 px-4 rounded-2xl shadow-sm">
             <h3 className="font-black text-lg tracking-wide">
-              {language === 'th' ? storeConfig.name : storeConfig.nameEn}
+              {language === 'en' ? storeConfig.nameEn || storeConfig.name : storeConfig.name}
             </h3>
             <p className="text-[11px] text-orange-100 font-medium">
-              {language === 'th' ? storeConfig.tagline : storeConfig.taglineEn}
+              {language === 'en' ? storeConfig.taglineEn || storeConfig.tagline : storeConfig.tagline}
             </p>
           </div>
 
@@ -123,7 +123,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
 
         {/* Actions & Instructions */}
         <div className="space-y-4">
-          <div className="bg-white rounded-3xl p-5 border border-stone-200 shadow-xs space-y-3">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200 shadow-xs space-y-3">
             <h4 className="font-bold text-stone-900 text-sm">
               {language === 'th' ? 'สั่งพิมพ์หรือบันทึกรูปภาพ' : 'Print & Export Options'}
             </h4>
