@@ -1,6 +1,6 @@
 import React from 'react';
-import { ShoppingBag, Coffee, Store, UtensilsCrossed } from 'lucide-react';
-import { StoreConfig } from '../../types';
+import { ShoppingBag, Coffee, Store, UtensilsCrossed, Globe } from 'lucide-react';
+import { StoreConfig, Language } from '../../types';
 
 interface HeaderProps {
   storeConfig: StoreConfig;
@@ -9,6 +9,8 @@ interface HeaderProps {
   onOpenCart: () => void;
   activeRole: 'customer' | 'kitchen' | 'qr';
   onTableChange: (table: string) => void;
+  language: Language;
+  onToggleLanguage: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,13 +20,15 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCart,
   activeRole,
   onTableChange,
+  language,
+  onToggleLanguage,
 }) => {
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm">
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-orange-100/60 shadow-xs">
       <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
         {/* Brand Logo & Name */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/20">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-600 via-orange-500 to-amber-400 flex items-center justify-center text-white shadow-md shadow-orange-500/20">
             {activeRole === 'kitchen' ? (
               <UtensilsCrossed className="w-5 h-5" />
             ) : (
@@ -32,22 +36,32 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
           <div>
-            <h1 className="font-bold text-gray-900 leading-tight text-base sm:text-lg flex items-center gap-1.5">
-              {storeConfig.name}
+            <h1 className="font-extrabold text-gray-900 leading-tight text-base sm:text-lg flex items-center gap-1.5">
+              {language === 'th' ? storeConfig.name : storeConfig.nameEn}
             </h1>
-            <p className="text-xs text-gray-500 hidden sm:block">
-              {storeConfig.tagline}
+            <p className="text-xs text-stone-500 hidden sm:block font-medium">
+              {language === 'th' ? storeConfig.tagline : storeConfig.taglineEn}
             </p>
           </div>
         </div>
 
         {/* Action area */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Language Toggle Button */}
+          <button
+            onClick={onToggleLanguage}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-gray-200 hover:border-orange-300 bg-gray-50/80 hover:bg-orange-50/50 text-xs font-bold text-gray-700 transition"
+            title="เปลี่ยนภาษา / Switch Language"
+          >
+            <Globe className="w-3.5 h-3.5 text-orange-500" />
+            <span>{language === 'th' ? 'TH' : 'EN'}</span>
+          </button>
+
           {activeRole === 'customer' && (
             <>
               {/* Table Selector badge */}
-              <div className="flex items-center bg-orange-50 border border-orange-200 text-orange-800 text-xs font-semibold px-2.5 py-1.5 rounded-lg">
-                <Store className="w-3.5 h-3.5 mr-1 text-orange-600" />
+              <div className="flex items-center bg-orange-50/90 border border-orange-200 text-orange-900 text-xs font-bold px-2.5 py-1.5 rounded-xl shadow-2xs">
+                <Store className="w-3.5 h-3.5 mr-1 text-orange-600 flex-shrink-0" />
                 <select
                   aria-label="เลือกเบอร์โต๊ะ"
                   value={tableNumber}
@@ -58,11 +72,13 @@ export const Header: React.FC<HeaderProps> = ({
                     const t = (i + 1).toString().padStart(2, '0');
                     return (
                       <option key={t} value={t}>
-                        โต๊ะ {t}
+                        {language === 'th' ? `โต๊ะ ${t}` : `Table ${t}`}
                       </option>
                     );
                   })}
-                  <option value="TAKEAWAY">สั่งกลับบ้าน</option>
+                  <option value="TAKEAWAY">
+                    {language === 'th' ? 'สั่งกลับบ้าน' : 'Takeaway'}
+                  </option>
                 </select>
               </div>
 
@@ -74,19 +90,21 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <ShoppingBag className="w-5 h-5" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[11px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white animate-bounce">
+                  <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[11px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white animate-bounce shadow-xs">
                     {cartCount}
                   </span>
                 )}
-                <span className="hidden sm:inline text-xs font-medium pr-0.5">ตะกร้า</span>
+                <span className="hidden sm:inline text-xs font-bold pr-0.5">
+                  {language === 'th' ? 'ตะกร้า' : 'Cart'}
+                </span>
               </button>
             </>
           )}
 
           {activeRole === 'kitchen' && (
-            <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1.5 rounded-lg text-xs font-semibold">
+            <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Kitchen KDS Online
+              Kitchen KDS
             </div>
           )}
         </div>

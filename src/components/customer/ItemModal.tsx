@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Minus, ShoppingBag } from 'lucide-react';
-import { MenuItem, SelectedOption } from '../../types';
+import { MenuItem, SelectedOption, Language } from '../../types';
 import { soundService } from '../../utils/sound';
 
 interface ItemModalProps {
   item: MenuItem | null;
   onClose: () => void;
+  language: Language;
   onAddToCart: (
     item: MenuItem,
     quantity: number,
@@ -18,13 +19,13 @@ interface ItemModalProps {
 export const ItemModal: React.FC<ItemModalProps> = ({
   item,
   onClose,
+  language,
   onAddToCart,
 }) => {
   const [quantity, setQuantity] = useState(1);
   const [specialNote, setSpecialNote] = useState('');
   const [selectedChoices, setSelectedChoices] = useState<Record<string, string[]>>({});
 
-  // Initialize default options
   useEffect(() => {
     if (item && item.optionGroups) {
       const initial: Record<string, string[]> = {};
@@ -73,7 +74,6 @@ export const ItemModal: React.FC<ItemModalProps> = ({
     });
   };
 
-  // Calculate Unit Price with Add-ons
   let deltaSum = 0;
   const flatSelectedOptions: SelectedOption[] = [];
 
@@ -86,9 +86,9 @@ export const ItemModal: React.FC<ItemModalProps> = ({
           deltaSum += choice.priceDelta;
           flatSelectedOptions.push({
             groupId: group.id,
-            groupName: group.name,
+            groupName: language === 'en' && group.nameEn ? group.nameEn : group.name,
             choiceId: choice.id,
-            choiceName: choice.name,
+            choiceName: language === 'en' && choice.nameEn ? choice.nameEn : choice.name,
             priceDelta: choice.priceDelta,
           });
         }
@@ -106,10 +106,10 @@ export const ItemModal: React.FC<ItemModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/65 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-200">
       <div className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
         {/* Modal Header / Hero Image */}
-        <div className="relative w-full h-48 sm:h-56 bg-gray-100 flex-shrink-0">
+        <div className="relative w-full h-48 sm:h-56 bg-stone-100 flex-shrink-0">
           <img
             src={item.imageUrl}
             alt={item.name}
@@ -117,31 +117,35 @@ export const ItemModal: React.FC<ItemModalProps> = ({
           />
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center backdrop-blur-sm transition"
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-sm transition shadow-sm"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Modal Body: Scrollable options */}
+        {/* Modal Body */}
         <div className="p-5 overflow-y-auto space-y-5 flex-1">
           <div>
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">{item.name}</h2>
-                {item.nameEn && (
-                  <p className="text-xs text-gray-400">{item.nameEn}</p>
+                <h2 className="text-xl font-extrabold text-stone-900">
+                  {language === 'en' && item.nameEn ? item.nameEn : item.name}
+                </h2>
+                {language === 'th' && item.nameEn && (
+                  <p className="text-xs text-stone-400">{item.nameEn}</p>
                 )}
               </div>
               <div className="text-right">
-                <span className="text-sm text-gray-500 font-medium">เริ่มต้น </span>
-                <span className="text-lg font-bold text-orange-600">
+                <span className="text-xs text-stone-400 font-medium">
+                  {language === 'th' ? 'เริ่มต้น ' : 'From '}
+                </span>
+                <span className="text-lg font-black text-orange-600">
                   ฿{item.price}
                 </span>
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
-              {item.description}
+            <p className="text-xs text-stone-500 mt-1.5 leading-relaxed">
+              {language === 'en' && item.descriptionEn ? item.descriptionEn : item.description}
             </p>
           </div>
 
@@ -151,13 +155,15 @@ export const ItemModal: React.FC<ItemModalProps> = ({
             const currentSelected = selectedChoices[group.id] || [];
 
             return (
-              <div key={group.id} className="pt-3 border-t border-gray-100">
+              <div key={group.id} className="pt-3.5 border-t border-stone-100">
                 <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-sm font-bold text-gray-800">
-                    {group.name}
+                  <span className="text-sm font-bold text-stone-800">
+                    {language === 'en' && group.nameEn ? group.nameEn : group.name}
                   </span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
-                    {group.required ? 'จำเป็นต้องเลือก' : 'ไม่บังคับ'}
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-medium">
+                    {group.required
+                      ? language === 'th' ? 'จำเป็น' : 'Required'
+                      : language === 'th' ? 'ไม่บังคับ' : 'Optional'}
                   </span>
                 </div>
 
@@ -175,10 +181,10 @@ export const ItemModal: React.FC<ItemModalProps> = ({
                             handleCheckboxToggle(group.id, choice.id, group.maxSelect);
                           }
                         }}
-                        className={`flex items-center justify-between p-3 rounded-xl border text-sm cursor-pointer transition ${
+                        className={`flex items-center justify-between p-3 rounded-2xl border text-sm cursor-pointer transition ${
                           isChecked
-                            ? 'border-orange-500 bg-orange-50/50 text-orange-950 font-medium'
-                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                            ? 'border-orange-500 bg-orange-50/50 text-orange-950 font-bold shadow-2xs'
+                            : 'border-stone-200 hover:border-stone-300 text-stone-700'
                         }`}
                       >
                         <div className="flex items-center gap-2.5">
@@ -188,18 +194,20 @@ export const ItemModal: React.FC<ItemModalProps> = ({
                             } border flex items-center justify-center ${
                               isChecked
                                 ? 'border-orange-500 bg-orange-500 text-white'
-                                : 'border-gray-300 bg-white'
+                                : 'border-stone-300 bg-white'
                             }`}
                           >
                             {isChecked && (
                               <span className="w-1.5 h-1.5 rounded-full bg-white block" />
                             )}
                           </div>
-                          <span>{choice.name}</span>
+                          <span>
+                            {language === 'en' && choice.nameEn ? choice.nameEn : choice.name}
+                          </span>
                         </div>
 
                         {choice.priceDelta > 0 && (
-                          <span className="text-xs font-semibold text-orange-600">
+                          <span className="text-xs font-bold text-orange-600">
                             +฿{choice.priceDelta}
                           </span>
                         )}
@@ -212,47 +220,50 @@ export const ItemModal: React.FC<ItemModalProps> = ({
           })}
 
           {/* Special Request */}
-          <div className="pt-3 border-t border-gray-100">
-            <label className="block text-sm font-bold text-gray-800 mb-1.5">
-              หมายเหตุเพิ่มเติม (ถ้ามี)
+          <div className="pt-3.5 border-t border-stone-100">
+            <label className="block text-sm font-bold text-stone-800 mb-1.5">
+              {language === 'th' ? 'หมายเหตุเพิ่มเติม (ถ้ามี)' : 'Special Requests'}
             </label>
             <input
               type="text"
               value={specialNote}
               onChange={(e) => setSpecialNote(e.target.value)}
-              placeholder="เช่น แยกน้ำแข็ง, ขอช้อนส้อม, ไม่ใส่ผักชี"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+              placeholder={
+                language === 'th'
+                  ? 'เช่น แยกน้ำแข็ง, ขอช้อนส้อม, ไม่ใส่ผักชี'
+                  : 'e.g. Less ice, extra napkin, no dressing'
+              }
+              className="w-full px-3.5 py-2.5 rounded-2xl border border-stone-200 text-sm focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
             />
           </div>
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-4">
-          {/* Quantity Controls */}
-          <div className="flex items-center bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
+        <div className="p-4 bg-stone-50 border-t border-stone-100 flex items-center justify-between gap-4">
+          <div className="flex items-center bg-white border border-stone-200 rounded-2xl p-1 shadow-xs">
             <button
               onClick={() => setQuantity((q) => Math.max(1, q - 1))}
               disabled={quantity <= 1}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-30"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-stone-600 hover:bg-stone-100 disabled:opacity-30"
             >
               <Minus className="w-4 h-4" />
             </button>
             <span className="w-9 text-center font-bold text-sm">{quantity}</span>
             <button
               onClick={() => setQuantity((q) => q + 1)}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-100"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-stone-600 hover:bg-stone-100"
             >
               <Plus className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Add to Cart Button */}
           <button
             onClick={handleAdd}
-            className="flex-1 py-3 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-bold text-sm shadow-md shadow-orange-500/25 flex items-center justify-between transition"
+            className="flex-1 py-3 px-4 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-bold text-sm shadow-md shadow-orange-500/25 flex items-center justify-between transition"
           >
             <span className="flex items-center gap-2">
-              <ShoppingBag className="w-4 h-4" /> ใส่ตะกร้า
+              <ShoppingBag className="w-4 h-4" />
+              {language === 'th' ? 'ใส่ตะกร้า' : 'Add to Order'}
             </span>
             <span>฿{totalPrice.toLocaleString()}</span>
           </button>

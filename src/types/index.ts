@@ -1,16 +1,20 @@
+export type Language = 'th' | 'en';
+
 export interface OptionChoice {
   id: string;
   name: string;
-  priceDelta: number; // e.g. 0, 15, 20
+  nameEn?: string;
+  priceDelta: number;
   isDefault?: boolean;
 }
 
 export interface OptionGroup {
   id: string;
-  name: string; // e.g. "ระดับความหวาน", "ประเภทนม", "ท็อปปิ้ง"
+  name: string;
+  nameEn?: string;
   required: boolean;
   minSelect?: number;
-  maxSelect?: number; // 1 for radio, >1 for checkboxes
+  maxSelect?: number;
   choices: OptionChoice[];
 }
 
@@ -20,17 +24,20 @@ export interface MenuItem {
   name: string;
   nameEn?: string;
   description: string;
+  descriptionEn?: string;
   price: number;
   imageUrl: string;
   isAvailable: boolean;
   isPopular?: boolean;
   isChefRecommend?: boolean;
+  tags?: string[];
   optionGroups?: OptionGroup[];
 }
 
 export interface MenuCategory {
   id: string;
   name: string;
+  nameEn: string;
   icon: string;
 }
 
@@ -58,7 +65,7 @@ export type PaymentStatus = 'unpaid' | 'paid';
 
 export interface Order {
   id: string;
-  orderNumber: string; // e.g. #0042
+  orderNumber: string;
   tableNumber: string;
   items: CartItem[];
   subtotal: number;
@@ -66,13 +73,15 @@ export interface Order {
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   status: OrderStatus;
-  createdAt: string; // ISO string
+  createdAt: string;
   customerNote?: string;
 }
 
 export interface StoreConfig {
   name: string;
+  nameEn: string;
   tagline: string;
+  taglineEn: string;
   promptpayNumber: string;
   promptpayName: string;
   openTime: string;

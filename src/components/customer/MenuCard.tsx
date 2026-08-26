@@ -1,25 +1,26 @@
 import React from 'react';
 import { Plus, Flame, Sparkles } from 'lucide-react';
-import { MenuItem } from '../../types';
+import { MenuItem, Language } from '../../types';
 
 interface MenuCardProps {
   item: MenuItem;
   onSelect: (item: MenuItem) => void;
+  language: Language;
 }
 
-export const MenuCard: React.FC<MenuCardProps> = ({ item, onSelect }) => {
+export const MenuCard: React.FC<MenuCardProps> = ({ item, onSelect, language }) => {
   return (
     <div
       onClick={() => item.isAvailable && onSelect(item)}
-      className={`group relative bg-white rounded-2xl p-3 border border-gray-100 shadow-sm transition-all duration-200 flex flex-col justify-between ${
+      className={`group relative bg-white rounded-3xl p-3 sm:p-3.5 border border-stone-200/80 shadow-xs transition-all duration-200 flex flex-col justify-between ${
         item.isAvailable
-          ? 'hover:shadow-md hover:border-orange-200 cursor-pointer active:scale-[0.98]'
-          : 'opacity-60 cursor-not-allowed bg-gray-50'
+          ? 'hover:shadow-md hover:border-orange-300/80 cursor-pointer active:scale-[0.98]'
+          : 'opacity-60 cursor-not-allowed bg-stone-50'
       }`}
     >
       <div>
         {/* Image Container */}
-        <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden mb-3 bg-gray-100">
+        <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden mb-3 bg-stone-100 shadow-2xs">
           <img
             src={item.imageUrl}
             alt={item.name}
@@ -27,9 +28,9 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, onSelect }) => {
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
           {!item.isAvailable && (
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
-              <span className="bg-red-500/90 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
-                สินค้าหมด (Sold Out)
+            <div className="absolute inset-0 bg-black/65 backdrop-blur-[2px] flex items-center justify-center p-2 text-center">
+              <span className="bg-red-500/95 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md">
+                {language === 'th' ? 'สินค้าหมด (Sold Out)' : 'Sold Out'}
               </span>
             </div>
           )}
@@ -37,13 +38,13 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, onSelect }) => {
           {/* Badges */}
           <div className="absolute top-2 left-2 flex flex-col gap-1">
             {item.isChefRecommend && (
-              <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow">
-                <Sparkles className="w-3 h-3" /> แนะนำ
+              <span className="bg-amber-500/95 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                <Sparkles className="w-3 h-3" /> {language === 'th' ? 'แนะนำ' : 'Chef Pick'}
               </span>
             )}
             {item.isPopular && !item.isChefRecommend && (
-              <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow">
-                <Flame className="w-3 h-3" /> ยอดฮิต
+              <span className="bg-red-500/95 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                <Flame className="w-3 h-3" /> {language === 'th' ? 'ยอดฮิต' : 'Popular'}
               </span>
             )}
           </div>
@@ -51,25 +52,25 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, onSelect }) => {
 
         {/* Info */}
         <div className="space-y-1">
-          <h3 className="font-bold text-gray-900 text-sm sm:text-base leading-snug line-clamp-1 group-hover:text-orange-600 transition-colors">
-            {item.name}
+          <h3 className="font-bold text-stone-900 text-sm sm:text-base leading-snug line-clamp-1 group-hover:text-orange-600 transition-colors">
+            {language === 'en' && item.nameEn ? item.nameEn : item.name}
           </h3>
-          {item.nameEn && (
-            <p className="text-[11px] text-gray-400 font-normal line-clamp-1">
+          {language === 'th' && item.nameEn && (
+            <p className="text-[11px] text-stone-400 font-medium line-clamp-1">
               {item.nameEn}
             </p>
           )}
-          <p className="text-xs text-gray-500 line-clamp-2 pt-0.5 leading-relaxed">
-            {item.description}
+          <p className="text-xs text-stone-500 line-clamp-2 pt-0.5 leading-relaxed">
+            {language === 'en' && item.descriptionEn ? item.descriptionEn : item.description}
           </p>
         </div>
       </div>
 
       {/* Price & Action Button */}
-      <div className="mt-3 pt-2 border-t border-gray-50 flex items-center justify-between">
+      <div className="mt-3 pt-2.5 border-t border-stone-100 flex items-center justify-between">
         <div>
-          <span className="text-xs text-gray-400 font-medium">฿</span>
-          <span className="text-base font-extrabold text-gray-900 ml-0.5">
+          <span className="text-xs text-stone-400 font-medium">฿</span>
+          <span className="text-base font-extrabold text-stone-900 ml-0.5">
             {item.price.toLocaleString()}
           </span>
         </div>
@@ -77,7 +78,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, onSelect }) => {
         {item.isAvailable && (
           <button
             type="button"
-            className="w-8 h-8 rounded-full bg-orange-100 group-hover:bg-orange-500 text-orange-600 group-hover:text-white flex items-center justify-center transition shadow-sm"
+            className="w-8 h-8 rounded-full bg-orange-100 group-hover:bg-orange-500 text-orange-600 group-hover:text-white flex items-center justify-center transition shadow-2xs"
           >
             <Plus className="w-4 h-4" />
           </button>
