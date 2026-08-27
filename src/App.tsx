@@ -35,6 +35,7 @@ export function App() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('promptpay');
   const [activePromptPayOrder, setActivePromptPayOrder] = useState<Order | null>(null);
   const [trackedOrder, setTrackedOrder] = useState<Order | null>(null);
+  const [isOrderTrackerOpen, setIsOrderTrackerOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
   // Initialize and check URL query params
@@ -74,6 +75,7 @@ export function App() {
         setOrders([]);
         setCart([]);
         setTrackedOrder(null);
+        setIsOrderTrackerOpen(false);
       }
     });
 
@@ -165,14 +167,17 @@ export function App() {
       setActivePromptPayOrder(newOrder);
     } else {
       setTrackedOrder(newOrder);
+      setIsOrderTrackerOpen(true);
     }
   };
 
   const handlePromptPayConfirmed = () => {
     if (activePromptPayOrder) {
       syncManager.updateOrderStatus(activePromptPayOrder.id, 'pending', 'paid');
-      setTrackedOrder({ ...activePromptPayOrder, paymentStatus: 'paid' });
+      const updated = { ...activePromptPayOrder, paymentStatus: 'paid' as const };
+      setTrackedOrder(updated);
       setActivePromptPayOrder(null);
+      setIsOrderTrackerOpen(true);
     }
   };
 
@@ -266,12 +271,12 @@ export function App() {
           <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
             {/* Active Tracked Order Bar */}
             {trackedOrder && (
-              <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 rounded-3xl p-4 text-white shadow-lg shadow-orange-500/20 flex items-center justify-between animate-pulse-subtle">
-                <div>
+              <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 rounded-3xl p-4 sm:p-5 text-white shadow-lg shadow-orange-500/20 flex items-center justify-between animate-pulse-subtle">
+                <div className="space-y-0.5">
                   <span className="text-[11px] font-black uppercase tracking-wider text-orange-100">
                     {t('recentOrderStatus', language)} ({trackedOrder.orderNumber})
                   </span>
-                  <h3 className="text-base font-black">
+                  <h3 className="text-base sm:text-lg font-black">
                     {trackedOrder.status === 'pending' && `⏳ ${t('trackerStep1', language)}`}
                     {trackedOrder.status === 'cooking' && `🍳 ${t('trackerStep2', language)}`}
                     {trackedOrder.status === 'ready' && `✨ ${t('trackerStep3', language)}`}
@@ -279,8 +284,8 @@ export function App() {
                   </h3>
                 </div>
                 <button
-                  onClick={() => setTrackedOrder(trackedOrder)}
-                  className="px-3.5 py-1.5 rounded-xl bg-white text-orange-600 font-black text-xs shadow hover:bg-orange-50 transition cursor-pointer"
+                  onClick={() => setIsOrderTrackerOpen(true)}
+                  className="px-4 py-2 rounded-2xl bg-white text-orange-600 font-black text-xs sm:text-sm shadow-md hover:bg-orange-50 active:scale-95 transition cursor-pointer"
                 >
                   {t('viewStatus', language)}
                 </button>
@@ -480,6 +485,7 @@ export function App() {
         onClose={() => {
           if (activePromptPayOrder) {
             setTrackedOrder(activePromptPayOrder);
+            setIsOrderTrackerOpen(true);
           }
           setActivePromptPayOrder(null);
         }}
@@ -489,6 +495,14 @@ export function App() {
         orderNumber={activePromptPayOrder?.orderNumber || ''}
         language={language}
         onPaymentConfirmed={handlePromptPayConfirmed}
+      />
+
+      {/* Live Order Tracker Modal Dialog */}
+      <OrderTracker
+        isOpen={isOrderTrackerOpen}
+        onClose={() => setIsOrderTrackerOpen(false)}
+        order={trackedOrder}
+        language={language}
       />
 
       {/* Reset System Confirmation Modal */}

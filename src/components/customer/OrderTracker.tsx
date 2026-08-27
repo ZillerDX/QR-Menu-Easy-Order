@@ -1,52 +1,70 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import confetti from 'canvas-confetti';
-import { CheckCircle2, Clock, ChefHat, Sparkles, Plus } from 'lucide-react';
+import { CheckCircle2, Clock, ChefHat, Sparkles, Plus, X, Utensils, Receipt } from 'lucide-react';
 import { Order, OrderStatus, Language } from '../../types';
 import { t } from '../../utils/i18n';
 
 interface OrderTrackerProps {
+  isOpen: boolean;
+  onClose: () => void;
   order: Order | null;
   language: Language;
-  onOrderMore: () => void;
 }
 
-export const OrderTracker: React.FC<OrderTrackerProps> = ({ order, language, onOrderMore }) => {
+export const OrderTracker: React.FC<OrderTrackerProps> = ({
+  isOpen,
+  onClose,
+  order,
+  language,
+}) => {
   useEffect(() => {
-    if (order?.status === 'ready' || order?.status === 'completed') {
+    if (isOpen && (order?.status === 'ready' || order?.status === 'completed')) {
       confetti({
-        particleCount: 80,
+        particleCount: 70,
         spread: 60,
         origin: { y: 0.6 },
       });
     }
-  }, [order?.status]);
+  }, [isOpen, order?.status]);
 
-  if (!order) return null;
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !order) return null;
 
   const steps: { key: OrderStatus; label: string; desc: string; icon: React.ReactNode }[] = [
     {
       key: 'pending',
       label: t('trackerStep1', language),
       desc: t('trackerStep1Desc', language),
-      icon: <Clock className="w-5 h-5" />,
+      icon: <Clock className="w-4 h-4" />,
     },
     {
       key: 'cooking',
       label: t('trackerStep2', language),
       desc: t('trackerStep2Desc', language),
-      icon: <ChefHat className="w-5 h-5" />,
+      icon: <ChefHat className="w-4 h-4" />,
     },
     {
       key: 'ready',
       label: t('trackerStep3', language),
       desc: t('trackerStep3Desc', language),
-      icon: <Sparkles className="w-5 h-5 text-amber-500" />,
+      icon: <Sparkles className="w-4 h-4 text-amber-500" />,
     },
     {
       key: 'completed',
       label: t('trackerStep4', language),
       desc: t('trackerStep4Desc', language),
-      icon: <CheckCircle2 className="w-5 h-5 text-emerald-500" />,
+      icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
     },
   ];
 
@@ -63,121 +81,188 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({ order, language, onO
 
   const currentIndex = getStepIndex(order.status);
 
-  return (
-    <div className="max-w-md mx-auto p-4 space-y-5 animate-in fade-in duration-300 pb-24">
-      {/* Status Card */}
-      <div className="bg-white rounded-3xl p-5 border border-stone-200 shadow-md text-center relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-orange-400 to-amber-500" />
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+      {/* Full Backdrop */}
+      <div 
+        className="fixed inset-0 bg-stone-950/75 backdrop-blur-md transition-opacity"
+        onClick={onClose}
+      />
 
-        <div className="pt-2">
-          <span className="text-xs font-bold text-stone-400">
-            {t('trackerTitle', language)}
-          </span>
-          <h2 className="text-2xl font-black text-stone-900 tracking-tight">
-            {order.orderNumber}
-          </h2>
-          <div className="inline-block mt-1 bg-orange-50 text-orange-800 text-xs font-extrabold px-3 py-1 rounded-full border border-orange-200">
-            {order.tableNumber === 'TAKEAWAY' ? t('takeaway', language) : `${t('table', language)} ${order.tableNumber}`}
+      {/* Tracker Card */}
+      <div className="relative w-full max-w-lg bg-white rounded-[28px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col border border-stone-200/80 z-10">
+        
+        {/* Header */}
+        <div className="px-6 py-4 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 text-white flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white">
+              <Receipt className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-black text-white text-lg tracking-tight">
+                  {t('trackerTitle', language)} {order.orderNumber}
+                </h3>
+              </div>
+              <p className="text-xs text-orange-100 font-medium">
+                {order.tableNumber === 'TAKEAWAY' ? t('takeaway', language) : `${t('table', language)} ${order.tableNumber}`} • {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="w-9 h-9 rounded-2xl bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition cursor-pointer"
+            title={t('close', language)}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Scrollable Body */}
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1 min-h-0 text-xs sm:text-sm">
+          
+          {/* Status Progression Card */}
+          <div className="bg-stone-50/90 rounded-3xl p-4 sm:p-5 border border-stone-200/80 space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-black uppercase tracking-wider text-stone-400">
+                {language === 'th' ? 'ความคืบหน้าออเดอร์' : 'Live Order Progress'}
+              </span>
+              <span className="text-xs font-black text-orange-600 bg-orange-100/70 px-2.5 py-0.5 rounded-full animate-pulse">
+                {order.status === 'pending' && `⏳ ${t('trackerStep1', language)}`}
+                {order.status === 'cooking' && `🍳 ${t('trackerStep2', language)}`}
+                {order.status === 'ready' && `✨ ${t('trackerStep3', language)}`}
+                {order.status === 'completed' && `✅ ${t('trackerStep4', language)}`}
+              </span>
+            </div>
+
+            {/* Timeline */}
+            <div className="space-y-4 pt-1">
+              {steps.map((step, idx) => {
+                const isPassed = idx < currentIndex;
+                const isCurrent = idx === currentIndex;
+
+                return (
+                  <div key={step.key} className="flex items-start gap-3.5 relative">
+                    {idx < steps.length - 1 && (
+                      <div
+                        className={`absolute left-[15px] top-8 w-0.5 h-8 ${
+                          idx < currentIndex ? 'bg-orange-500' : 'bg-stone-200'
+                        }`}
+                      />
+                    )}
+
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 transition-all ${
+                        isCurrent
+                          ? 'bg-orange-500 text-white ring-4 ring-orange-200 scale-110 shadow-md'
+                          : isPassed
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-stone-200 text-stone-400'
+                      }`}
+                    >
+                      {isPassed ? <CheckCircle2 className="w-4 h-4 stroke-[3]" /> : step.icon}
+                    </div>
+
+                    <div className="flex-1 pt-0.5">
+                      <h4
+                        className={`text-sm font-black ${
+                          isCurrent
+                            ? 'text-orange-600'
+                            : isPassed
+                            ? 'text-stone-900'
+                            : 'text-stone-400'
+                        }`}
+                      >
+                        {step.label}
+                      </h4>
+                      <p className="text-xs text-stone-500 leading-snug font-medium mt-0.5">
+                        {step.desc}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Ordered Items Breakdown */}
+          <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/80 shadow-xs space-y-3">
+            <div className="flex items-center justify-between border-b border-stone-100 pb-2.5">
+              <h4 className="text-xs font-black text-stone-800 flex items-center gap-1.5">
+                <Utensils className="w-3.5 h-3.5 text-orange-500" />
+                <span>{language === 'th' ? 'รายการอาหารที่สั่ง' : 'Ordered Items'}</span>
+              </h4>
+              <span className="text-xs font-bold text-stone-400">
+                {order.items.length} {t('items', language)}
+              </span>
+            </div>
+
+            <div className="divide-y divide-stone-100">
+              {order.items.map((item, i) => (
+                <div key={i} className="py-2.5 flex justify-between items-start">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg text-xs">
+                        {item.quantity}x
+                      </span>
+                      <span className="text-stone-900 font-bold text-xs sm:text-sm">
+                        {language === 'en' && item.menuItem.nameEn ? item.menuItem.nameEn : item.menuItem.name}
+                      </span>
+                    </div>
+                    {item.selectedOptions.length > 0 && (
+                      <p className="text-[11px] text-stone-400 font-medium pl-8">
+                        {item.selectedOptions.map((o) => o.choiceName).join(', ')}
+                      </p>
+                    )}
+                    {item.specialNote && (
+                      <p className="text-[11px] text-amber-600 font-medium pl-8">
+                        ✏️ {item.specialNote}
+                      </p>
+                    )}
+                  </div>
+                  <span className="font-black text-stone-800 text-xs sm:text-sm pt-0.5">
+                    ฿{item.totalItemPrice.toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Total & Payment Method */}
+            <div className="pt-3 border-t border-stone-200/80 space-y-2">
+              <div className="flex justify-between items-center font-black text-base">
+                <span className="text-stone-900">{t('total', language)}</span>
+                <span className="text-orange-600 text-lg">฿{order.totalPrice.toLocaleString()}</span>
+              </div>
+
+              <div className="flex justify-between items-center text-xs text-stone-500 pt-1 font-medium bg-stone-50 p-2.5 rounded-xl border border-stone-200/60">
+                <span>{t('trackerPaymentMethod', language)}:</span>
+                <span className="font-black text-stone-800">
+                  {order.paymentMethod === 'promptpay' ? t('promptpayQR', language) : t('cashAtCounter', language)}
+                  <span className={`ml-1.5 px-2 py-0.5 rounded-md text-[10px] font-black ${
+                    order.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                  }`}>
+                    {order.paymentStatus === 'paid' ? t('kdsPaid', language) : t('kdsUnpaid', language)}
+                  </span>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Timeline */}
-        <div className="mt-6 space-y-4 text-left">
-          {steps.map((step, idx) => {
-            const isPassed = idx < currentIndex;
-            const isCurrent = idx === currentIndex;
-
-            return (
-              <div key={step.key} className="flex items-start gap-3 relative">
-                {idx < steps.length - 1 && (
-                  <div
-                    className={`absolute left-4 top-8 w-0.5 h-7 ${
-                      idx < currentIndex ? 'bg-orange-500' : 'bg-stone-200'
-                    }`}
-                  />
-                )}
-
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 transition-all ${
-                    isCurrent
-                      ? 'bg-orange-500 text-white ring-4 ring-orange-100 scale-110 shadow'
-                      : isPassed
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-stone-100 text-stone-400'
-                  }`}
-                >
-                  {isPassed ? <CheckCircle2 className="w-4 h-4" /> : step.icon}
-                </div>
-
-                <div className="flex-1 pt-0.5">
-                  <h4
-                    className={`text-sm font-extrabold ${
-                      isCurrent
-                        ? 'text-orange-600'
-                        : isPassed
-                        ? 'text-stone-800'
-                        : 'text-stone-400'
-                    }`}
-                  >
-                    {step.label}
-                  </h4>
-                  <p className="text-xs text-stone-500 leading-tight">
-                    {step.desc}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
+        {/* Footer */}
+        <div className="px-6 py-4 bg-stone-50 border-t border-stone-200/80 flex items-center justify-end gap-3 flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="w-full py-3 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-black text-sm shadow-md shadow-orange-500/25 transition cursor-pointer flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span>{t('trackerOrderMore', language)}</span>
+          </button>
         </div>
       </div>
-
-      {/* Order Summary breakdown */}
-      <div className="bg-white rounded-3xl p-5 border border-stone-200 shadow-xs space-y-3">
-        <h4 className="text-xs font-black text-stone-400 uppercase tracking-wider">
-          {language === 'th' ? 'รายการอาหารที่สั่ง' : 'Ordered Items'} ({order.items.length} {t('items', language)})
-        </h4>
-
-        <div className="divide-y divide-stone-100 text-sm">
-          {order.items.map((item, i) => (
-            <div key={i} className="py-2.5 flex justify-between items-start">
-              <div>
-                <span className="font-extrabold text-stone-800">{item.quantity}x </span>
-                <span className="text-stone-800 font-bold">
-                  {language === 'en' && item.menuItem.nameEn ? item.menuItem.nameEn : item.menuItem.name}
-                </span>
-                {item.selectedOptions.length > 0 && (
-                  <p className="text-[11px] text-stone-400 font-medium">
-                    {item.selectedOptions.map((o) => o.choiceName).join(', ')}
-                  </p>
-                )}
-              </div>
-              <span className="font-bold text-stone-800">
-                ฿{item.totalItemPrice.toLocaleString()}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="pt-2 border-t border-stone-100 flex justify-between font-extrabold text-base">
-          <span>{t('total', language)}</span>
-          <span className="text-orange-600">฿{order.totalPrice.toLocaleString()}</span>
-        </div>
-
-        <div className="text-xs text-stone-400 flex justify-between pt-1 font-medium">
-          <span>{t('trackerPaymentMethod', language)}</span>
-          <span className="font-bold text-stone-700">
-            {order.paymentMethod === 'promptpay' ? t('promptpayQR', language) : t('cashAtCounter', language)} (
-            {order.paymentStatus === 'paid' ? t('kdsPaid', language) : t('kdsUnpaid', language)})
-          </span>
-        </div>
-      </div>
-
-      <button
-        onClick={onOrderMore}
-        className="w-full py-3.5 px-4 rounded-2xl bg-orange-50 hover:bg-orange-100 text-orange-800 font-extrabold text-sm border border-orange-200 transition flex items-center justify-center gap-2 shadow-2xs"
-      >
-        <Plus className="w-4 h-4" /> {t('trackerOrderMore', language)}
-      </button>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 };
