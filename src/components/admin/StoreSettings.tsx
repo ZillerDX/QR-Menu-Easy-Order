@@ -39,7 +39,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
       {/* Top Banner */}
       <div className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
@@ -96,7 +96,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2.5 bg-stone-900 hover:bg-black text-white font-extrabold text-xs sm:text-sm rounded-2xl flex items-center gap-2 transition shadow-xs"
+                  className="px-4 py-2.5 bg-stone-900 hover:bg-black text-white font-extrabold text-xs sm:text-sm rounded-2xl flex items-center gap-2 transition shadow-xs cursor-pointer"
                 >
                   <Upload className="w-4 h-4" />
                   <span>{t('settingsLogoUploadBtn', language)}</span>
@@ -106,7 +106,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
                   <button
                     type="button"
                     onClick={() => setFormData((prev) => ({ ...prev, logoUrl: '' }))}
-                    className="px-3.5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs rounded-2xl transition"
+                    className="px-3.5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs rounded-2xl transition cursor-pointer"
                   >
                     {t('delete', language)}
                   </button>
@@ -244,7 +244,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
         <div className="pt-4 border-t border-stone-100 flex items-center justify-end">
           <button
             type="submit"
-            className="w-full sm:w-auto px-8 py-3.5 bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-black text-sm rounded-2xl shadow-md shadow-orange-500/25 transition flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-8 py-3.5 bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-black text-sm rounded-2xl shadow-md shadow-orange-500/25 transition flex items-center justify-center gap-2 cursor-pointer"
           >
             <span>{t('save', language)}</span>
           </button>
