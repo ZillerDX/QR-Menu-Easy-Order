@@ -25,11 +25,11 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleLanguage,
 }) => {
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-xs">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between py-3">
-        {/* Brand Logo & Name (Consistent across ALL views) */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-600 via-orange-500 to-amber-400 flex items-center justify-center text-white shadow-md shadow-orange-500/20 flex-shrink-0 overflow-hidden">
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-xs h-16 flex items-center">
+      <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between">
+        {/* Brand Logo & Name (Fixed & 100% Consistent across ALL views) */}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-2xl bg-gradient-to-tr from-amber-600 via-orange-500 to-amber-400 flex items-center justify-center text-white shadow-md shadow-orange-500/20 flex-shrink-0 overflow-hidden">
             {storeConfig.logoUrl ? (
               <img
                 src={storeConfig.logoUrl}
@@ -40,18 +40,18 @@ export const Header: React.FC<HeaderProps> = ({
               <Store className="w-5 h-5" />
             )}
           </div>
-          <div>
-            <h1 className="font-black text-stone-900 leading-tight text-base sm:text-lg flex items-center gap-1.5">
+          <div className="min-w-0">
+            <h1 className="font-black text-stone-900 leading-tight text-base sm:text-lg truncate">
               {language === 'en' ? storeConfig.nameEn || storeConfig.name : storeConfig.name}
             </h1>
-            <p className="text-xs text-stone-500 hidden sm:block font-medium">
+            <p className="text-xs text-stone-500 hidden sm:block font-medium truncate">
               {language === 'en' ? storeConfig.taglineEn || storeConfig.tagline : storeConfig.tagline}
             </p>
           </div>
         </div>
 
         {/* Action area */}
-        <div className="flex items-center gap-2 sm:gap-2.5">
+        <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
           {/* Language Toggle Button */}
           <button
             onClick={onToggleLanguage}
@@ -125,6 +125,12 @@ export const Header: React.FC<HeaderProps> = ({
           {activeRole === 'settings' && (
             <div className="flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-200 px-3 py-1.5 rounded-xl text-xs font-black shadow-2xs whitespace-nowrap">
               Store Settings
+            </div>
+          )}
+
+          {activeRole === 'qr' && (
+            <div className="flex items-center gap-1.5 bg-blue-50 text-blue-800 border border-blue-200 px-3 py-1.5 rounded-xl text-xs font-black shadow-2xs whitespace-nowrap">
+              Table QR Stand
             </div>
           )}
         </div>

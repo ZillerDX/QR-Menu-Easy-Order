@@ -46,15 +46,16 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
-      {/* Top Controls & Metrics Bar */}
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
+      {/* Top Controls & Metrics Bar (Aligned identically with Admin / Settings / QR) */}
       <div className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-black text-stone-900">
+            <UtensilsCrossed className="w-6 h-6 text-orange-500 flex-shrink-0" />
+            <h2 className="text-xl font-black text-stone-900 flex items-center gap-2">
               {t('kdsTitle', language)}
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping flex-shrink-0" />
             </h2>
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping flex-shrink-0" />
           </div>
           <p className="text-xs text-stone-500 mt-1">
             {t('kdsSubtitle', language)}
@@ -86,7 +87,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
             <button
               onClick={handleTestSound}
               title="Test sound notification"
-              className="p-2.5 rounded-2xl border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 text-xs font-bold flex items-center gap-1.5 transition"
+              className="p-2.5 rounded-2xl border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
             >
               <Volume2 className="w-4 h-4 text-orange-500" />
               <span className="hidden sm:inline">{t('kdsTestSound', language)}</span>
@@ -94,7 +95,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
 
             <button
               onClick={() => setShowStock(!showStock)}
-              className={`p-2.5 rounded-2xl border text-xs font-bold flex items-center gap-1.5 transition ${
+              className={`p-2.5 rounded-2xl border text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
                 showStock
                   ? 'border-orange-500 bg-orange-50 text-orange-700'
                   : 'border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700'
@@ -107,7 +108,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
             <button
               onClick={onResetData}
               title="Reset test data"
-              className="p-2.5 rounded-2xl border border-stone-200 bg-stone-50 hover:bg-red-50 hover:text-red-600 text-stone-400 text-xs transition"
+              className="p-2.5 rounded-2xl border border-stone-200 bg-stone-50 hover:bg-red-50 hover:text-red-600 text-stone-400 text-xs transition cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
@@ -127,7 +128,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
       <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
         <button
           onClick={() => setFilter('active')}
-          className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 flex-shrink-0 ${
+          className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
             filter === 'active'
               ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25'
               : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
@@ -142,7 +143,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
 
         <button
           onClick={() => setFilter('ready')}
-          className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 flex-shrink-0 ${
+          className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
             filter === 'ready'
               ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25'
               : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
@@ -157,7 +158,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
 
         <button
           onClick={() => setFilter('completed')}
-          className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 flex-shrink-0 ${
+          className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
             filter === 'completed'
               ? 'bg-stone-900 text-white'
               : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
@@ -171,7 +172,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
 
         <button
           onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 flex-shrink-0 ${
+          className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
             filter === 'all'
               ? 'bg-stone-900 text-white'
               : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'

@@ -242,7 +242,7 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-[#fafaf9] text-stone-900 flex flex-col selection:bg-orange-500 selection:text-white">
-      {/* Top Header with Brand Logo & Language Toggle */}
+      {/* Top Header with Fixed Height & Exact Same Logo */}
       <Header
         storeConfig={storeConfig}
         tableNumber={tableNumber}
@@ -255,10 +255,10 @@ export function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1">
+      <main className="flex-1 w-full">
         {/* VIEW 1: CUSTOMER VIEW */}
         {activeRole === 'customer' && (
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
+          <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
             {/* Active Tracked Order Bar */}
             {trackedOrder && (
               <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 rounded-3xl p-4 text-white shadow-lg shadow-orange-500/20 flex items-center justify-between animate-pulse-subtle">
@@ -282,8 +282,8 @@ export function App() {
               </div>
             )}
 
-            {/* Banner / Store Intro */}
-            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 text-white p-6 sm:p-8 shadow-md border border-stone-800">
+            {/* Banner / Store Intro with Standardized p-5 sm:p-6 Padding */}
+            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 text-white p-5 sm:p-6 shadow-md border border-stone-800">
               <div className="relative z-10 max-w-xl space-y-2">
                 <span className="bg-orange-500/95 backdrop-blur-xs text-white text-[11px] font-black px-2.5 py-0.5 rounded-full inline-block mb-1 shadow-xs">
                   {t('heroBadge', language)}
