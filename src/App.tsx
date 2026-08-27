@@ -14,6 +14,7 @@ import { KitchenDashboard } from './components/kitchen/KitchenDashboard';
 import { MenuAdmin } from './components/admin/MenuAdmin';
 import { StoreSettings } from './components/admin/StoreSettings';
 import { QRGenerator } from './components/table-qr/QRGenerator';
+import { ConfirmModal } from './components/common/ConfirmModal';
 import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight } from 'lucide-react';
 
 export function App() {
@@ -34,6 +35,7 @@ export function App() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('promptpay');
   const [activePromptPayOrder, setActivePromptPayOrder] = useState<Order | null>(null);
   const [trackedOrder, setTrackedOrder] = useState<Order | null>(null);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
   // Initialize and check URL query params
   useEffect(() => {
@@ -203,9 +205,12 @@ export function App() {
   };
 
   const handleResetData = () => {
-    if (window.confirm(language === 'th' ? 'ต้องการรีเซ็ตข้อมูลออเดอร์และสต็อกทั้งหมดเพื่อเริ่มทดสอบใหม่หรือไม่?' : 'Reset all orders and stock for testing?')) {
-      syncManager.resetAll();
-    }
+    setIsResetConfirmOpen(true);
+  };
+
+  const handleExecuteResetData = () => {
+    syncManager.resetAll();
+    setIsResetConfirmOpen(false);
   };
 
   const filteredMenuItems = menuItems.filter((item) => {
@@ -484,6 +489,23 @@ export function App() {
         orderNumber={activePromptPayOrder?.orderNumber || ''}
         language={language}
         onPaymentConfirmed={handlePromptPayConfirmed}
+      />
+
+      {/* Reset System Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isResetConfirmOpen}
+        title={language === 'th' ? 'รีเซ็ตข้อมูลระบบ' : 'Reset System Data'}
+        message={
+          language === 'th'
+            ? 'ต้องการรีเซ็ตข้อมูลออเดอร์ สต็อก และการตั้งค่าทั้งหมดเพื่อเริ่มการทดสอบใหม่หรือไม่?'
+            : 'Are you sure you want to reset all test orders, stock availability, and data?'
+        }
+        confirmText={language === 'th' ? 'รีเซ็ตข้อมูล' : 'Reset All'}
+        cancelText={t('cancel', language)}
+        isDestructive={true}
+        icon="warning"
+        onConfirm={handleExecuteResetData}
+        onCancel={() => setIsResetConfirmOpen(false)}
       />
     </div>
   );

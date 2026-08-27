@@ -4,6 +4,7 @@ import { MenuItem, MenuCategory, Language } from '../../types';
 import { t } from '../../utils/i18n';
 import { ItemEditorModal } from './ItemEditorModal';
 import { CategoryModal } from './CategoryModal';
+import { ConfirmModal } from '../common/ConfirmModal';
 
 interface MenuAdminProps {
   menuItems: MenuItem[];
@@ -36,6 +37,19 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(null);
 
+  // Confirm delete modal state
+  const [confirmDelete, setConfirmDelete] = useState<{
+    isOpen: boolean;
+    type: 'item' | 'category';
+    id: string;
+    name: string;
+  }>({
+    isOpen: false,
+    type: 'item',
+    id: '',
+    name: '',
+  });
+
   const filteredItems = menuItems.filter((item) => {
     const matchesSearch =
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -56,10 +70,13 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
     setIsItemModalOpen(true);
   };
 
-  const handleDeleteItem = (itemId: string) => {
-    if (window.confirm(t('adminConfirmDelete', language))) {
-      onDeleteMenuItem(itemId);
-    }
+  const handleDeleteItemClick = (item: MenuItem) => {
+    setConfirmDelete({
+      isOpen: true,
+      type: 'item',
+      id: item.id,
+      name: language === 'en' && item.nameEn ? item.nameEn : item.name,
+    });
   };
 
   const handleAddNewCategory = () => {
@@ -72,15 +89,27 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
     setIsCategoryModalOpen(true);
   };
 
-  const handleDeleteCategory = (catId: string) => {
-    if (catId === 'popular') return;
-    if (window.confirm(t('adminConfirmDelete', language))) {
-      onDeleteCategory(catId);
+  const handleDeleteCategoryClick = (cat: MenuCategory) => {
+    if (cat.id === 'popular') return;
+    setConfirmDelete({
+      isOpen: true,
+      type: 'category',
+      id: cat.id,
+      name: language === 'en' ? (cat.nameEn || cat.name) : cat.name,
+    });
+  };
+
+  const handleExecuteDelete = () => {
+    if (confirmDelete.type === 'item') {
+      onDeleteMenuItem(confirmDelete.id);
+    } else if (confirmDelete.type === 'category') {
+      onDeleteCategory(confirmDelete.id);
     }
+    setConfirmDelete({ isOpen: false, type: 'item', id: '', name: '' });
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
       {/* Top Banner */}
       <div className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
@@ -93,7 +122,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
           </p>
         </div>
 
-        {/* Action button (Single clean plus icon) */}
+        {/* Action button */}
         <div className="flex items-center gap-2 w-full md:w-auto">
           {activeTab === 'items' ? (
             <button
@@ -271,7 +300,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
                       </button>
 
                       <button
-                        onClick={() => handleDeleteItem(item.id)}
+                        onClick={() => handleDeleteItemClick(item)}
                         className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-bold transition cursor-pointer"
                         title={t('delete', language)}
                       >
@@ -322,7 +351,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={() => handleDeleteCategory(cat.id)}
+                      onClick={() => handleDeleteCategoryClick(cat)}
                       className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition cursor-pointer"
                       title={t('delete', language)}
                     >
@@ -352,6 +381,23 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
         category={editingCategory}
         language={language}
         onSave={onSaveCategory}
+      />
+
+      {/* Beautiful Custom Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmDelete.isOpen}
+        title={language === 'th' ? (confirmDelete.type === 'item' ? 'ลบรายการเมนู' : 'ลบหมวดหมู่อาหาร') : (confirmDelete.type === 'item' ? 'Delete Menu Item' : 'Delete Category')}
+        message={
+          language === 'th'
+            ? `คุณแน่ใจหรือไม่ว่าต้องการลบ "${confirmDelete.name}" ออกจากระบบ? การดำเนินการนี้ไม่สามารถยกเลิกได้`
+            : `Are you sure you want to delete "${confirmDelete.name}"? This action cannot be undone.`
+        }
+        confirmText={language === 'th' ? 'ลบรายการ' : 'Delete'}
+        cancelText={t('cancel', language)}
+        isDestructive={true}
+        icon="trash"
+        onConfirm={handleExecuteDelete}
+        onCancel={() => setConfirmDelete({ isOpen: false, type: 'item', id: '', name: '' })}
       />
     </div>
   );
