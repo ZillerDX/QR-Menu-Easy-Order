@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Search, Coffee, Utensils, Check, X, Layers, Sparkles, Flame, Tag } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Coffee, Utensils, Check, X, Layers, Sparkles, Flame, Tag, ChevronDown } from 'lucide-react';
 import { MenuItem, MenuCategory, Language } from '../../types';
 import { t } from '../../utils/i18n';
 import { ItemEditorModal } from './ItemEditorModal';
@@ -93,12 +93,12 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
           </p>
         </div>
 
-        {/* Action button */}
+        {/* Action button (Single clean plus icon) */}
         <div className="flex items-center gap-2 w-full md:w-auto">
           {activeTab === 'items' ? (
             <button
               onClick={handleAddNewItem}
-              className="w-full md:w-auto py-2.5 px-4 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-extrabold text-xs sm:text-sm shadow-md shadow-orange-500/25 flex items-center justify-center gap-1.5 transition whitespace-nowrap"
+              className="w-full md:w-auto py-3 px-5 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-black text-xs sm:text-sm shadow-md shadow-orange-500/25 flex items-center justify-center gap-2 transition whitespace-nowrap cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>{t('adminAddNewItem', language)}</span>
@@ -106,7 +106,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
           ) : (
             <button
               onClick={handleAddNewCategory}
-              className="w-full md:w-auto py-2.5 px-4 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-extrabold text-xs sm:text-sm shadow-md shadow-orange-500/25 flex items-center justify-center gap-1.5 transition whitespace-nowrap"
+              className="w-full md:w-auto py-3 px-5 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-black text-xs sm:text-sm shadow-md shadow-orange-500/25 flex items-center justify-center gap-2 transition whitespace-nowrap cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>{t('adminAddNewCategory', language)}</span>
@@ -119,7 +119,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
       <div className="flex items-center gap-2 border-b border-stone-200 pb-2">
         <button
           onClick={() => setActiveTab('items')}
-          className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
+          className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-black transition flex items-center gap-1.5 cursor-pointer ${
             activeTab === 'items'
               ? 'bg-stone-900 text-white shadow-sm'
               : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
@@ -134,7 +134,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
 
         <button
           onClick={() => setActiveTab('categories')}
-          className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
+          className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-black transition flex items-center gap-1.5 cursor-pointer ${
             activeTab === 'categories'
               ? 'bg-stone-900 text-white shadow-sm'
               : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
@@ -151,44 +151,47 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
       {/* TAB 1: MENU ITEMS LIST */}
       {activeTab === 'items' && (
         <div className="space-y-4">
-          {/* Filter & Search Bar */}
+          {/* Filter & Search Bar with Modern Dropdown */}
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('searchPlaceholder', language)}
-                className="w-full pl-9 pr-4 py-2.5 bg-white border border-stone-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:border-orange-500 shadow-2xs"
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-stone-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:border-orange-500 shadow-2xs font-medium"
               />
             </div>
 
-            {/* Category Dropdown Filter */}
-            <select
-              value={selectedCatFilter}
-              onChange={(e) => setSelectedCatFilter(e.target.value)}
-              className="px-3 py-2.5 bg-white border border-stone-200 rounded-2xl text-xs sm:text-sm font-bold text-stone-800 focus:outline-none focus:border-orange-500 shadow-2xs"
-            >
-              <option value="all">{language === 'th' ? 'ทุกหมวดหมู่' : 'All Categories'}</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {language === 'en' ? c.nameEn : c.name}
-                </option>
-              ))}
-            </select>
+            {/* Modern Category Dropdown */}
+            <div className="relative min-w-[200px]">
+              <select
+                value={selectedCatFilter}
+                onChange={(e) => setSelectedCatFilter(e.target.value)}
+                className="w-full px-4 py-2.5 bg-white border border-stone-200 rounded-2xl text-xs sm:text-sm font-black text-stone-800 focus:outline-none focus:border-orange-500 shadow-2xs appearance-none cursor-pointer pr-9"
+              >
+                <option value="all">{language === 'th' ? 'ทุกหมวดหมู่ (All)' : 'All Categories'}</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {language === 'en' ? (c.nameEn || c.name) : c.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-4 h-4 text-stone-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
 
           {/* Items Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
             {filteredItems.map((item) => {
               const categoryName = categories.find((c) => c.id === item.categoryId);
               return (
                 <div
                   key={item.id}
-                  className="bg-white rounded-3xl p-4 border border-stone-200 shadow-xs flex flex-col justify-between space-y-3"
+                  className="bg-white rounded-3xl p-4 border border-stone-200 shadow-xs flex flex-col justify-between space-y-3 hover:border-orange-200 transition"
                 >
-                  <div className="flex gap-3">
+                  <div className="flex gap-3.5">
                     {/* Item Image */}
                     <div className="relative w-20 h-20 rounded-2xl bg-stone-100 overflow-hidden flex-shrink-0 border border-stone-100">
                       <img
@@ -206,26 +209,26 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
                     {/* Details */}
                     <div className="flex-1 space-y-0.5 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 whitespace-nowrap">
-                          {categoryName ? (language === 'en' ? categoryName.nameEn : categoryName.name) : item.categoryId}
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 whitespace-nowrap">
+                          {categoryName ? (language === 'en' ? (categoryName.nameEn || categoryName.name) : categoryName.name) : item.categoryId}
                         </span>
                         {item.isChefRecommend && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 flex items-center gap-0.5 whitespace-nowrap">
+                          <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 flex items-center gap-0.5 whitespace-nowrap">
                             <Sparkles className="w-2.5 h-2.5" />
                           </span>
                         )}
                         {item.isPopular && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 flex items-center gap-0.5 whitespace-nowrap">
+                          <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 flex items-center gap-0.5 whitespace-nowrap">
                             <Flame className="w-2.5 h-2.5" />
                           </span>
                         )}
                       </div>
 
-                      <h4 className="font-extrabold text-stone-900 text-sm truncate">
+                      <h4 className="font-black text-stone-900 text-sm truncate">
                         {language === 'en' && item.nameEn ? item.nameEn : item.name}
                       </h4>
                       {item.nameEn && language === 'th' && (
-                        <p className="text-[11px] text-stone-400 truncate">{item.nameEn}</p>
+                        <p className="text-[11px] text-stone-400 font-medium truncate">{item.nameEn}</p>
                       )}
                       <p className="text-sm font-black text-orange-600 pt-0.5">
                         ฿{item.price.toLocaleString()}
@@ -238,7 +241,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
                     {/* Stock Switch */}
                     <button
                       onClick={() => onToggleStock(item.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 transition whitespace-nowrap ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 transition whitespace-nowrap cursor-pointer shadow-2xs ${
                         item.isAvailable
                           ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                           : 'bg-red-50 text-red-800 border border-red-200'
@@ -260,7 +263,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
                     <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => handleEditItem(item)}
-                        className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold flex items-center gap-1 transition"
+                        className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold flex items-center gap-1 transition cursor-pointer"
                         title={t('edit', language)}
                       >
                         <Edit2 className="w-3.5 h-3.5" />
@@ -269,7 +272,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
 
                       <button
                         onClick={() => handleDeleteItem(item.id)}
-                        className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-bold transition"
+                        className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-bold transition cursor-pointer"
                         title={t('delete', language)}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -285,7 +288,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
 
       {/* TAB 2: CATEGORIES LIST */}
       {activeTab === 'categories' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 sm:gap-4">
           {categories.map((cat) => {
             const count = menuItems.filter((i) => i.categoryId === cat.id).length;
             const isProtected = cat.id === 'popular';
@@ -293,17 +296,17 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
             return (
               <div
                 key={cat.id}
-                className="bg-white rounded-3xl p-4 border border-stone-200 shadow-xs flex items-center justify-between"
+                className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200 shadow-xs flex items-center justify-between"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-orange-50 text-orange-600 border border-orange-200 flex items-center justify-center font-bold">
+                  <div className="w-11 h-11 rounded-2xl bg-orange-50 text-orange-600 border border-orange-200 flex items-center justify-center font-black">
                     <Coffee className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-extrabold text-stone-900 text-sm">
-                      {language === 'en' ? cat.nameEn : cat.name}
+                    <h4 className="font-black text-stone-900 text-sm">
+                      {language === 'en' ? (cat.nameEn || cat.name) : cat.name}
                     </h4>
-                    <p className="text-[11px] text-stone-400 font-medium">
+                    <p className="text-[11px] text-stone-400 font-bold">
                       {count} {t('adminItemCount', language)}
                     </p>
                   </div>
@@ -313,14 +316,14 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleEditCategory(cat)}
-                      className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 transition"
+                      className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 transition cursor-pointer"
                       title={t('edit', language)}
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleDeleteCategory(cat.id)}
-                      className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition"
+                      className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition cursor-pointer"
                       title={t('delete', language)}
                     >
                       <Trash2 className="w-3.5 h-3.5" />

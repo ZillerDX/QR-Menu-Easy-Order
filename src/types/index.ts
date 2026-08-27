@@ -82,6 +82,7 @@ export interface StoreConfig {
   nameEn: string;
   tagline: string;
   taglineEn: string;
+  logoUrl?: string;
   promptpayNumber: string;
   promptpayName: string;
   openTime: string;

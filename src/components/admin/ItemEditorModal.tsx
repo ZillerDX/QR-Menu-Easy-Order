@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, Sparkles, Flame, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Sparkles, Flame, Upload, Image as ImageIcon, ChevronDown } from 'lucide-react';
 import { MenuItem, MenuCategory, Language } from '../../types';
 import { t } from '../../utils/i18n';
 
@@ -12,18 +12,7 @@ interface ItemEditorModalProps {
   onSave: (item: MenuItem) => void;
 }
 
-const photoPresets = [
-  { label: "Espresso / Coffee", url: "https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=500&auto=format&fit=crop&q=80" },
-  { label: "Dirty Coffee / Latte", url: "https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=500&auto=format&fit=crop&q=80" },
-  { label: "Matcha Latte", url: "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=500&auto=format&fit=crop&q=80" },
-  { label: "Thai Milk Tea", url: "https://images.unsplash.com/photo-1556881286-fc6915169721?w=500&auto=format&fit=crop&q=80" },
-  { label: "Sparkling Drink", url: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&auto=format&fit=crop&q=80" },
-  { label: "Pasta Carbonara", url: "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=500&auto=format&fit=crop&q=80" },
-  { label: "Thai Basil Rice", url: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500&auto=format&fit=crop&q=80" },
-  { label: "Croissant / Pastry", url: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=500&auto=format&fit=crop&q=80" },
-  { label: "Cheesecake / Dessert", url: "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=500&auto=format&fit=crop&q=80" },
-  { label: "Fries / Snacks", url: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=500&auto=format&fit=crop&q=80" },
-];
+const defaultPlaceholderImage = "https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=500&auto=format&fit=crop&q=80";
 
 export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
   isOpen,
@@ -38,13 +27,15 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
     nameEn: '',
     categoryId: categories[0]?.id || 'coffee',
     price: 80,
-    imageUrl: photoPresets[0].url,
+    imageUrl: defaultPlaceholderImage,
     description: '',
     descriptionEn: '',
     isAvailable: true,
     isChefRecommend: false,
     isPopular: false,
   });
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (item) {
@@ -56,7 +47,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
         nameEn: '',
         categoryId: categories.find((c) => c.id !== 'popular')?.id || 'coffee',
         price: 80,
-        imageUrl: photoPresets[0].url,
+        imageUrl: defaultPlaceholderImage,
         description: '',
         descriptionEn: '',
         isAvailable: true,
@@ -68,9 +59,22 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
 
   if (!isOpen) return null;
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setFormData((prev) => ({ ...prev, imageUrl: reader.result as string }));
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.price) return;
+    if (!formData.name || formData.price === undefined) return;
 
     const finalItem: MenuItem = {
       id: formData.id || `item-${Date.now()}`,
@@ -78,7 +82,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
       name: formData.name || '',
       nameEn: formData.nameEn || '',
       price: Number(formData.price),
-      imageUrl: formData.imageUrl || photoPresets[0].url,
+      imageUrl: formData.imageUrl || defaultPlaceholderImage,
       description: formData.description || '',
       descriptionEn: formData.descriptionEn || '',
       isAvailable: formData.isAvailable ?? true,
@@ -101,62 +105,80 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
           </h3>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4 flex-1 text-xs sm:text-sm">
-          {/* Image Preview & URL */}
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1 text-xs sm:text-sm">
+          {/* Direct Image File Upload & Preview */}
           <div className="space-y-2">
-            <label className="block font-bold text-stone-800">
-              {t('adminImageUrl', language)}
+            <label className="block font-black text-stone-800">
+              {t('adminImageUrl', language)} *
             </label>
-            <div className="flex gap-3 items-center">
-              <div className="w-20 h-20 rounded-2xl bg-stone-100 overflow-hidden border border-stone-200 flex-shrink-0">
-                <img
-                  src={formData.imageUrl}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = photoPresets[0].url;
-                  }}
-                />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            
+            <div className="flex flex-col sm:flex-row gap-3.5 items-center">
+              {/* Image Preview Box */}
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-stone-100 overflow-hidden border-2 border-dashed border-stone-300 hover:border-orange-500 cursor-pointer flex-shrink-0 flex items-center justify-center relative group transition"
+                title="Click to upload image"
+              >
+                {formData.imageUrl ? (
+                  <img
+                    src={formData.imageUrl}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-stone-400">
+                    <ImageIcon className="w-6 h-6 mb-1" />
+                    <span className="text-[10px] font-bold">Upload</span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white">
+                  <Upload className="w-5 h-5" />
+                </div>
               </div>
-              <input
-                type="url"
-                value={formData.imageUrl}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                placeholder="https://..."
-                required
-                className="flex-1 px-3.5 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500"
-              />
-            </div>
 
-            {/* Quick Presets */}
-            <div>
-              <span className="text-[11px] font-bold text-stone-500 block mb-1">
-                {t('adminQuickImages', language)}
-              </span>
-              <div className="flex gap-1.5 overflow-x-auto pb-1">
-                {photoPresets.map((preset, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, imageUrl: preset.url })}
-                    className="flex-shrink-0 px-2 py-1 bg-stone-100 hover:bg-orange-100 hover:text-orange-900 rounded-lg text-[11px] font-medium transition"
-                  >
-                    {preset.label}
-                  </button>
-                ))}
+              {/* Upload Button & Optional URL input */}
+              <div className="flex-1 space-y-2 w-full">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full py-2.5 px-4 bg-orange-50 hover:bg-orange-100 text-orange-800 border border-orange-200 font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 transition cursor-pointer"
+                >
+                  <Upload className="w-4 h-4 text-orange-600" />
+                  <span>{t('adminUploadImage', language)}</span>
+                </button>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] text-stone-400 font-medium block">
+                    {t('adminOrUrl', language)}
+                  </span>
+                  <input
+                    type="url"
+                    value={formData.imageUrl?.startsWith('data:') ? '' : formData.imageUrl}
+                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                    placeholder="https://images.unsplash.com/..."
+                    className="w-full px-3 py-2 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500 text-xs"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
           {/* Names */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
               <label className="block font-bold text-stone-800 mb-1">
                 {t('adminItemNameTh', language)} *
@@ -167,7 +189,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="เช่น อเมริกาโน่เย็น"
                 required
-                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold"
               />
             </div>
             <div>
@@ -179,34 +201,37 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
                 value={formData.nameEn}
                 onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
                 placeholder="e.g. Iced Americano"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold"
               />
             </div>
           </div>
 
-          {/* Category & Price */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Category & Price (Removed THB) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
               <label className="block font-bold text-stone-800 mb-1">
                 {t('adminCategory', language)} *
               </label>
-              <select
-                value={formData.categoryId}
-                onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-white focus:outline-none focus:border-orange-500 font-bold"
-              >
-                {categories
-                  .filter((c) => c.id !== 'popular')
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {language === 'en' ? c.nameEn : c.name}
-                    </option>
-                  ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={formData.categoryId}
+                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-white focus:outline-none focus:border-orange-500 font-bold appearance-none cursor-pointer pr-8"
+                >
+                  {categories
+                    .filter((c) => c.id !== 'popular')
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {language === 'en' ? (c.nameEn || c.name) : c.name}
+                      </option>
+                    ))}
+                </select>
+                <ChevronDown className="w-4 h-4 text-stone-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             </div>
             <div>
               <label className="block font-bold text-stone-800 mb-1">
-                {t('adminPrice', language)} *
+                {t('adminPrice', language)} (฿) *
               </label>
               <input
                 type="number"
@@ -215,7 +240,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
                 required
-                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-orange-600"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500 font-black text-orange-600"
               />
             </div>
           </div>
@@ -231,7 +256,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={2}
                 placeholder="รายละเอียดรสชาติ วัตถุดิบ..."
-                className="w-full px-3.5 py-2 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500 resize-none"
+                className="w-full px-3.5 py-2 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500 resize-none text-xs"
               />
             </div>
             <div>
@@ -243,7 +268,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
                 rows={2}
                 placeholder="Flavor profile, ingredients..."
-                className="w-full px-3.5 py-2 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500 resize-none"
+                className="w-full px-3.5 py-2 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500 resize-none text-xs"
               />
             </div>
           </div>
@@ -285,13 +310,13 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-stone-200 hover:bg-stone-100 text-stone-700 font-bold transition text-xs sm:text-sm"
+              className="px-4 py-2.5 rounded-xl border border-stone-200 hover:bg-stone-100 text-stone-700 font-bold transition text-xs sm:text-sm cursor-pointer"
             >
               {t('cancel', language)}
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-extrabold shadow-md shadow-orange-500/25 transition text-xs sm:text-sm"
+              className="px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-black shadow-md shadow-orange-500/25 transition text-xs sm:text-sm cursor-pointer"
             >
               {t('save', language)}
             </button>

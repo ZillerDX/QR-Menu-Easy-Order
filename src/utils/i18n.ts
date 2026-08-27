@@ -3,8 +3,8 @@ import { Language } from '../types';
 export const translations = {
   en: {
     // Header & Brand
-    appName: "Bistro & Craft Cafe",
-    tagline: "Artisan Coffee & Kitchen • Scan & Order Instantly",
+    appName: "Easy Menu",
+    tagline: "Smart Restaurant & Cafe Ordering System",
     table: "Table",
     takeaway: "Takeaway",
     cart: "Cart",
@@ -49,7 +49,8 @@ export const translations = {
     // Roles
     roleCustomer: "Order Menu",
     roleKitchen: "Kitchen (KDS)",
-    roleAdmin: "Menu & Store Admin",
+    roleAdmin: "Menu Items",
+    roleSettings: "Store Settings",
     roleQR: "Table QR Stand",
 
     // Kitchen KDS
@@ -108,18 +109,20 @@ export const translations = {
     qrScanInstruction: "📱 Scan QR code with your phone camera to view menu, place order, and pay instantly without waiting for staff.",
 
     // Menu & Store Admin
-    adminTitle: "Menu & Store Management",
-    adminSubtitle: "Add, edit, and manage menu items, categories, prices, and stock.",
+    adminTitle: "Menu Management",
+    adminSubtitle: "Add, edit, and organize menu items, categories, prices, and stock.",
     adminTabMenus: "Menu Items",
     adminTabCategories: "Categories",
-    adminAddNewItem: "+ Add New Menu Item",
-    adminAddNewCategory: "+ Add New Category",
+    adminAddNewItem: "Add New Menu Item",
+    adminAddNewCategory: "Add New Category",
     adminItemNameTh: "Item Name (Thai)",
     adminItemNameEn: "Item Name (English)",
     adminCategory: "Category",
-    adminPrice: "Price (THB)",
-    adminImageUrl: "Image URL",
-    adminQuickImages: "Or select from photo presets:",
+    adminPrice: "Price",
+    adminImageUrl: "Image",
+    adminUploadImage: "Upload Image from Device",
+    adminUploadHint: "Click or drag image file here (PNG, JPG, WebP)",
+    adminOrUrl: "Or paste image link URL:",
     adminDescTh: "Description (Thai)",
     adminDescEn: "Description (English)",
     adminHighlightBadges: "Highlight Badges",
@@ -130,11 +133,27 @@ export const translations = {
     adminCategoryIcon: "Category Icon",
     adminConfirmDelete: "Are you sure you want to delete this item?",
     adminItemCount: "items",
+
+    // Store Settings
+    settingsTitle: "Store & Branding Settings",
+    settingsSubtitle: "Customize your store name, logo profile, PromptPay payment details, and tables.",
+    settingsStoreNameTh: "Store Name (Thai)",
+    settingsStoreNameEn: "Store Name (English)",
+    settingsTaglineTh: "Tagline / Slogan (Thai)",
+    settingsTaglineEn: "Tagline / Slogan (English)",
+    settingsLogoTitle: "Store Logo / Profile Picture",
+    settingsLogoUploadBtn: "Upload New Logo",
+    settingsLogoHint: "Recommended square aspect ratio (PNG, JPG, SVG)",
+    settingsPromptPayNo: "PromptPay Phone Number or National ID",
+    settingsPromptPayName: "PromptPay Account Name",
+    settingsTableCount: "Number of Tables",
+    settingsOpenHours: "Opening Hours",
+    settingsSaveSuccess: "Store settings saved successfully!",
   },
   th: {
     // Header & Brand
-    appName: "Bistro & Craft Cafe",
-    tagline: "อาหารและเครื่องดื่มคราฟต์ สแกนสั่งง่ายไม่ต้องรอคิว",
+    appName: "Easy Menu",
+    tagline: "ระบบสั่งอาหารและจัดการร้านอัจฉริยะ",
     table: "โต๊ะ",
     takeaway: "สั่งกลับบ้าน",
     cart: "ตะกร้า",
@@ -179,7 +198,8 @@ export const translations = {
     // Roles
     roleCustomer: "สั่งอาหาร",
     roleKitchen: "จอห้องครัว (KDS)",
-    roleAdmin: "จัดการเมนู & ร้านค้า",
+    roleAdmin: "จัดการเมนู",
+    roleSettings: "ตั้งค่าร้านค้า",
     roleQR: "การ์ด QR โต๊ะ",
 
     // Kitchen KDS
@@ -238,18 +258,20 @@ export const translations = {
     qrScanInstruction: "📱 เปิดกล้องมือถือสแกน QR เพื่อดูเมนูทั้งหมด สั่งอาหาร และชำระเงินผ่านมือถือโดยไม่ต้องรอพนักงาน",
 
     // Menu & Store Admin
-    adminTitle: "ระบบจัดการเมนู & หมวดหมู่ (Menu Admin)",
+    adminTitle: "ระบบจัดการเมนูอาหาร (Menu Management)",
     adminSubtitle: "เพิ่ม ลบ แก้ไข เมนูอาหาร หมวดหมู่ และราคาสำหรับเจ้าของร้าน",
     adminTabMenus: "รายการเมนูอาหาร",
     adminTabCategories: "หมวดหมู่อาหาร",
-    adminAddNewItem: "+ เพิ่มเมนูใหม่",
-    adminAddNewCategory: "+ เพิ่มหมวดหมู่ใหม่",
+    adminAddNewItem: "เพิ่มเมนูใหม่",
+    adminAddNewCategory: "เพิ่มหมวดหมู่ใหม่",
     adminItemNameTh: "ชื่อเมนู (ภาษาไทย)",
     adminItemNameEn: "ชื่อเมนู (English)",
     adminCategory: "หมวดหมู่",
-    adminPrice: "ราคา (บาท)",
-    adminImageUrl: "ลิงก์รูปภาพ (Image URL)",
-    adminQuickImages: "หรือเลือกรูปภาพตัวอย่าง:",
+    adminPrice: "ราคา",
+    adminImageUrl: "รูปภาพเมนู",
+    adminUploadImage: "อัปโหลดรูปภาพจากอุปกรณ์",
+    adminUploadHint: "คลิกหรือลากไฟล์ภาพมาวางที่นี่ (PNG, JPG, WebP)",
+    adminOrUrl: "หรือระบุลิงก์รูปภาพ (Image URL):",
     adminDescTh: "รายละเอียดเมนู (ภาษาไทย)",
     adminDescEn: "รายละเอียดเมนู (English)",
     adminHighlightBadges: "ป้ายกำกับพิเศษ",
@@ -260,10 +282,26 @@ export const translations = {
     adminCategoryIcon: "ไอคอนหมวดหมู่",
     adminConfirmDelete: "คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?",
     adminItemCount: "เมนู",
+
+    // Store Settings
+    settingsTitle: "ตั้งค่าร้านค้า & ข้อมูลแบรนด์ (Store Settings)",
+    settingsSubtitle: "ตั้งชื่อร้าน สโลแกน อัปโหลดโลโก้ร้าน เบอร์พร้อมเพย์ และจำนวนโต๊ะ",
+    settingsStoreNameTh: "ชื่อร้าน (ภาษาไทย)",
+    settingsStoreNameEn: "ชื่อร้าน (English)",
+    settingsTaglineTh: "สโลแกน / คำโปรย (ภาษาไทย)",
+    settingsTaglineEn: "สโลแกน / คำโปรย (English)",
+    settingsLogoTitle: "โลโก้ / รูปโปรไฟล์ร้าน",
+    settingsLogoUploadBtn: "อัปโหลดโลโก้ใหม่",
+    settingsLogoHint: "แนะนำรูปภาพสี่เหลี่ยมจัตุรัส (PNG, JPG, SVG)",
+    settingsPromptPayNo: "เบอร์พร้อมเพย์ หรือ เลขบัตรประชาชน",
+    settingsPromptPayName: "ชื่อบัญชีพร้อมเพย์",
+    settingsTableCount: "จำนวนโต๊ะในร้าน",
+    settingsOpenHours: "เวลาเปิด - ปิดร้าน",
+    settingsSaveSuccess: "บันทึกข้อมูลการตั้งค่าร้านค้าเรียบร้อยแล้ว!",
   },
 };
 
-const LANG_STORAGE_KEY = 'qr_menu_preferred_lang_v1';
+const LANG_STORAGE_KEY = 'qr_menu_preferred_lang_v2';
 
 export function getInitialLanguage(): Language {
   if (typeof window === 'undefined') return 'en';

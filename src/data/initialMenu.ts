@@ -1,13 +1,14 @@
 import { MenuCategory, MenuItem, StoreConfig } from '../types';
 
 export const initialStoreConfig: StoreConfig = {
-  name: "Bistro & Craft Cafe",
-  nameEn: "Bistro & Craft Cafe",
-  tagline: "อาหารและเครื่องดื่มคราฟต์ สแกนสั่งง่ายไม่ต้องรอคิว",
-  taglineEn: "Artisan Coffee & Kitchen • Scan & Order Instantly",
+  name: "Easy Menu",
+  nameEn: "Easy Menu",
+  tagline: "ระบบสั่งอาหารและจัดการร้านอัจฉริยะ",
+  taglineEn: "Smart Ordering & Kitchen Management System",
+  logoUrl: "",
   promptpayNumber: "0812345678",
-  promptpayName: "บิสโทร แอนด์ คราฟต์ คาเฟ่",
-  openTime: "08:30 - 21:00 น.",
+  promptpayName: "อีซี่ เมนู (Easy Menu)",
+  openTime: "08:00 - 22:00 น.",
   tableCount: 15,
 };
 

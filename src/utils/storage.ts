@@ -1,17 +1,18 @@
 import { Order, MenuItem, MenuCategory, StoreConfig } from '../types';
 import { initialMenuItems, initialCategories, initialStoreConfig } from '../data/initialMenu';
 
-const ORDERS_KEY = 'qr_menu_orders_v2';
-const MENU_KEY = 'qr_menu_items_v2';
-const CATEGORIES_KEY = 'qr_menu_categories_v2';
-const STORE_KEY = 'qr_menu_store_config_v2';
-const CHANNEL_NAME = 'qr_menu_realtime_sync_v2';
+const ORDERS_KEY = 'qr_menu_orders_v3';
+const MENU_KEY = 'qr_menu_items_v3';
+const CATEGORIES_KEY = 'qr_menu_categories_v3';
+const STORE_KEY = 'qr_menu_store_config_v3';
+const CHANNEL_NAME = 'qr_menu_realtime_sync_v3';
 
 export type SyncEventType = 
   | { type: 'ORDER_CREATED'; payload: Order }
   | { type: 'ORDER_STATUS_UPDATED'; payload: Order }
   | { type: 'MENU_UPDATED'; payload: MenuItem[] }
   | { type: 'CATEGORIES_UPDATED'; payload: MenuCategory[] }
+  | { type: 'STORE_CONFIG_UPDATED'; payload: StoreConfig }
   | { type: 'SYSTEM_RESET' };
 
 type EventListener = (event: SyncEventType) => void;
@@ -190,7 +191,13 @@ class RealtimeSyncManager {
     }
   }
 
-  // --- Reset All (For testing) ---
+  saveStoreConfig(config: StoreConfig): StoreConfig {
+    localStorage.setItem(STORE_KEY, JSON.stringify(config));
+    this.broadcast({ type: 'STORE_CONFIG_UPDATED', payload: config });
+    return config;
+  }
+
+  // --- Reset All ---
   resetAll() {
     localStorage.removeItem(ORDERS_KEY);
     localStorage.removeItem(MENU_KEY);

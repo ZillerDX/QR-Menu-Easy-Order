@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MenuItem, MenuCategory, CartItem, Order, OrderStatus, PaymentMethod, SelectedOption, Language } from './types';
+import { MenuItem, MenuCategory, CartItem, Order, OrderStatus, PaymentMethod, SelectedOption, Language, StoreConfig } from './types';
 import { syncManager } from './utils/storage';
 import { soundService } from './utils/sound';
 import { t, getInitialLanguage, saveLanguagePreference } from './utils/i18n';
@@ -12,11 +12,12 @@ import { PromptPayModal } from './components/customer/PromptPayModal';
 import { OrderTracker } from './components/customer/OrderTracker';
 import { KitchenDashboard } from './components/kitchen/KitchenDashboard';
 import { MenuAdmin } from './components/admin/MenuAdmin';
+import { StoreSettings } from './components/admin/StoreSettings';
 import { QRGenerator } from './components/table-qr/QRGenerator';
 import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight } from 'lucide-react';
 
 export function App() {
-  const [storeConfig] = useState(() => syncManager.getStoreConfig());
+  const [storeConfig, setStoreConfig] = useState<StoreConfig>(() => syncManager.getStoreConfig());
   const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
   const [activeRole, setActiveRole] = useState<AppRole>('customer');
   const [tableNumber, setTableNumber] = useState('01');
@@ -42,10 +43,11 @@ export function App() {
       setTableNumber(tableParam);
     }
     const roleParam = params.get('role');
-    if (roleParam === 'kitchen' || roleParam === 'admin' || roleParam === 'qr') {
+    if (roleParam === 'kitchen' || roleParam === 'admin' || roleParam === 'settings' || roleParam === 'qr') {
       setActiveRole(roleParam as AppRole);
     }
 
+    setStoreConfig(syncManager.getStoreConfig());
     setCategories(syncManager.getCategories());
     setMenuItems(syncManager.getMenuItems());
     setOrders(syncManager.getOrders());
@@ -61,7 +63,10 @@ export function App() {
         setMenuItems(event.payload);
       } else if (event.type === 'CATEGORIES_UPDATED') {
         setCategories(event.payload);
+      } else if (event.type === 'STORE_CONFIG_UPDATED') {
+        setStoreConfig(event.payload);
       } else if (event.type === 'SYSTEM_RESET') {
+        setStoreConfig(syncManager.getStoreConfig());
         setCategories(syncManager.getCategories());
         setMenuItems(syncManager.getMenuItems());
         setOrders([]);
@@ -80,6 +85,11 @@ export function App() {
     const url = new URL(window.location.href);
     url.searchParams.set('lang', nextLang);
     window.history.replaceState({}, '', url.toString());
+  };
+
+  const handleSaveStoreConfig = (config: StoreConfig) => {
+    syncManager.saveStoreConfig(config);
+    setStoreConfig(config);
   };
 
   const handleAddToCart = (
@@ -232,7 +242,7 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-[#fafaf9] text-stone-900 flex flex-col selection:bg-orange-500 selection:text-white">
-      {/* Top Header with Brand & Language Toggle */}
+      {/* Top Header with Brand Logo & Language Toggle */}
       <Header
         storeConfig={storeConfig}
         tableNumber={tableNumber}
@@ -249,7 +259,7 @@ export function App() {
         {/* VIEW 1: CUSTOMER VIEW */}
         {activeRole === 'customer' && (
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
-            {/* If there is an active tracked order, show tracker bar */}
+            {/* Active Tracked Order Bar */}
             {trackedOrder && (
               <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 rounded-3xl p-4 text-white shadow-lg shadow-orange-500/20 flex items-center justify-between animate-pulse-subtle">
                 <div>
@@ -265,7 +275,7 @@ export function App() {
                 </div>
                 <button
                   onClick={() => setTrackedOrder(trackedOrder)}
-                  className="px-3.5 py-1.5 rounded-xl bg-white text-orange-600 font-black text-xs shadow hover:bg-orange-50 transition"
+                  className="px-3.5 py-1.5 rounded-xl bg-white text-orange-600 font-black text-xs shadow hover:bg-orange-50 transition cursor-pointer"
                 >
                   {t('viewStatus', language)}
                 </button>
@@ -279,10 +289,10 @@ export function App() {
                   {t('heroBadge', language)}
                 </span>
                 <h2 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight leading-tight">
-                  {t('heroTitle', language)}
+                  {language === 'en' ? storeConfig.nameEn || storeConfig.name : storeConfig.name}
                 </h2>
                 <p className="text-xs sm:text-sm text-stone-300 font-normal leading-relaxed">
-                  {t('heroSubtitle', language)}
+                  {language === 'en' ? storeConfig.taglineEn || storeConfig.tagline : storeConfig.tagline}
                 </p>
               </div>
             </div>
@@ -300,22 +310,22 @@ export function App() {
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-stone-400 hover:text-stone-600 font-bold"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-stone-400 hover:text-stone-600 font-bold cursor-pointer"
                 >
                   {t('clear', language)}
                 </button>
               )}
             </div>
 
-            {/* Category Pills */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+            {/* Responsive Category Pills Bar */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar touch-pan-x">
               {categories.map((cat) => {
                 const isActive = selectedCategory === cat.id;
                 return (
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex-shrink-0 ${
+                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex-shrink-0 cursor-pointer ${
                       isActive
                         ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25 scale-[1.02]'
                         : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
@@ -328,13 +338,13 @@ export function App() {
               })}
             </div>
 
-            {/* Menu Items Grid */}
+            {/* Menu Items Grid - Fully Responsive */}
             <div>
               <div className="flex items-center justify-between mb-3 px-1">
                 <h3 className="font-extrabold text-stone-900 text-sm sm:text-base">
                   {language === 'en'
-                    ? categories.find((c) => c.id === selectedCategory)?.nameEn || 'Menu Items'
-                    : categories.find((c) => c.id === selectedCategory)?.name || 'รายการเมนู'}
+                    ? (categories.find((c) => c.id === selectedCategory)?.nameEn || 'Menu Items')
+                    : (categories.find((c) => c.id === selectedCategory)?.name || 'รายการเมนู')}
                 </h3>
                 <span className="text-xs text-stone-400 font-bold">
                   {filteredMenuItems.length} {t('items', language)}
@@ -370,7 +380,7 @@ export function App() {
               <div className="fixed bottom-16 left-4 right-4 z-30 max-w-md mx-auto animate-in slide-in-from-bottom-5">
                 <button
                   onClick={() => setIsCartOpen(true)}
-                  className="w-full bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white p-3.5 rounded-2xl shadow-xl shadow-orange-500/40 flex items-center justify-between transition"
+                  className="w-full bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white p-3.5 rounded-2xl shadow-xl shadow-orange-500/40 flex items-center justify-between transition cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center font-black text-xs">
@@ -416,7 +426,16 @@ export function App() {
           />
         )}
 
-        {/* VIEW 4: TABLE QR GENERATOR */}
+        {/* VIEW 4: STORE SETTINGS */}
+        {activeRole === 'settings' && (
+          <StoreSettings
+            storeConfig={storeConfig}
+            language={language}
+            onSave={handleSaveStoreConfig}
+          />
+        )}
+
+        {/* VIEW 5: TABLE QR GENERATOR */}
         {activeRole === 'qr' && (
           <QRGenerator storeConfig={storeConfig} language={language} />
         )}
