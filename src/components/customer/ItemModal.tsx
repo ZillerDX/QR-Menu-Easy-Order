@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { MenuItem, SelectedOption, Language } from '../../types';
 import { soundService } from '../../utils/sound';
@@ -43,6 +44,17 @@ export const ItemModal: React.FC<ItemModalProps> = ({
       setQuantity(1);
       setSpecialNote('');
     }
+  }, [item]);
+
+  useEffect(() => {
+    if (item) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [item]);
 
   if (!item) return null;
@@ -105,9 +117,13 @@ export const ItemModal: React.FC<ItemModalProps> = ({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/65 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+      <div 
+        className="fixed inset-0 bg-stone-950/75 backdrop-blur-md transition-opacity"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-lg bg-white rounded-t-[32px] sm:rounded-[28px] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom-5 duration-200 z-10 border border-stone-200/80">
         {/* Modal Header / Hero Image */}
         <div className="relative w-full h-48 sm:h-56 bg-stone-100 flex-shrink-0">
           <img
@@ -117,14 +133,14 @@ export const ItemModal: React.FC<ItemModalProps> = ({
           />
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-sm transition shadow-sm"
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-sm transition shadow-sm cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 overflow-y-auto space-y-5 flex-1">
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1 min-h-0">
           <div>
             <div className="flex items-start justify-between gap-2">
               <div>
@@ -144,7 +160,7 @@ export const ItemModal: React.FC<ItemModalProps> = ({
                 </span>
               </div>
             </div>
-            <p className="text-xs text-stone-500 mt-1.5 leading-relaxed">
+            <p className="text-xs text-stone-500 mt-1.5 leading-relaxed font-medium">
               {language === 'en' && item.descriptionEn ? item.descriptionEn : item.description}
             </p>
           </div>
@@ -233,25 +249,25 @@ export const ItemModal: React.FC<ItemModalProps> = ({
                   ? 'เช่น แยกน้ำแข็ง, ขอช้อนส้อม, ไม่ใส่ผักชี'
                   : 'e.g. Less ice, extra napkin, no dressing'
               }
-              className="w-full px-3.5 py-2.5 rounded-2xl border border-stone-200 text-sm focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+              className="w-full px-3.5 py-2.5 rounded-2xl border border-stone-200 text-sm focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 font-medium"
             />
           </div>
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 bg-stone-50 border-t border-stone-100 flex items-center justify-between gap-4">
+        <div className="p-4 bg-stone-50 border-t border-stone-100 flex items-center justify-between gap-4 flex-shrink-0">
           <div className="flex items-center bg-white border border-stone-200 rounded-2xl p-1 shadow-xs">
             <button
               onClick={() => setQuantity((q) => Math.max(1, q - 1))}
               disabled={quantity <= 1}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-stone-600 hover:bg-stone-100 disabled:opacity-30"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-stone-600 hover:bg-stone-100 disabled:opacity-30 cursor-pointer"
             >
               <Minus className="w-4 h-4" />
             </button>
             <span className="w-9 text-center font-bold text-sm">{quantity}</span>
             <button
               onClick={() => setQuantity((q) => q + 1)}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-stone-600 hover:bg-stone-100"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-stone-600 hover:bg-stone-100 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -259,7 +275,7 @@ export const ItemModal: React.FC<ItemModalProps> = ({
 
           <button
             onClick={handleAdd}
-            className="flex-1 py-3 px-4 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-bold text-sm shadow-md shadow-orange-500/25 flex items-center justify-between transition"
+            className="flex-1 py-3 px-4 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-black text-sm shadow-md shadow-orange-500/25 flex items-center justify-between transition cursor-pointer"
           >
             <span className="flex items-center gap-2">
               <ShoppingBag className="w-4 h-4" />
@@ -271,4 +287,6 @@ export const ItemModal: React.FC<ItemModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 };

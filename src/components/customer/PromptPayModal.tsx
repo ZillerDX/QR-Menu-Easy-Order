@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import QRCode from 'qrcode';
 import { X, CheckCircle2, ShieldCheck, QrCode } from 'lucide-react';
 import { Language } from '../../types';
@@ -42,11 +43,26 @@ export const PromptPayModal: React.FC<PromptPayModalProps> = ({
     }
   }, [isOpen, promptpayNumber, amount]);
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-sm bg-white rounded-[28px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 border border-stone-200/80">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div 
+        className="fixed inset-0 bg-stone-950/75 backdrop-blur-md transition-opacity"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-sm bg-white rounded-[28px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 border border-stone-200/80 z-10">
         {/* Modern PromptPay Header */}
         <div className="bg-gradient-to-r from-[#003B71] to-[#002850] text-white p-5 text-center relative">
           <button
@@ -104,4 +120,6 @@ export const PromptPayModal: React.FC<PromptPayModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 };

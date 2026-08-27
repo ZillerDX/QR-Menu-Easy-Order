@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Coffee, Sparkles, CupSoda, Utensils, Cake, Pizza, Heart, Tag } from 'lucide-react';
 import { MenuCategory, Language } from '../../types';
 import { t } from '../../utils/i18n';
@@ -47,6 +48,17 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
     }
   }, [category, isOpen]);
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -64,9 +76,13 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-white rounded-[28px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/80">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div 
+        className="fixed inset-0 bg-stone-950/75 backdrop-blur-md transition-opacity"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-md bg-white rounded-[28px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/80 z-10">
         {/* Header */}
         <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between bg-white">
           <div className="flex items-center gap-3">
@@ -156,13 +172,13 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-3 rounded-2xl border border-stone-200 hover:bg-stone-100 text-stone-700 font-black transition text-xs sm:text-sm cursor-pointer"
+              className="px-5 py-2.5 rounded-2xl border border-stone-200 hover:bg-stone-100 text-stone-700 font-black transition text-xs sm:text-sm cursor-pointer"
             >
               {t('cancel', language)}
             </button>
             <button
               type="submit"
-              className="px-8 py-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] text-white font-black shadow-lg shadow-orange-500/25 transition text-xs sm:text-sm cursor-pointer"
+              className="px-8 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] text-white font-black shadow-lg shadow-orange-500/25 transition text-xs sm:text-sm cursor-pointer"
             >
               {t('save', language)}
             </button>
@@ -171,4 +187,6 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 };

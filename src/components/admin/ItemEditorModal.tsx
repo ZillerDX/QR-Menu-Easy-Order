@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Sparkles, Flame, Upload, Image as ImageIcon, ChevronDown, Check, Link2, Utensils } from 'lucide-react';
 import { MenuItem, MenuCategory, Language } from '../../types';
 import { t } from '../../utils/i18n';
@@ -60,6 +61,18 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
     }
   }, [item, categories, isOpen]);
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,12 +111,19 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/60 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="w-full max-w-2xl bg-white rounded-[28px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col border border-stone-200/80">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+      {/* Full-Screen Dark Overlay Covering 100% of Viewport */}
+      <div 
+        className="fixed inset-0 bg-stone-950/75 backdrop-blur-md transition-opacity"
+        onClick={onClose}
+      />
+
+      {/* Modal Dialog */}
+      <div className="relative w-full max-w-2xl bg-white rounded-[28px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col border border-stone-200/80 z-10">
         
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between bg-white sticky top-0 z-10">
+        {/* 1. Fixed Header */}
+        <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between bg-white flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-orange-50 text-orange-600 border border-orange-200/60 flex items-center justify-center flex-shrink-0 shadow-2xs">
               <Utensils className="w-5 h-5" />
@@ -121,6 +141,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             className="w-9 h-9 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center transition cursor-pointer"
             title={t('close', language)}
@@ -129,11 +150,11 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 flex-1 text-xs sm:text-sm">
+        {/* 2. Scrollable Body */}
+        <form id="item-editor-form" onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 flex-1 min-h-0 text-xs sm:text-sm">
           
           {/* SECTION 1: PHOTO UPLOAD CARD */}
-          <div className="bg-stone-50/80 rounded-3xl p-4 sm:p-5 border border-stone-200/70 space-y-3">
+          <div className="bg-stone-50/90 rounded-3xl p-4 sm:p-5 border border-stone-200/80 space-y-3">
             <div className="flex items-center justify-between">
               <label className="font-black text-stone-900 text-xs sm:text-sm flex items-center gap-1.5">
                 <ImageIcon className="w-4 h-4 text-orange-500" />
@@ -375,25 +396,29 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
               </div>
             </div>
           </div>
-
-          {/* Footer Submit Bar */}
-          <div className="pt-5 border-t border-stone-100 flex items-center justify-end gap-3 sticky bottom-0 bg-white pb-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 py-3 rounded-2xl border border-stone-200 hover:bg-stone-100 text-stone-700 font-black transition text-xs sm:text-sm cursor-pointer"
-            >
-              {t('cancel', language)}
-            </button>
-            <button
-              type="submit"
-              className="px-8 py-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] text-white font-black shadow-lg shadow-orange-500/25 transition text-xs sm:text-sm cursor-pointer flex items-center gap-2"
-            >
-              <span>{t('save', language)}</span>
-            </button>
-          </div>
         </form>
+
+        {/* 3. Fixed Footer Action Bar (Separated from form scroll, never overlapping) */}
+        <div className="px-6 py-4 bg-stone-50 border-t border-stone-200/80 flex items-center justify-end gap-3 flex-shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-2xl border border-stone-200 hover:bg-stone-200 text-stone-700 font-black transition text-xs sm:text-sm cursor-pointer"
+          >
+            {t('cancel', language)}
+          </button>
+          <button
+            type="submit"
+            form="item-editor-form"
+            className="px-8 py-2.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] text-white font-black shadow-lg shadow-orange-500/25 transition text-xs sm:text-sm cursor-pointer flex items-center gap-2"
+          >
+            <span>{t('save', language)}</span>
+          </button>
+        </div>
+
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 };
