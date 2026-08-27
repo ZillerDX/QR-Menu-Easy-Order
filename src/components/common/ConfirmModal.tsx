@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Trash2, X, Check } from 'lucide-react';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -18,7 +18,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   isOpen,
   title,
   message,
-  confirmText = 'Confirm',
+  confirmText = 'OK',
   cancelText = 'Cancel',
   isDestructive = true,
   icon = 'trash',
@@ -40,14 +40,14 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   const modalContent = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
-      {/* Backdrop */}
+      {/* Full Dark Overlay */}
       <div
-        className="fixed inset-0 bg-stone-950/75 backdrop-blur-md transition-opacity"
+        className="fixed inset-0 bg-stone-950/80 backdrop-blur-md transition-opacity"
         onClick={onCancel}
       />
 
       {/* Dialog Card */}
-      <div className="relative w-full max-w-md bg-white rounded-[28px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/80 z-10 p-6 sm:p-7 text-center space-y-5">
+      <div className="relative w-full max-w-sm sm:max-w-md bg-white rounded-[28px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/80 z-10 p-6 sm:p-7 text-center space-y-5">
         
         {/* Top Close Button */}
         <button
@@ -67,8 +67,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="space-y-1.5">
-          <h3 className="font-black text-stone-900 text-lg sm:text-xl">
+        <div className="space-y-2">
+          <h3 className="font-black text-stone-900 text-lg sm:text-xl leading-snug">
             {title}
           </h3>
           <p className="text-xs sm:text-sm text-stone-500 font-medium leading-relaxed max-w-xs mx-auto">
@@ -76,26 +76,28 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </p>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons: Cancel & OK */}
         <div className="grid grid-cols-2 gap-3 pt-2">
           <button
             type="button"
             onClick={onCancel}
-            className="w-full py-3 px-4 rounded-2xl border border-stone-200 hover:bg-stone-100 text-stone-700 font-black text-xs sm:text-sm transition cursor-pointer shadow-2xs"
+            className="w-full py-3 px-4 rounded-2xl border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 font-black text-xs sm:text-sm transition cursor-pointer shadow-2xs flex items-center justify-center gap-1.5"
           >
-            {cancelText}
+            <X className="w-4 h-4 text-stone-400" />
+            <span>{cancelText}</span>
           </button>
           
           <button
             type="button"
             onClick={onConfirm}
-            className={`w-full py-3 px-4 rounded-2xl font-black text-xs sm:text-sm text-white transition cursor-pointer shadow-md active:scale-[0.98] ${
+            className={`w-full py-3 px-4 rounded-2xl font-black text-xs sm:text-sm text-white transition cursor-pointer shadow-md active:scale-[0.98] flex items-center justify-center gap-1.5 ${
               isDestructive
-                ? 'bg-red-600 hover:bg-red-700 shadow-red-600/25'
-                : 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/25'
+                ? 'bg-red-600 hover:bg-red-700 shadow-red-600/30'
+                : 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/30'
             }`}
           >
-            {confirmText}
+            <Check className="w-4 h-4 stroke-[3]" />
+            <span>{confirmText}</span>
           </button>
         </div>
       </div>

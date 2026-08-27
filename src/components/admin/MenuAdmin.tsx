@@ -383,17 +383,17 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
         onSave={onSaveCategory}
       />
 
-      {/* Beautiful Custom Delete Confirmation Modal */}
+      {/* Beautiful Custom Delete Confirmation Modal with OK & Cancel */}
       <ConfirmModal
         isOpen={confirmDelete.isOpen}
-        title={language === 'th' ? (confirmDelete.type === 'item' ? 'ลบรายการเมนู' : 'ลบหมวดหมู่อาหาร') : (confirmDelete.type === 'item' ? 'Delete Menu Item' : 'Delete Category')}
+        title={language === 'th' ? (confirmDelete.type === 'item' ? 'ยืนยันการลบเมนู' : 'ยืนยันการลบหมวดหมู่') : (confirmDelete.type === 'item' ? 'Delete Menu Item' : 'Delete Category')}
         message={
           language === 'th'
-            ? `คุณแน่ใจหรือไม่ว่าต้องการลบ "${confirmDelete.name}" ออกจากระบบ? การดำเนินการนี้ไม่สามารถยกเลิกได้`
+            ? `คุณแน่ใจหรือไม่ว่าต้องการลบ "${confirmDelete.name}"? การดำเนินการนี้ไม่สามารถยกเลิกได้`
             : `Are you sure you want to delete "${confirmDelete.name}"? This action cannot be undone.`
         }
-        confirmText={language === 'th' ? 'ลบรายการ' : 'Delete'}
-        cancelText={t('cancel', language)}
+        confirmText={language === 'th' ? 'ตกลง (ลบรายการ)' : 'OK (Delete)'}
+        cancelText={language === 'th' ? 'ยกเลิก' : 'Cancel'}
         isDestructive={true}
         icon="trash"
         onConfirm={handleExecuteDelete}
