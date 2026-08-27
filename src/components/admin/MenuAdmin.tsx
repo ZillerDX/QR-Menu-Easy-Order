@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Search, Coffee, Utensils, Check, X, Layers, Sparkles, Flame, Tag, ChevronDown } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Plus, Edit2, Trash2, Search, Coffee, Utensils, Check, X, Layers, Sparkles, Flame, Tag, ChevronDown, CupSoda, Cake, Pizza, Heart } from 'lucide-react';
 import { MenuItem, MenuCategory, Language } from '../../types';
 import { t } from '../../utils/i18n';
 import { ItemEditorModal } from './ItemEditorModal';
@@ -30,6 +30,8 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
   const [activeTab, setActiveTab] = useState<'items' | 'categories'>('items');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCatFilter, setSelectedCatFilter] = useState<string>('all');
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -49,6 +51,18 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
     id: '',
     name: '',
   });
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(e.target as Node)) {
+        setIsFilterDropdownOpen(false);
+      }
+    };
+    if (isFilterDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isFilterDropdownOpen]);
 
   const filteredItems = menuItems.filter((item) => {
     const matchesSearch =
@@ -108,6 +122,21 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
     setConfirmDelete({ isOpen: false, type: 'item', id: '', name: '' });
   };
 
+  const getCategoryIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'Sparkles': return <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />;
+      case 'Coffee': return <Coffee className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />;
+      case 'CupSoda': return <CupSoda className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />;
+      case 'Utensils': return <Utensils className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />;
+      case 'Cake': return <Cake className="w-3.5 h-3.5 text-pink-500 flex-shrink-0" />;
+      case 'Pizza': return <Pizza className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />;
+      case 'Heart': return <Heart className="w-3.5 h-3.5 text-rose-500 flex-shrink-0" />;
+      default: return <Coffee className="w-3.5 h-3.5 text-stone-500 flex-shrink-0" />;
+    }
+  };
+
+  const activeFilterCat = categories.find((c) => c.id === selectedCatFilter);
+
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
       {/* Top Banner */}
@@ -127,7 +156,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
           {activeTab === 'items' ? (
             <button
               onClick={handleAddNewItem}
-              className="w-full md:w-auto py-3 px-5 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-black text-xs sm:text-sm shadow-md shadow-orange-500/25 flex items-center justify-center gap-2 transition whitespace-nowrap cursor-pointer"
+              className="w-full md:w-auto py-3 px-5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] text-white font-black text-xs sm:text-sm shadow-md shadow-orange-500/25 flex items-center justify-center gap-2 transition whitespace-nowrap cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>{t('adminAddNewItem', language)}</span>
@@ -135,7 +164,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
           ) : (
             <button
               onClick={handleAddNewCategory}
-              className="w-full md:w-auto py-3 px-5 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-black text-xs sm:text-sm shadow-md shadow-orange-500/25 flex items-center justify-center gap-2 transition whitespace-nowrap cursor-pointer"
+              className="w-full md:w-auto py-3 px-5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] text-white font-black text-xs sm:text-sm shadow-md shadow-orange-500/25 flex items-center justify-center gap-2 transition whitespace-nowrap cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>{t('adminAddNewCategory', language)}</span>
@@ -180,7 +209,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
       {/* TAB 1: MENU ITEMS LIST */}
       {activeTab === 'items' && (
         <div className="space-y-4">
-          {/* Filter & Search Bar with Modern Dropdown */}
+          {/* Filter & Search Bar with Custom Animated Popover Dropdown */}
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
             <div className="relative flex-1">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
@@ -193,21 +222,86 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
               />
             </div>
 
-            {/* Modern Category Dropdown */}
-            <div className="relative min-w-[200px]">
-              <select
-                value={selectedCatFilter}
-                onChange={(e) => setSelectedCatFilter(e.target.value)}
-                className="w-full px-4 py-2.5 bg-white border border-stone-200 rounded-2xl text-xs sm:text-sm font-black text-stone-800 focus:outline-none focus:border-orange-500 shadow-2xs appearance-none cursor-pointer pr-9"
+            {/* Custom Modern Category Filter Popover */}
+            <div className="relative min-w-[210px]" ref={filterDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+                className={`w-full px-4 py-2.5 bg-white border rounded-2xl text-xs sm:text-sm font-black text-stone-800 flex items-center justify-between shadow-2xs transition-all cursor-pointer ${
+                  isFilterDropdownOpen
+                    ? 'border-orange-500 ring-2 ring-orange-500/20'
+                    : 'border-stone-200 hover:border-stone-300'
+                }`}
               >
-                <option value="all">{language === 'th' ? 'ทุกหมวดหมู่ (All)' : 'All Categories'}</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {language === 'en' ? (c.nameEn || c.name) : c.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 text-stone-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <div className="flex items-center gap-2 truncate">
+                  {selectedCatFilter === 'all' ? (
+                    <Layers className="w-3.5 h-3.5 text-stone-400 flex-shrink-0" />
+                  ) : (
+                    activeFilterCat && getCategoryIcon(activeFilterCat.icon)
+                  )}
+                  <span className="truncate">
+                    {selectedCatFilter === 'all'
+                      ? (language === 'th' ? 'ทุกหมวดหมู่ (All)' : 'All Categories')
+                      : activeFilterCat
+                      ? (language === 'en' ? (activeFilterCat.nameEn || activeFilterCat.name) : activeFilterCat.name)
+                      : 'All'}
+                  </span>
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 text-stone-400 transition-transform duration-200 flex-shrink-0 ${
+                    isFilterDropdownOpen ? 'rotate-180 text-orange-600' : ''
+                  }`}
+                />
+              </button>
+
+              {/* Popover Card */}
+              {isFilterDropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-stone-200/90 p-2 z-50 animate-pop-in space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCatFilter('all');
+                      setIsFilterDropdownOpen(false);
+                    }}
+                    className={`w-full px-3 py-2 rounded-xl flex items-center justify-between text-xs font-black transition cursor-pointer ${
+                      selectedCatFilter === 'all'
+                        ? 'bg-orange-500 text-white shadow-sm'
+                        : 'bg-stone-50 hover:bg-orange-50 text-stone-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>{language === 'th' ? 'ทุกหมวดหมู่ (All)' : 'All Categories'}</span>
+                    </div>
+                    {selectedCatFilter === 'all' && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                  </button>
+
+                  {categories.map((c) => {
+                    const isSelected = selectedCatFilter === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCatFilter(c.id);
+                          setIsFilterDropdownOpen(false);
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl flex items-center justify-between text-xs font-black transition cursor-pointer ${
+                          isSelected
+                            ? 'bg-orange-500 text-white shadow-sm'
+                            : 'bg-stone-50 hover:bg-orange-50 text-stone-800'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {getCategoryIcon(c.icon)}
+                          <span>{language === 'en' ? (c.nameEn || c.name) : c.name}</span>
+                        </div>
+                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -218,7 +312,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
               return (
                 <div
                   key={item.id}
-                  className="bg-white rounded-3xl p-4 border border-stone-200 shadow-xs flex flex-col justify-between space-y-3 hover:border-orange-200 transition"
+                  className="bg-white rounded-3xl p-4 border border-stone-200/90 shadow-xs flex flex-col justify-between space-y-3 hover:border-orange-300 hover:shadow-md transition duration-200"
                 >
                   <div className="flex gap-3.5">
                     {/* Item Image */}
@@ -229,7 +323,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
                         className="w-full h-full object-cover"
                       />
                       {!item.isAvailable && (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-[10px] font-black text-white text-center p-1">
+                        <div className="absolute inset-0 bg-stone-950/70 flex items-center justify-center text-[10px] font-black text-white text-center p-1">
                           {t('soldOut', language)}
                         </div>
                       )}
@@ -270,7 +364,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
                     {/* Stock Switch */}
                     <button
                       onClick={() => onToggleStock(item.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 transition whitespace-nowrap cursor-pointer shadow-2xs ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 transition whitespace-nowrap cursor-pointer shadow-2xs active:scale-95 ${
                         item.isAvailable
                           ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                           : 'bg-red-50 text-red-800 border border-red-200'
@@ -292,7 +386,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
                     <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => handleEditItem(item)}
-                        className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold flex items-center gap-1 transition cursor-pointer"
+                        className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold flex items-center gap-1 transition cursor-pointer active:scale-95"
                         title={t('edit', language)}
                       >
                         <Edit2 className="w-3.5 h-3.5" />
@@ -301,7 +395,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
 
                       <button
                         onClick={() => handleDeleteItemClick(item)}
-                        className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-bold transition cursor-pointer"
+                        className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-bold transition cursor-pointer active:scale-95"
                         title={t('delete', language)}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -345,14 +439,14 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleEditCategory(cat)}
-                      className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 transition cursor-pointer"
+                      className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 transition cursor-pointer active:scale-95"
                       title={t('edit', language)}
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleDeleteCategoryClick(cat)}
-                      className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition cursor-pointer"
+                      className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition cursor-pointer active:scale-95"
                       title={t('delete', language)}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
