@@ -27,7 +27,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
     name: '',
     nameEn: '',
     categoryId: categories[0]?.id || 'coffee',
-    price: 80,
+    price: undefined,
     imageUrl: defaultPlaceholderImage,
     description: '',
     descriptionEn: '',
@@ -49,7 +49,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
         name: '',
         nameEn: '',
         categoryId: categories.find((c) => c.id !== 'popular')?.id || 'coffee',
-        price: 80,
+        price: undefined,
         imageUrl: defaultPlaceholderImage,
         description: '',
         descriptionEn: '',
@@ -90,7 +90,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || formData.price === undefined) return;
+    if (!formData.name || formData.price === undefined || isNaN(Number(formData.price))) return;
 
     const finalItem: MenuItem = {
       id: formData.id || `item-${Date.now()}`,
@@ -263,7 +263,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
               </div>
             </div>
 
-            {/* Category & Price */}
+            {/* Category & Price (Clean - No default 0, No Currency Symbol) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block font-black text-stone-800 mb-1.5 text-xs">
@@ -289,22 +289,23 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
 
               <div>
                 <label className="block font-black text-stone-800 mb-1.5 text-xs">
-                  {t('adminPrice', language)} (฿) *
+                  {t('adminPrice', language)} *
                 </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-orange-500 text-sm">
-                    ฿
-                  </span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                    required
-                    className="w-full pl-8 pr-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 font-black text-stone-900 text-base"
-                  />
-                </div>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={formData.price !== undefined ? formData.price : ''}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      price: e.target.value === '' ? undefined : Number(e.target.value),
+                    })
+                  }
+                  placeholder={language === 'th' ? 'ระบุราคา เช่น 75' : 'e.g. 75'}
+                  required
+                  className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 font-black text-stone-900 text-base"
+                />
               </div>
             </div>
           </div>
