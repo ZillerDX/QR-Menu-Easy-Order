@@ -230,14 +230,14 @@ export function App() {
 
   const getCategoryIcon = (iconName: string) => {
     switch (iconName) {
-      case 'Sparkles': return <Sparkles className="w-4 h-4" />;
-      case 'Coffee': return <Coffee className="w-4 h-4" />;
-      case 'CupSoda': return <CupSoda className="w-4 h-4" />;
-      case 'Utensils': return <Utensils className="w-4 h-4" />;
-      case 'Cake': return <Cake className="w-4 h-4" />;
-      case 'Pizza': return <Pizza className="w-4 h-4" />;
-      case 'Heart': return <Heart className="w-4 h-4" />;
-      default: return <Coffee className="w-4 h-4" />;
+      case 'Sparkles': return <Sparkles className="w-4 h-4 flex-shrink-0" />;
+      case 'Coffee': return <Coffee className="w-4 h-4 flex-shrink-0" />;
+      case 'CupSoda': return <CupSoda className="w-4 h-4 flex-shrink-0" />;
+      case 'Utensils': return <Utensils className="w-4 h-4 flex-shrink-0" />;
+      case 'Cake': return <Cake className="w-4 h-4 flex-shrink-0" />;
+      case 'Pizza': return <Pizza className="w-4 h-4 flex-shrink-0" />;
+      case 'Heart': return <Heart className="w-4 h-4 flex-shrink-0" />;
+      default: return <Coffee className="w-4 h-4 flex-shrink-0" />;
     }
   };
 
@@ -247,7 +247,7 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-[#fafaf9] text-stone-900 flex flex-col selection:bg-orange-500 selection:text-white">
-      {/* Top Header with Fixed Height & Exact Same Logo */}
+      {/* Top Header with Dual Language Toggle */}
       <Header
         storeConfig={storeConfig}
         tableNumber={tableNumber}
@@ -322,22 +322,22 @@ export function App() {
               )}
             </div>
 
-            {/* Responsive Category Pills Bar */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar touch-pan-x">
+            {/* Responsive Category Pills Bar with Padding & No Clipping */}
+            <div className="flex items-center gap-2 overflow-x-auto p-1 -m-1 no-scrollbar touch-pan-x">
               {categories.map((cat) => {
                 const isActive = selectedCategory === cat.id;
                 return (
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex-shrink-0 cursor-pointer ${
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex-shrink-0 cursor-pointer ${
                       isActive
-                        ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25 scale-[1.02]'
-                        : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
+                        ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25 ring-2 ring-orange-500/20'
+                        : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200 shadow-2xs'
                     }`}
                   >
                     {getCategoryIcon(cat.icon)}
-                    <span>{language === 'en' ? (cat.nameEn || cat.name) : cat.name}</span>
+                    <span className="whitespace-nowrap">{language === 'en' ? (cat.nameEn || cat.name) : cat.name}</span>
                   </button>
                 );
               })}
@@ -348,7 +348,7 @@ export function App() {
               <div className="flex items-center justify-between mb-3 px-1">
                 <h3 className="font-extrabold text-stone-900 text-sm sm:text-base">
                   {language === 'en'
-                    ? (categories.find((c) => c.id === selectedCategory)?.nameEn || 'Menu Items')
+                    ? (categories.find((c) => c.id === selectedCategory)?.nameEn || "Chef's Specials")
                     : (categories.find((c) => c.id === selectedCategory)?.name || 'รายการเมนู')}
                 </h3>
                 <span className="text-xs text-stone-400 font-bold">
@@ -500,8 +500,8 @@ export function App() {
             ? 'ต้องการรีเซ็ตข้อมูลออเดอร์ สต็อก และการตั้งค่าทั้งหมดเพื่อเริ่มการทดสอบใหม่หรือไม่?'
             : 'Are you sure you want to reset all test orders, stock availability, and data?'
         }
-        confirmText={language === 'th' ? 'รีเซ็ตข้อมูล' : 'Reset All'}
-        cancelText={t('cancel', language)}
+        confirmText={language === 'th' ? 'ตกลง (รีเซ็ต)' : 'OK (Reset)'}
+        cancelText={language === 'th' ? 'ยกเลิก' : 'Cancel'}
         isDestructive={true}
         icon="warning"
         onConfirm={handleExecuteResetData}

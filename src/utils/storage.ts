@@ -109,7 +109,18 @@ class RealtimeSyncManager {
   getCategories(): MenuCategory[] {
     try {
       const data = localStorage.getItem(CATEGORIES_KEY);
-      return data ? JSON.parse(data) : initialCategories;
+      if (!data) return initialCategories;
+      const parsed: MenuCategory[] = JSON.parse(data);
+      return parsed.map((cat) => {
+        if (cat.id === 'popular') {
+          return {
+            ...cat,
+            name: cat.name.replace(/🔥/g, '').trim() || "เมนูแนะนำ & ยอดฮิต",
+            nameEn: (cat.nameEn || '').replace(/🔥/g, '').trim() || "Chef's Specials",
+          };
+        }
+        return cat;
+      });
     } catch {
       return initialCategories;
     }
@@ -197,8 +208,8 @@ class RealtimeSyncManager {
     return config;
   }
 
-  // --- Reset All ---
-  resetAll() {
+  // --- Reset All Data ---
+  resetAll(): void {
     localStorage.removeItem(ORDERS_KEY);
     localStorage.removeItem(MENU_KEY);
     localStorage.removeItem(CATEGORIES_KEY);
