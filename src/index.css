@@ -14,13 +14,13 @@
   }
 }
 
-/* Custom Scrollbar */
+/* Custom Sleek Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #f5f5f4;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: #d6d3d1;
@@ -30,11 +30,52 @@
   background: #a8a29e;
 }
 
+/* Next-Gen Micro-Animations */
 @keyframes pulse-subtle {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.03); }
+  50% { transform: scale(1.02); }
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.15); }
+  40% { transform: scale(1); }
+  60% { transform: scale(1.1); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes pop-in {
+  0% { transform: scale(0.92); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .animate-pulse-subtle {
-  animation: pulse-subtle 2s infinite ease-in-out;
+  animation: pulse-subtle 2.5s infinite ease-in-out;
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.6s infinite ease-in-out;
+}
+
+.animate-float {
+  animation: float-slow 3s infinite ease-in-out;
+}
+
+.animate-pop-in {
+  animation: pop-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.shimmer-gradient {
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2.5s infinite;
 }

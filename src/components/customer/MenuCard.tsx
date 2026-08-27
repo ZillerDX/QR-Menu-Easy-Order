@@ -13,10 +13,10 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, onSelect, language }) 
   return (
     <div
       onClick={() => item.isAvailable && onSelect(item)}
-      className={`group relative bg-white rounded-3xl p-3 sm:p-4 border border-stone-200/90 shadow-xs transition-all duration-200 flex flex-col justify-between ${
+      className={`group relative bg-white rounded-3xl p-3 sm:p-4 border border-stone-200/80 shadow-xs transition-all duration-300 flex flex-col justify-between ${
         item.isAvailable
-          ? 'hover:shadow-md hover:border-orange-300/80 cursor-pointer active:scale-[0.98]'
-          : 'opacity-65 cursor-not-allowed bg-stone-50'
+          ? 'hover:shadow-xl hover:shadow-orange-500/10 hover:border-orange-300 hover:-translate-y-1 cursor-pointer active:scale-[0.98]'
+          : 'opacity-60 cursor-not-allowed bg-stone-50'
       }`}
     >
       <div>
@@ -26,26 +26,26 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, onSelect, language }) 
             src={item.imageUrl}
             alt={item.name}
             loading="lazy"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
           />
           {!item.isAvailable && (
-            <div className="absolute inset-0 bg-black/65 backdrop-blur-[2px] flex items-center justify-center p-2 text-center">
-              <span className="bg-red-500/95 text-white text-[11px] font-black px-3 py-1 rounded-full shadow-md whitespace-nowrap">
+            <div className="absolute inset-0 bg-stone-950/70 backdrop-blur-[2px] flex items-center justify-center p-2 text-center">
+              <span className="bg-red-500 text-white text-[11px] font-black px-3 py-1 rounded-full shadow-lg whitespace-nowrap">
                 {t('soldOut', language)}
               </span>
             </div>
           )}
 
           {/* Badges */}
-          <div className="absolute top-2 left-2 flex flex-col gap-1">
+          <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
             {item.isChefRecommend && (
-              <span className="bg-amber-500/95 backdrop-blur-xs text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm whitespace-nowrap">
-                <Sparkles className="w-3 h-3" /> {t('chefPick', language)}
+              <span className="bg-gradient-to-r from-amber-500 to-orange-500 backdrop-blur-md text-white text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-md whitespace-nowrap">
+                <Sparkles className="w-3 h-3 animate-pulse" /> {t('chefPick', language)}
               </span>
             )}
             {item.isPopular && !item.isChefRecommend && (
-              <span className="bg-red-500/95 backdrop-blur-xs text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm whitespace-nowrap">
-                <Flame className="w-3 h-3" /> {t('popular', language)}
+              <span className="bg-gradient-to-r from-red-500 to-rose-500 backdrop-blur-md text-white text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-md whitespace-nowrap">
+                <Flame className="w-3 h-3 animate-pulse" /> {t('popular', language)}
               </span>
             )}
           </div>
@@ -79,9 +79,9 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, onSelect, language }) 
         {item.isAvailable && (
           <button
             type="button"
-            className="w-8 h-8 rounded-full bg-orange-100 group-hover:bg-orange-500 text-orange-600 group-hover:text-white flex items-center justify-center transition shadow-2xs font-bold"
+            className="w-8 h-8 rounded-2xl bg-orange-100 group-hover:bg-orange-500 text-orange-600 group-hover:text-white flex items-center justify-center transition-all duration-300 shadow-2xs font-bold group-hover:scale-105 active:scale-95"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 transition-transform duration-300 group-hover:rotate-90" />
           </button>
         )}
       </div>

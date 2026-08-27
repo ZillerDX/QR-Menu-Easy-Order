@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Check, Utensils, Sparkles, CheckCheck, Banknote, QrCode } from 'lucide-react';
+import { Clock, Utensils, Sparkles, CheckCheck, Banknote, QrCode, Flame, Hourglass } from 'lucide-react';
 import { Order, OrderStatus, Language } from '../../types';
 import { t } from '../../utils/i18n';
 
@@ -19,33 +19,38 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, language, onUpdateS
     switch (order.status) {
       case 'pending':
         return {
-          border: 'border-red-400 ring-2 ring-red-100',
-          badge: 'bg-red-500 text-white',
+          border: 'border-red-400/80 ring-2 ring-red-100 shadow-md shadow-red-500/10',
+          badge: 'bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-xs',
           label: t('kdsPendingBadge', language),
+          icon: <Hourglass className="w-3.5 h-3.5 animate-spin text-white" />,
         };
       case 'cooking':
         return {
-          border: 'border-amber-400 ring-2 ring-amber-100',
-          badge: 'bg-amber-500 text-white',
+          border: 'border-amber-400/80 ring-2 ring-amber-100 shadow-md shadow-amber-500/10',
+          badge: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs',
           label: t('kdsCookingBadge', language),
+          icon: <Flame className="w-3.5 h-3.5 animate-pulse text-white" />,
         };
       case 'ready':
         return {
-          border: 'border-emerald-400 ring-2 ring-emerald-100',
-          badge: 'bg-emerald-500 text-white',
+          border: 'border-emerald-400/80 ring-2 ring-emerald-100 shadow-md shadow-emerald-500/10',
+          badge: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-xs',
           label: t('kdsReadyBadge', language),
+          icon: <Sparkles className="w-3.5 h-3.5 animate-bounce text-white" />,
         };
       case 'completed':
         return {
-          border: 'border-stone-200 opacity-70',
+          border: 'border-stone-200 opacity-65',
           badge: 'bg-stone-500 text-white',
           label: t('kdsCompletedBadge', language),
+          icon: <CheckCheck className="w-3.5 h-3.5 text-white" />,
         };
       default:
         return {
           border: 'border-stone-200',
           badge: 'bg-stone-400 text-white',
           label: order.status,
+          icon: <Clock className="w-3.5 h-3.5 text-white" />,
         };
     }
   };
@@ -53,12 +58,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, language, onUpdateS
   const theme = getCardTheme();
 
   return (
-    <div className={`bg-white rounded-3xl p-4 sm:p-5 border shadow-xs flex flex-col justify-between transition-all ${theme.border}`}>
+    <div className={`bg-white rounded-3xl p-4 sm:p-5 border flex flex-col justify-between transition-all duration-300 hover:shadow-lg ${theme.border}`}>
       <div>
         {/* Header: Table & Time */}
         <div className="flex items-center justify-between pb-3 border-b border-stone-100">
           <div className="flex items-center gap-2">
-            <span className="text-base font-black px-2.5 py-1 rounded-xl bg-stone-900 text-white">
+            <span className="text-sm font-black px-3 py-1 rounded-xl bg-stone-900 text-white shadow-xs">
               {order.tableNumber === 'TAKEAWAY' ? t('takeaway', language) : `${t('table', language)} ${order.tableNumber}`}
             </span>
             <span className="text-xs font-black text-stone-400">
@@ -74,8 +79,9 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, language, onUpdateS
 
         {/* Status indicator */}
         <div className="py-2.5 flex items-center justify-between">
-          <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full ${theme.badge}`}>
-            {theme.label}
+          <span className={`text-[11px] font-black px-3 py-1 rounded-full flex items-center gap-1.5 ${theme.badge}`}>
+            {theme.icon}
+            <span>{theme.label}</span>
           </span>
           <div className="flex items-center gap-1 text-xs">
             {order.paymentMethod === 'promptpay' ? (
@@ -87,7 +93,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, language, onUpdateS
                 <Banknote className="w-3 h-3" /> {t('cashAtCounter', language)}
               </span>
             )}
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-black ${
+            <span className={`text-[10px] px-2 py-0.5 rounded-md font-black ${
               order.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
             }`}>
               {order.paymentStatus === 'paid' ? t('kdsPaid', language) : t('kdsUnpaid', language)}
@@ -110,7 +116,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, language, onUpdateS
                 </div>
               </div>
 
-              {item.selectedOptions.length > 0 && (
+              {item.selectedOptions && item.selectedOptions.length > 0 && (
                 <div className="ml-6 mt-0.5 flex flex-wrap gap-1">
                   {item.selectedOptions.map((opt, i) => (
                     <span
@@ -144,7 +150,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, language, onUpdateS
           {order.status === 'pending' && (
             <button
               onClick={() => onUpdateStatus(order.id, 'cooking')}
-              className="col-span-2 py-2.5 px-3 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-black text-xs flex items-center justify-center gap-1.5 transition shadow-sm"
+              className="col-span-2 py-2.5 px-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-orange-500/25 active:scale-95 cursor-pointer"
             >
               <Utensils className="w-4 h-4" /> {t('kdsStartCooking', language)}
             </button>
@@ -153,7 +159,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, language, onUpdateS
           {order.status === 'cooking' && (
             <button
               onClick={() => onUpdateStatus(order.id, 'ready')}
-              className="col-span-2 py-2.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center justify-center gap-1.5 transition shadow-sm"
+              className="col-span-2 py-2.5 px-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-600/25 active:scale-95 cursor-pointer"
             >
               <Sparkles className="w-4 h-4" /> {t('kdsReadyToServe', language)}
             </button>
@@ -162,15 +168,15 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, language, onUpdateS
           {order.status === 'ready' && (
             <button
               onClick={() => onUpdateStatus(order.id, 'completed', 'paid')}
-              className="col-span-2 py-2.5 px-3 rounded-2xl bg-stone-900 hover:bg-black text-white font-black text-xs flex items-center justify-center gap-1.5 transition shadow-sm"
+              className="col-span-2 py-2.5 px-3 rounded-2xl bg-stone-900 hover:bg-black text-white font-black text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
             >
               <CheckCheck className="w-4 h-4" /> {t('kdsCloseBill', language)}
             </button>
           )}
 
           {order.status === 'completed' && (
-            <div className="col-span-2 text-center text-xs text-stone-400 py-1 font-bold">
-              {t('kdsCompletedBadge', language)}
+            <div className="col-span-2 text-center text-xs text-stone-400 py-1.5 font-bold bg-stone-100 rounded-2xl">
+              ✓ {t('kdsCompletedBadge', language)}
             </div>
           )}
         </div>

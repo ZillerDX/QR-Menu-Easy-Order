@@ -15,7 +15,7 @@ import { MenuAdmin } from './components/admin/MenuAdmin';
 import { StoreSettings } from './components/admin/StoreSettings';
 import { QRGenerator } from './components/table-qr/QRGenerator';
 import { ConfirmModal } from './components/common/ConfirmModal';
-import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight } from 'lucide-react';
+import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight, Hourglass, Flame, CheckCircle2 } from 'lucide-react';
 
 export function App() {
   const [storeConfig, setStoreConfig] = useState<StoreConfig>(() => syncManager.getStoreConfig());
@@ -274,7 +274,7 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-[#fafaf9] text-stone-900 flex flex-col selection:bg-orange-500 selection:text-white">
-      {/* Top Header with Dual Language Toggle */}
+      {/* Top Header with Dual Language Toggle & Custom Table Popover */}
       <Header
         storeConfig={storeConfig}
         tableNumber={tableNumber}
@@ -295,17 +295,39 @@ export function App() {
             {trackedOrder && (
               <div
                 onClick={() => setIsOrderTrackerOpen(true)}
-                className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 rounded-3xl p-4 sm:p-5 text-white shadow-lg shadow-orange-500/20 flex items-center justify-between animate-pulse-subtle cursor-pointer hover:shadow-orange-500/30 transition group"
+                className="relative overflow-hidden bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 rounded-3xl p-4 sm:p-5 text-white shadow-xl shadow-orange-500/25 flex items-center justify-between animate-pulse-subtle cursor-pointer hover:shadow-2xl hover:shadow-orange-500/35 transition-all duration-300 group hover:-translate-y-0.5"
               >
-                <div className="space-y-0.5">
-                  <span className="text-[11px] font-black uppercase tracking-wider text-orange-100">
+                <div className="absolute inset-0 shimmer-gradient pointer-events-none opacity-30" />
+                <div className="relative z-10 space-y-1">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-orange-100/90 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-white animate-ping" />
                     {t('recentOrderStatus', language)} ({trackedOrder.orderNumber})
                   </span>
-                  <h3 className="text-base sm:text-lg font-black">
-                    {trackedOrder.status === 'pending' && `⏳ ${t('trackerStep1', language)}`}
-                    {trackedOrder.status === 'cooking' && `🍳 ${t('trackerStep2', language)}`}
-                    {trackedOrder.status === 'ready' && `✨ ${t('trackerStep3', language)}`}
-                    {trackedOrder.status === 'completed' && `✅ ${t('trackerStep4', language)}`}
+                  <h3 className="text-base sm:text-lg font-black flex items-center gap-2">
+                    {trackedOrder.status === 'pending' && (
+                      <>
+                        <Hourglass className="w-4 h-4 animate-spin text-orange-100" />
+                        <span>{t('trackerStep1', language)}</span>
+                      </>
+                    )}
+                    {trackedOrder.status === 'cooking' && (
+                      <>
+                        <Flame className="w-4 h-4 animate-pulse text-amber-200" />
+                        <span>{t('trackerStep2', language)}</span>
+                      </>
+                    )}
+                    {trackedOrder.status === 'ready' && (
+                      <>
+                        <Sparkles className="w-4 h-4 animate-bounce text-yellow-200" />
+                        <span>{t('trackerStep3', language)}</span>
+                      </>
+                    )}
+                    {trackedOrder.status === 'completed' && (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                        <span>{t('trackerStep4', language)}</span>
+                      </>
+                    )}
                   </h3>
                 </div>
                 <button
@@ -314,7 +336,7 @@ export function App() {
                     e.stopPropagation();
                     setIsOrderTrackerOpen(true);
                   }}
-                  className="px-4 py-2 rounded-2xl bg-white text-orange-600 font-black text-xs sm:text-sm shadow-md hover:bg-orange-50 active:scale-95 transition cursor-pointer flex-shrink-0 group-hover:scale-105"
+                  className="relative z-10 px-4 py-2 rounded-2xl bg-white text-orange-600 font-black text-xs sm:text-sm shadow-md hover:bg-orange-50 active:scale-95 transition-all cursor-pointer flex-shrink-0 group-hover:scale-105 group-hover:shadow-lg"
                 >
                   {t('viewStatus', language)}
                 </button>
@@ -322,10 +344,11 @@ export function App() {
             )}
 
             {/* Banner / Store Intro with Standardized p-5 sm:p-6 Padding */}
-            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 text-white p-5 sm:p-6 shadow-md border border-stone-800">
+            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-stone-950 via-stone-900 to-stone-950 text-white p-5 sm:p-6 shadow-lg border border-stone-800">
               <div className="relative z-10 max-w-xl space-y-2">
-                <span className="bg-orange-500/95 backdrop-blur-xs text-white text-[11px] font-black px-2.5 py-0.5 rounded-full inline-block mb-1 shadow-xs">
-                  {t('heroBadge', language)}
+                <span className="bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[11px] font-black px-3 py-1 rounded-full inline-flex items-center gap-1.5 shadow-md">
+                  <Sparkles className="w-3 h-3" />
+                  <span>{t('heroBadge', language)}</span>
                 </span>
                 <h2 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight leading-tight">
                   {language === 'en' ? storeConfig.nameEn || storeConfig.name : storeConfig.name}
@@ -344,7 +367,7 @@ export function App() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('searchPlaceholder', language)}
-                className="w-full pl-11 pr-4 py-3 bg-white border border-stone-200 rounded-2xl text-sm focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 shadow-xs font-medium"
+                className="w-full pl-11 pr-4 py-3 bg-white border border-stone-200 rounded-2xl text-sm focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 shadow-xs font-medium transition-all"
               />
               {searchQuery && (
                 <button
@@ -364,10 +387,10 @@ export function App() {
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex-shrink-0 cursor-pointer ${
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex-shrink-0 cursor-pointer active:scale-95 ${
                       isActive
-                        ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25 ring-2 ring-orange-500/20'
-                        : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200 shadow-2xs'
+                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/30 ring-2 ring-orange-500/20'
+                        : 'bg-white hover:bg-orange-50/60 text-stone-600 hover:text-orange-950 border border-stone-200 shadow-2xs hover:border-orange-200'
                     }`}
                   >
                     {getCategoryIcon(cat.icon)}
@@ -419,7 +442,7 @@ export function App() {
               <div className="fixed bottom-16 left-4 right-4 z-30 max-w-md mx-auto animate-in slide-in-from-bottom-5">
                 <button
                   onClick={() => setIsCartOpen(true)}
-                  className="w-full bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white p-3.5 rounded-2xl shadow-xl shadow-orange-500/40 flex items-center justify-between transition cursor-pointer"
+                  className="w-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] text-white p-3.5 rounded-2xl shadow-xl shadow-orange-500/40 flex items-center justify-between transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center font-black text-xs">

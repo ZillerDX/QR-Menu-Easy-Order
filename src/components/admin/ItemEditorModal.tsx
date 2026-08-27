@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Sparkles, Flame, Upload, Image as ImageIcon, ChevronDown, Check, Link2, Utensils } from 'lucide-react';
+import { X, Sparkles, Flame, Upload, Image as ImageIcon, ChevronDown, Check, Link2, Utensils, Coffee, CupSoda, Cake, Pizza, Heart } from 'lucide-react';
 import { MenuItem, MenuCategory, Language } from '../../types';
 import { t } from '../../utils/i18n';
 
@@ -37,7 +37,9 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
   });
 
   const [showUrlInput, setShowUrlInput] = useState(false);
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const categoryDropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (item) {
@@ -72,6 +74,19 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
       document.body.style.overflow = '';
     };
   }, [isOpen]);
+
+  // Click outside category dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node)) {
+        setIsCategoryDropdownOpen(false);
+      }
+    };
+    if (isCategoryDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isCategoryDropdownOpen]);
 
   if (!isOpen) return null;
 
@@ -110,6 +125,22 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
     onSave(finalItem);
     onClose();
   };
+
+  const getCategoryIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'Sparkles': return <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0" />;
+      case 'Coffee': return <Coffee className="w-4 h-4 text-orange-500 flex-shrink-0" />;
+      case 'CupSoda': return <CupSoda className="w-4 h-4 text-emerald-500 flex-shrink-0" />;
+      case 'Utensils': return <Utensils className="w-4 h-4 text-blue-500 flex-shrink-0" />;
+      case 'Cake': return <Cake className="w-4 h-4 text-pink-500 flex-shrink-0" />;
+      case 'Pizza': return <Pizza className="w-4 h-4 text-red-500 flex-shrink-0" />;
+      case 'Heart': return <Heart className="w-4 h-4 text-rose-500 flex-shrink-0" />;
+      default: return <Coffee className="w-4 h-4 text-stone-500 flex-shrink-0" />;
+    }
+  };
+
+  const selectableCategories = categories.filter((c) => c.id !== 'popular');
+  const selectedCat = categories.find((c) => c.id === formData.categoryId) || selectableCategories[0];
 
   const modalContent = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
@@ -263,30 +294,69 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
               </div>
             </div>
 
-            {/* Category & Price (Clean - No default 0, No Currency Symbol) */}
+            {/* Custom Category Dropdown & Price */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
+              {/* Ultra-Modern Custom Category Dropdown */}
+              <div className="relative" ref={categoryDropdownRef}>
                 <label className="block font-black text-stone-800 mb-1.5 text-xs">
                   {t('adminCategory', language)} *
                 </label>
-                <div className="relative">
-                  <select
-                    value={formData.categoryId}
-                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                    className="w-full px-4 py-3 rounded-2xl border border-stone-200 bg-white focus:outline-none focus:border-orange-500 font-bold text-stone-900 appearance-none cursor-pointer pr-10 shadow-2xs"
-                  >
-                    {categories
-                      .filter((c) => c.id !== 'popular')
-                      .map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {language === 'en' ? (c.nameEn || c.name) : c.name}
-                        </option>
-                      ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-stone-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                  className={`w-full px-4 py-3 rounded-2xl border bg-white flex items-center justify-between text-stone-900 font-bold shadow-2xs transition-all cursor-pointer ${
+                    isCategoryDropdownOpen
+                      ? 'border-orange-500 ring-2 ring-orange-500/20'
+                      : 'border-stone-200 hover:border-stone-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    {selectedCat && getCategoryIcon(selectedCat.icon)}
+                    <span className="truncate">
+                      {selectedCat
+                        ? (language === 'en' ? (selectedCat.nameEn || selectedCat.name) : selectedCat.name)
+                        : 'เลือกหมวดหมู่'}
+                    </span>
+                  </div>
+                  <ChevronDown
+                    className={`w-4 h-4 text-stone-400 transition-transform duration-200 flex-shrink-0 ${
+                      isCategoryDropdownOpen ? 'rotate-180 text-orange-600' : ''
+                    }`}
+                  />
+                </button>
+
+                {/* Animated Dropdown Menu */}
+                {isCategoryDropdownOpen && (
+                  <div className="absolute left-0 right-0 top-full mt-2 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-stone-200/90 p-2 z-50 animate-pop-in space-y-1 max-h-56 overflow-y-auto">
+                    {selectableCategories.map((cat) => {
+                      const isSelected = formData.categoryId === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => {
+                            setFormData({ ...formData, categoryId: cat.id });
+                            setIsCategoryDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2.5 rounded-xl flex items-center justify-between transition-all cursor-pointer text-xs font-black ${
+                            isSelected
+                              ? 'bg-orange-500 text-white shadow-sm'
+                              : 'bg-stone-50 hover:bg-orange-50 text-stone-800'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            {getCategoryIcon(cat.icon)}
+                            <span>{language === 'en' ? (cat.nameEn || cat.name) : cat.name}</span>
+                          </div>
+                          {isSelected && <Check className="w-4 h-4 text-white stroke-[3]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
+              {/* Price Field */}
               <div>
                 <label className="block font-black text-stone-800 mb-1.5 text-xs">
                   {t('adminPrice', language)} *
@@ -304,7 +374,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
                   }
                   placeholder={language === 'th' ? 'ระบุราคา เช่น 75' : 'e.g. 75'}
                   required
-                  className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 font-black text-stone-900 text-base"
+                  className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 font-black text-stone-900 text-base shadow-2xs"
                 />
               </div>
             </div>
@@ -321,7 +391,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={2}
                 placeholder="รายละเอียดรสชาติ วัตถุดิบ ความพิเศษของเมนู..."
-                className="w-full px-4 py-2.5 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 resize-none text-xs leading-relaxed"
+                className="w-full px-4 py-2.5 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 resize-none text-xs leading-relaxed font-medium"
               />
             </div>
             <div>
@@ -333,7 +403,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
                 rows={2}
                 placeholder="Flavor profile, tasting notes, ingredients..."
-                className="w-full px-4 py-2.5 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 resize-none text-xs leading-relaxed"
+                className="w-full px-4 py-2.5 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 resize-none text-xs leading-relaxed font-medium"
               />
             </div>
           </div>
@@ -347,7 +417,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
               {/* Chef Recommend Card */}
               <div
                 onClick={() => setFormData({ ...formData, isChefRecommend: !formData.isChefRecommend })}
-                className={`p-3.5 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition ${
+                className={`p-3.5 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition active:scale-[0.99] ${
                   formData.isChefRecommend
                     ? 'border-amber-500 bg-amber-50/70 text-amber-950 shadow-2xs'
                     : 'border-stone-200 bg-white hover:border-stone-300 text-stone-600'
@@ -373,7 +443,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
               {/* Popular Item Card */}
               <div
                 onClick={() => setFormData({ ...formData, isPopular: !formData.isPopular })}
-                className={`p-3.5 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition ${
+                className={`p-3.5 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition active:scale-[0.99] ${
                   formData.isPopular
                     ? 'border-red-500 bg-red-50/70 text-red-950 shadow-2xs'
                     : 'border-stone-200 bg-white hover:border-stone-300 text-stone-600'
@@ -399,12 +469,12 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
           </div>
         </form>
 
-        {/* 3. Fixed Footer Action Bar (Separated from form scroll, never overlapping) */}
+        {/* 3. Fixed Footer Action Bar */}
         <div className="px-6 py-4 bg-stone-50 border-t border-stone-200/80 flex items-center justify-end gap-3 flex-shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 rounded-2xl border border-stone-200 hover:bg-stone-200 text-stone-700 font-black transition text-xs sm:text-sm cursor-pointer"
+            className="px-5 py-2.5 rounded-2xl border border-stone-200 hover:bg-stone-200 text-stone-700 font-black transition text-xs sm:text-sm cursor-pointer active:scale-95"
           >
             {t('cancel', language)}
           </button>
