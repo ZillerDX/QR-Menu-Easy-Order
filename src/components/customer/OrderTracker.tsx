@@ -20,11 +20,15 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
 }) => {
   useEffect(() => {
     if (isOpen && (order?.status === 'ready' || order?.status === 'completed')) {
-      confetti({
-        particleCount: 70,
-        spread: 60,
-        origin: { y: 0.6 },
-      });
+      try {
+        confetti({
+          particleCount: 70,
+          spread: 60,
+          origin: { y: 0.6 },
+        });
+      } catch (err) {
+        console.error("Confetti error:", err);
+      }
     }
   }, [isOpen, order?.status]);
 
@@ -81,11 +85,19 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
 
   const currentIndex = getStepIndex(order.status);
 
+  const formattedTime = (() => {
+    try {
+      return order.createdAt ? new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    } catch {
+      return '';
+    }
+  })();
+
   const modalContent = (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
       {/* Full Backdrop */}
       <div 
-        className="fixed inset-0 bg-stone-950/75 backdrop-blur-md transition-opacity"
+        className="fixed inset-0 bg-stone-950/80 backdrop-blur-md transition-opacity"
         onClick={onClose}
       />
 
@@ -105,7 +117,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
                 </h3>
               </div>
               <p className="text-xs text-orange-100 font-medium">
-                {order.tableNumber === 'TAKEAWAY' ? t('takeaway', language) : `${t('table', language)} ${order.tableNumber}`} • {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {order.tableNumber === 'TAKEAWAY' ? t('takeaway', language) : `${t('table', language)} ${order.tableNumber}`} {formattedTime ? `• ${formattedTime}` : ''}
               </p>
             </div>
           </div>
@@ -194,12 +206,12 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
                 <span>{language === 'th' ? 'รายการอาหารที่สั่ง' : 'Ordered Items'}</span>
               </h4>
               <span className="text-xs font-bold text-stone-400">
-                {order.items.length} {t('items', language)}
+                {(order.items || []).length} {t('items', language)}
               </span>
             </div>
 
             <div className="divide-y divide-stone-100">
-              {order.items.map((item, i) => (
+              {(order.items || []).map((item, i) => (
                 <div key={i} className="py-2.5 flex justify-between items-start">
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
@@ -207,10 +219,10 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
                         {item.quantity}x
                       </span>
                       <span className="text-stone-900 font-bold text-xs sm:text-sm">
-                        {language === 'en' && item.menuItem.nameEn ? item.menuItem.nameEn : item.menuItem.name}
+                        {language === 'en' && item.menuItem?.nameEn ? item.menuItem.nameEn : item.menuItem?.name}
                       </span>
                     </div>
-                    {item.selectedOptions.length > 0 && (
+                    {item.selectedOptions && item.selectedOptions.length > 0 && (
                       <p className="text-[11px] text-stone-400 font-medium pl-8">
                         {item.selectedOptions.map((o) => o.choiceName).join(', ')}
                       </p>
@@ -222,7 +234,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
                     )}
                   </div>
                   <span className="font-black text-stone-800 text-xs sm:text-sm pt-0.5">
-                    ฿{item.totalItemPrice.toLocaleString()}
+                    ฿{item.totalItemPrice?.toLocaleString()}
                   </span>
                 </div>
               ))}
@@ -232,7 +244,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
             <div className="pt-3 border-t border-stone-200/80 space-y-2">
               <div className="flex justify-between items-center font-black text-base">
                 <span className="text-stone-900">{t('total', language)}</span>
-                <span className="text-orange-600 text-lg">฿{order.totalPrice.toLocaleString()}</span>
+                <span className="text-orange-600 text-lg">฿{order.totalPrice?.toLocaleString()}</span>
               </div>
 
               <div className="flex justify-between items-center text-xs text-stone-500 pt-1 font-medium bg-stone-50 p-2.5 rounded-xl border border-stone-200/60">

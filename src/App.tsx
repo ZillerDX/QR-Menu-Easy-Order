@@ -34,7 +34,12 @@ export function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('promptpay');
   const [activePromptPayOrder, setActivePromptPayOrder] = useState<Order | null>(null);
-  const [trackedOrder, setTrackedOrder] = useState<Order | null>(null);
+  
+  // Tracked order initialization (from latest active order)
+  const [trackedOrder, setTrackedOrder] = useState<Order | null>(() => {
+    const all = syncManager.getOrders();
+    return all.find((o) => o.status !== 'completed' && o.status !== 'cancelled') || all[0] || null;
+  });
   const [isOrderTrackerOpen, setIsOrderTrackerOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
@@ -50,17 +55,25 @@ export function App() {
       setActiveRole(roleParam as AppRole);
     }
 
+    const currentOrders = syncManager.getOrders();
     setStoreConfig(syncManager.getStoreConfig());
     setCategories(syncManager.getCategories());
     setMenuItems(syncManager.getMenuItems());
-    setOrders(syncManager.getOrders());
+    setOrders(currentOrders);
+
+    if (!trackedOrder && currentOrders.length > 0) {
+      setTrackedOrder(currentOrders[0]);
+    }
 
     const unsubscribe = syncManager.subscribe((event) => {
       if (event.type === 'ORDER_CREATED') {
-        setOrders(syncManager.getOrders());
+        const updated = syncManager.getOrders();
+        setOrders(updated);
+        setTrackedOrder(event.payload);
         soundService.playNewOrderChime();
       } else if (event.type === 'ORDER_STATUS_UPDATED') {
-        setOrders(syncManager.getOrders());
+        const updated = syncManager.getOrders();
+        setOrders(updated);
         setTrackedOrder((prev) => (prev?.id === event.payload.id ? event.payload : prev));
       } else if (event.type === 'MENU_UPDATED') {
         setMenuItems(event.payload);
@@ -81,6 +94,15 @@ export function App() {
 
     return () => unsubscribe();
   }, []);
+
+  // Update tracked order when tableNumber changes
+  useEffect(() => {
+    const all = syncManager.getOrders();
+    const match = all.find((o) => o.tableNumber === tableNumber && o.status !== 'cancelled');
+    if (match) {
+      setTrackedOrder(match);
+    }
+  }, [tableNumber]);
 
   const handleToggleLanguage = () => {
     const nextLang: Language = language === 'en' ? 'th' : 'en';
@@ -269,9 +291,12 @@ export function App() {
         {/* VIEW 1: CUSTOMER VIEW */}
         {activeRole === 'customer' && (
           <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
-            {/* Active Tracked Order Bar */}
+            {/* Active Tracked Order Banner (Click anywhere to open OrderTracker) */}
             {trackedOrder && (
-              <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 rounded-3xl p-4 sm:p-5 text-white shadow-lg shadow-orange-500/20 flex items-center justify-between animate-pulse-subtle">
+              <div
+                onClick={() => setIsOrderTrackerOpen(true)}
+                className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 rounded-3xl p-4 sm:p-5 text-white shadow-lg shadow-orange-500/20 flex items-center justify-between animate-pulse-subtle cursor-pointer hover:shadow-orange-500/30 transition group"
+              >
                 <div className="space-y-0.5">
                   <span className="text-[11px] font-black uppercase tracking-wider text-orange-100">
                     {t('recentOrderStatus', language)} ({trackedOrder.orderNumber})
@@ -284,8 +309,12 @@ export function App() {
                   </h3>
                 </div>
                 <button
-                  onClick={() => setIsOrderTrackerOpen(true)}
-                  className="px-4 py-2 rounded-2xl bg-white text-orange-600 font-black text-xs sm:text-sm shadow-md hover:bg-orange-50 active:scale-95 transition cursor-pointer"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsOrderTrackerOpen(true);
+                  }}
+                  className="px-4 py-2 rounded-2xl bg-white text-orange-600 font-black text-xs sm:text-sm shadow-md hover:bg-orange-50 active:scale-95 transition cursor-pointer flex-shrink-0 group-hover:scale-105"
                 >
                   {t('viewStatus', language)}
                 </button>
