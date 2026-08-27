@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Sparkles, Flame, Upload, Image as ImageIcon, ChevronDown } from 'lucide-react';
+import { X, Sparkles, Flame, Upload, Image as ImageIcon, ChevronDown, Check, Link2, Utensils } from 'lucide-react';
 import { MenuItem, MenuCategory, Language } from '../../types';
 import { t } from '../../utils/i18n';
 
@@ -35,11 +35,13 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
     isPopular: false,
   });
 
+  const [showUrlInput, setShowUrlInput] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (item) {
       setFormData(item);
+      setShowUrlInput(!!item.imageUrl && !item.imageUrl.startsWith('data:'));
     } else {
       setFormData({
         id: `item-${Date.now()}`,
@@ -54,6 +56,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
         isChefRecommend: false,
         isPopular: false,
       });
+      setShowUrlInput(false);
     }
   }, [item, categories, isOpen]);
 
@@ -96,28 +99,56 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="w-full max-w-xl bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/60 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+      <div className="w-full max-w-2xl bg-white rounded-[28px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col border border-stone-200/80">
+        
         {/* Header */}
-        <div className="p-4 bg-stone-900 text-white flex items-center justify-between">
-          <h3 className="font-extrabold text-base">
-            {item ? (language === 'th' ? 'แก้ไขเมนูอาหาร' : 'Edit Menu Item') : (language === 'th' ? 'เพิ่มเมนูอาหารใหม่' : 'Add New Menu Item')}
-          </h3>
+        <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between bg-white sticky top-0 z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-orange-50 text-orange-600 border border-orange-200/60 flex items-center justify-center flex-shrink-0 shadow-2xs">
+              <Utensils className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-black text-stone-900 text-base sm:text-lg">
+                {item
+                  ? (language === 'th' ? 'แก้ไขเมนูอาหาร' : 'Edit Menu Item')
+                  : (language === 'th' ? 'เพิ่มเมนูอาหารใหม่' : 'Add New Menu Item')}
+              </h3>
+              <p className="text-xs text-stone-400 font-medium">
+                {language === 'th' ? 'กรอกรายละเอียดและอัปโหลดรูปภาพเมนู' : 'Fill in the menu details and upload a photo'}
+              </p>
+            </div>
+          </div>
+
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer"
+            className="w-9 h-9 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-600 flex items-center justify-center transition cursor-pointer"
+            title={t('close', language)}
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1 text-xs sm:text-sm">
-          {/* Direct Image File Upload & Preview */}
-          <div className="space-y-2">
-            <label className="block font-black text-stone-800">
-              {t('adminImageUrl', language)} *
-            </label>
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 flex-1 text-xs sm:text-sm">
+          
+          {/* SECTION 1: PHOTO UPLOAD CARD */}
+          <div className="bg-stone-50/80 rounded-3xl p-4 sm:p-5 border border-stone-200/70 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="font-black text-stone-900 text-xs sm:text-sm flex items-center gap-1.5">
+                <ImageIcon className="w-4 h-4 text-orange-500" />
+                <span>{t('adminImageUrl', language)} *</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowUrlInput(!showUrlInput)}
+                className="text-[11px] font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1 cursor-pointer"
+              >
+                <Link2 className="w-3.5 h-3.5" />
+                <span>{showUrlInput ? (language === 'th' ? 'ซ่อนลิงก์ URL' : 'Hide URL input') : (language === 'th' ? 'ใส่ลิงก์รูปภาพ (URL)' : 'Paste Image URL')}</span>
+              </button>
+            </div>
+
             <input
               ref={fileInputRef}
               type="file"
@@ -125,13 +156,13 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
               onChange={handleFileUpload}
               className="hidden"
             />
-            
-            <div className="flex flex-col sm:flex-row gap-3.5 items-center">
-              {/* Image Preview Box */}
+
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+              {/* Photo Preview Box */}
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-stone-100 overflow-hidden border-2 border-dashed border-stone-300 hover:border-orange-500 cursor-pointer flex-shrink-0 flex items-center justify-center relative group transition"
-                title="Click to upload image"
+                className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl bg-white overflow-hidden border-2 border-dashed border-stone-300 hover:border-orange-500 cursor-pointer flex-shrink-0 flex items-center justify-center relative group transition shadow-xs"
+                title={language === 'th' ? 'คลิกเพื่อเลือกไฟล์รูปภาพ' : 'Click to choose image'}
               >
                 {formData.imageUrl ? (
                   <img
@@ -140,185 +171,225 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-stone-400">
-                    <ImageIcon className="w-6 h-6 mb-1" />
-                    <span className="text-[10px] font-bold">Upload</span>
+                  <div className="flex flex-col items-center justify-center text-stone-400 p-2 text-center">
+                    <ImageIcon className="w-6 h-6 mb-1 text-stone-300" />
+                    <span className="text-[11px] font-bold">No Image</span>
                   </div>
                 )}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition text-white">
-                  <Upload className="w-5 h-5" />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition text-white text-center p-2">
+                  <Upload className="w-5 h-5 mb-1" />
+                  <span className="text-[10px] font-bold">{language === 'th' ? 'เปลี่ยนรูป' : 'Change'}</span>
                 </div>
               </div>
 
-              {/* Upload Button & Optional URL input */}
-              <div className="flex-1 space-y-2 w-full">
+              {/* Upload Actions */}
+              <div className="flex-1 space-y-2.5 w-full">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full py-2.5 px-4 bg-orange-50 hover:bg-orange-100 text-orange-800 border border-orange-200 font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 transition cursor-pointer"
+                  className="w-full py-3 px-4 bg-white hover:bg-orange-50 text-stone-800 hover:text-orange-700 border border-stone-200 hover:border-orange-300 font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 transition cursor-pointer shadow-xs active:scale-[0.99]"
                 >
-                  <Upload className="w-4 h-4 text-orange-600" />
+                  <Upload className="w-4 h-4 text-orange-500" />
                   <span>{t('adminUploadImage', language)}</span>
                 </button>
+                <p className="text-[11px] text-stone-400 font-medium text-center sm:text-left">
+                  {t('adminUploadHint', language)}
+                </p>
 
-                <div className="space-y-1">
-                  <span className="text-[11px] text-stone-400 font-medium block">
-                    {t('adminOrUrl', language)}
+                {showUrlInput && (
+                  <div className="pt-1 animate-in fade-in">
+                    <input
+                      type="url"
+                      value={formData.imageUrl?.startsWith('data:') ? '' : formData.imageUrl}
+                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                      placeholder="https://images.unsplash.com/photo-..."
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-white focus:outline-none focus:border-orange-500 text-xs font-medium"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 2: BASIC INFO (NAMES, CATEGORY, PRICE) */}
+          <div className="space-y-4">
+            {/* Names */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-black text-stone-800 mb-1.5 text-xs">
+                  {t('adminItemNameTh', language)} *
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="เช่น อเมริกาโน่เย็น"
+                  required
+                  className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 font-bold text-stone-900"
+                />
+              </div>
+              <div>
+                <label className="block font-black text-stone-800 mb-1.5 text-xs">
+                  {t('adminItemNameEn', language)}
+                </label>
+                <input
+                  type="text"
+                  value={formData.nameEn}
+                  onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
+                  placeholder="e.g. Craft Iced Americano"
+                  className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 font-bold text-stone-900"
+                />
+              </div>
+            </div>
+
+            {/* Category & Price */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-black text-stone-800 mb-1.5 text-xs">
+                  {t('adminCategory', language)} *
+                </label>
+                <div className="relative">
+                  <select
+                    value={formData.categoryId}
+                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                    className="w-full px-4 py-3 rounded-2xl border border-stone-200 bg-white focus:outline-none focus:border-orange-500 font-bold text-stone-900 appearance-none cursor-pointer pr-10 shadow-2xs"
+                  >
+                    {categories
+                      .filter((c) => c.id !== 'popular')
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {language === 'en' ? (c.nameEn || c.name) : c.name}
+                        </option>
+                      ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-stone-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-black text-stone-800 mb-1.5 text-xs">
+                  {t('adminPrice', language)} (฿) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-orange-500 text-sm">
+                    ฿
                   </span>
                   <input
-                    type="url"
-                    value={formData.imageUrl?.startsWith('data:') ? '' : formData.imageUrl}
-                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                    placeholder="https://images.unsplash.com/..."
-                    className="w-full px-3 py-2 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500 text-xs"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                    required
+                    className="w-full pl-8 pr-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 font-black text-stone-900 text-base"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Names */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {/* SECTION 3: DESCRIPTIONS */}
+          <div className="space-y-4 pt-1">
             <div>
-              <label className="block font-bold text-stone-800 mb-1">
-                {t('adminItemNameTh', language)} *
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="เช่น อเมริกาโน่เย็น"
-                required
-                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold"
-              />
-            </div>
-            <div>
-              <label className="block font-bold text-stone-800 mb-1">
-                {t('adminItemNameEn', language)}
-              </label>
-              <input
-                type="text"
-                value={formData.nameEn}
-                onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
-                placeholder="e.g. Iced Americano"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold"
-              />
-            </div>
-          </div>
-
-          {/* Category & Price (Removed THB) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <label className="block font-bold text-stone-800 mb-1">
-                {t('adminCategory', language)} *
-              </label>
-              <div className="relative">
-                <select
-                  value={formData.categoryId}
-                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 bg-white focus:outline-none focus:border-orange-500 font-bold appearance-none cursor-pointer pr-8"
-                >
-                  {categories
-                    .filter((c) => c.id !== 'popular')
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {language === 'en' ? (c.nameEn || c.name) : c.name}
-                      </option>
-                    ))}
-                </select>
-                <ChevronDown className="w-4 h-4 text-stone-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
-            </div>
-            <div>
-              <label className="block font-bold text-stone-800 mb-1">
-                {t('adminPrice', language)} (฿) *
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                required
-                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500 font-black text-orange-600"
-              />
-            </div>
-          </div>
-
-          {/* Descriptions */}
-          <div className="space-y-3">
-            <div>
-              <label className="block font-bold text-stone-800 mb-1">
+              <label className="block font-black text-stone-800 mb-1.5 text-xs">
                 {t('adminDescTh', language)}
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={2}
-                placeholder="รายละเอียดรสชาติ วัตถุดิบ..."
-                className="w-full px-3.5 py-2 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500 resize-none text-xs"
+                placeholder="รายละเอียดรสชาติ วัตถุดิบ ความพิเศษของเมนู..."
+                className="w-full px-4 py-2.5 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 resize-none text-xs leading-relaxed"
               />
             </div>
             <div>
-              <label className="block font-bold text-stone-800 mb-1">
+              <label className="block font-black text-stone-800 mb-1.5 text-xs">
                 {t('adminDescEn', language)}
               </label>
               <textarea
                 value={formData.descriptionEn}
                 onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
                 rows={2}
-                placeholder="Flavor profile, ingredients..."
-                className="w-full px-3.5 py-2 rounded-xl border border-stone-200 focus:outline-none focus:border-orange-500 resize-none text-xs"
+                placeholder="Flavor profile, tasting notes, ingredients..."
+                className="w-full px-4 py-2.5 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 resize-none text-xs leading-relaxed"
               />
             </div>
           </div>
 
-          {/* Badges & Highlights */}
-          <div className="pt-2 border-t border-stone-100">
-            <label className="block font-bold text-stone-800 mb-2">
+          {/* SECTION 4: HIGHLIGHT BADGES (SELECTABLE CARDS) */}
+          <div className="pt-2">
+            <label className="block font-black text-stone-800 mb-2.5 text-xs">
               {t('adminHighlightBadges', language)}
             </label>
-            <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.isChefRecommend}
-                  onChange={(e) => setFormData({ ...formData, isChefRecommend: e.target.checked })}
-                  className="w-4 h-4 rounded text-orange-500 focus:ring-orange-400"
-                />
-                <span className="text-xs font-bold text-amber-700 flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5" /> {t('adminIsChef', language)}
-                </span>
-              </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Chef Recommend Card */}
+              <div
+                onClick={() => setFormData({ ...formData, isChefRecommend: !formData.isChefRecommend })}
+                className={`p-3.5 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition ${
+                  formData.isChefRecommend
+                    ? 'border-amber-500 bg-amber-50/70 text-amber-950 shadow-2xs'
+                    : 'border-stone-200 bg-white hover:border-stone-300 text-stone-600'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${formData.isChefRecommend ? 'bg-amber-500 text-white' : 'bg-stone-100 text-stone-500'}`}>
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-xs sm:text-sm">
+                      {t('adminIsChef', language)}
+                    </h4>
+                    <p className="text-[11px] text-stone-400 font-medium">Chef's Pick Badge</p>
+                  </div>
+                </div>
 
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.isPopular}
-                  onChange={(e) => setFormData({ ...formData, isPopular: e.target.checked })}
-                  className="w-4 h-4 rounded text-orange-500 focus:ring-orange-400"
-                />
-                <span className="text-xs font-bold text-red-600 flex items-center gap-1">
-                  <Flame className="w-3.5 h-3.5" /> {t('adminIsPopular', language)}
-                </span>
-              </label>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition ${formData.isChefRecommend ? 'border-amber-500 bg-amber-500 text-white' : 'border-stone-300 bg-white'}`}>
+                  {formData.isChefRecommend && <Check className="w-3 h-3 stroke-[3]" />}
+                </div>
+              </div>
+
+              {/* Popular Item Card */}
+              <div
+                onClick={() => setFormData({ ...formData, isPopular: !formData.isPopular })}
+                className={`p-3.5 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition ${
+                  formData.isPopular
+                    ? 'border-red-500 bg-red-50/70 text-red-950 shadow-2xs'
+                    : 'border-stone-200 bg-white hover:border-stone-300 text-stone-600'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${formData.isPopular ? 'bg-red-500 text-white' : 'bg-stone-100 text-stone-500'}`}>
+                    <Flame className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-xs sm:text-sm">
+                      {t('adminIsPopular', language)}
+                    </h4>
+                    <p className="text-[11px] text-stone-400 font-medium">Best Seller Badge</p>
+                  </div>
+                </div>
+
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition ${formData.isPopular ? 'border-red-500 bg-red-500 text-white' : 'border-stone-300 bg-white'}`}>
+                  {formData.isPopular && <Check className="w-3 h-3 stroke-[3]" />}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Footer Submit */}
-          <div className="pt-4 border-t border-stone-100 flex items-center justify-end gap-2.5">
+          {/* Footer Submit Bar */}
+          <div className="pt-5 border-t border-stone-100 flex items-center justify-end gap-3 sticky bottom-0 bg-white pb-1">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-stone-200 hover:bg-stone-100 text-stone-700 font-bold transition text-xs sm:text-sm cursor-pointer"
+              className="px-5 py-3 rounded-2xl border border-stone-200 hover:bg-stone-100 text-stone-700 font-black transition text-xs sm:text-sm cursor-pointer"
             >
               {t('cancel', language)}
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-black shadow-md shadow-orange-500/25 transition text-xs sm:text-sm cursor-pointer"
+              className="px-8 py-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] text-white font-black shadow-lg shadow-orange-500/25 transition text-xs sm:text-sm cursor-pointer flex items-center gap-2"
             >
-              {t('save', language)}
+              <span>{t('save', language)}</span>
             </button>
           </div>
         </form>
