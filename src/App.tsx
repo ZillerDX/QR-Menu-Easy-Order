@@ -16,6 +16,7 @@ import { StoreSettings } from './components/admin/StoreSettings';
 import { QRGenerator } from './components/table-qr/QRGenerator';
 import { ConfirmModal } from './components/common/ConfirmModal';
 import { AuthModal } from './components/auth/AuthModal';
+import { ReceiptModal } from './components/common/ReceiptModal';
 import { supabase, authService } from './utils/supabaseClient';
 import { User } from '@supabase/supabase-js';
 import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight, Hourglass, Flame, CheckCircle2 } from 'lucide-react';
@@ -41,6 +42,7 @@ export function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('promptpay');
   const [activePromptPayOrder, setActivePromptPayOrder] = useState<Order | null>(null);
+  const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
   
   // Tracked order initialization (from latest active order)
   const [trackedOrder, setTrackedOrder] = useState<Order | null>(() => {
@@ -178,17 +180,6 @@ export function App() {
       return;
     }
     setActiveRole(role);
-  };
-
-  const handleQuickDemoLogin = () => {
-    const mockUser: any = {
-      id: 'demo-staff-id',
-      email: 'staff@cafeorder.com',
-      user_metadata: { name: 'Store Staff' },
-      app_metadata: { provider: 'demo' },
-    };
-    setUser(mockUser);
-    setActiveRole('kitchen');
   };
 
   const handleLogout = async () => {
@@ -402,14 +393,13 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-[#fafaf9] text-stone-900 flex flex-col selection:bg-orange-500 selection:text-white">
-      {/* Top Header with Dual Language Toggle & Custom Table Popover */}
+      {/* Top Header with Dual Language Toggle & Fixed Non-Changeable Table Badge for Customers */}
       <Header
         storeConfig={storeConfig}
         tableNumber={tableNumber}
         cartCount={totalCartCount}
         onOpenCart={() => setIsCartOpen(true)}
         activeRole={activeRole}
-        onTableChange={setTableNumber}
         language={language}
         onToggleLanguage={handleToggleLanguage}
         user={user}
@@ -530,6 +520,7 @@ export function App() {
             onUpdateStatus={handleUpdateOrderStatus}
             onToggleStock={handleToggleStock}
             onResetData={handleResetData}
+            onPrintReceipt={(order) => setReceiptOrder(order)}
           />
         )}
 
@@ -580,10 +571,9 @@ export function App() {
         onSuccess={() => {
           setIsAuthModalOpen(false);
         }}
-        onQuickDemoLogin={handleQuickDemoLogin}
       />
 
-      {/* Modals */}
+      {/* Item Customization Modal */}
       <ItemModal
         item={activeModalItem}
         onClose={() => setActiveModalItem(null)}
@@ -591,6 +581,7 @@ export function App() {
         language={language}
       />
 
+      {/* Cart Drawer */}
       <CartDrawer
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
@@ -604,6 +595,7 @@ export function App() {
         setPaymentMethod={setPaymentMethod}
       />
 
+      {/* PromptPay Modal */}
       <PromptPayModal
         isOpen={!!activePromptPayOrder}
         onClose={() => {
@@ -626,6 +618,16 @@ export function App() {
         isOpen={isOrderTrackerOpen}
         onClose={() => setIsOrderTrackerOpen(false)}
         order={trackedOrder}
+        language={language}
+        onPrintReceipt={(order) => setReceiptOrder(order)}
+      />
+
+      {/* Receipt Printing Modal Slip */}
+      <ReceiptModal
+        isOpen={!!receiptOrder}
+        onClose={() => setReceiptOrder(null)}
+        order={receiptOrder}
+        storeConfig={storeConfig}
         language={language}
       />
 

@@ -10,6 +10,7 @@ interface OrderTrackerProps {
   onClose: () => void;
   order: Order | null;
   language: Language;
+  onPrintReceipt?: (order: Order) => void;
 }
 
 export const OrderTracker: React.FC<OrderTrackerProps> = ({
@@ -17,6 +18,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
   onClose,
   order,
   language,
+  onPrintReceipt,
 }) => {
   useEffect(() => {
     if (isOpen && (order?.status === 'ready' || order?.status === 'completed')) {
@@ -263,10 +265,19 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-stone-50 border-t border-stone-200/80 flex items-center justify-end gap-3 flex-shrink-0">
+        <div className="px-6 py-4 bg-stone-50 border-t border-stone-200/80 flex items-center justify-between gap-3 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => onPrintReceipt?.(order)}
+            className="py-3 px-4 rounded-2xl bg-stone-100 hover:bg-stone-200 active:scale-[0.98] text-stone-800 font-bold text-xs sm:text-sm transition cursor-pointer flex items-center justify-center gap-1.5 border border-stone-200/80 shadow-2xs"
+          >
+            <Receipt className="w-4 h-4 text-orange-500" />
+            <span>{language === 'th' ? 'พิมพ์ใบเสร็จ' : 'Receipt Slip'}</span>
+          </button>
+
           <button
             onClick={onClose}
-            className="w-full py-3 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-black text-sm shadow-md shadow-orange-500/25 transition cursor-pointer flex items-center justify-center gap-2"
+            className="flex-1 py-3 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-black text-xs sm:text-sm shadow-md shadow-orange-500/25 transition cursor-pointer flex items-center justify-center gap-2"
           >
             <Plus className="w-4 h-4" />
             <span>{t('trackerOrderMore', language)}</span>

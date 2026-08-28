@@ -14,6 +14,7 @@ interface KitchenDashboardProps {
   onUpdateStatus: (orderId: string, status: OrderStatus, paymentStatus?: Order['paymentStatus']) => void;
   onToggleStock: (itemId: string) => void;
   onResetData: () => void;
+  onPrintReceipt?: (order: Order) => void;
 }
 
 export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
@@ -23,6 +24,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
   onUpdateStatus,
   onToggleStock,
   onResetData,
+  onPrintReceipt,
 }) => {
   const [filter, setFilter] = useState<'active' | 'ready' | 'completed' | 'all'>('active');
   const [showStock, setShowStock] = useState(false);
@@ -222,6 +224,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
               order={order}
               language={language}
               onUpdateStatus={onUpdateStatus}
+              onPrintReceipt={onPrintReceipt}
             />
           ))}
         </div>

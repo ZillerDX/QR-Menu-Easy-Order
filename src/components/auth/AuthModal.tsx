@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Lock, Mail, KeyRound, AlertCircle, Sparkles, CheckCircle2, ShieldCheck, Zap, ExternalLink } from 'lucide-react';
+import { X, Lock, Mail, KeyRound, AlertCircle, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { authService } from '../../utils/supabaseClient';
 import { Language } from '../../types';
 import { CAFE_ORDER_LOGO_DATA_URI } from '../../data/logoData';
@@ -10,7 +10,6 @@ interface AuthModalProps {
   onClose: () => void;
   language: Language;
   onSuccess?: () => void;
-  onQuickDemoLogin?: () => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -18,7 +17,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   language,
   onSuccess,
-  onQuickDemoLogin,
 }) => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
@@ -39,8 +37,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       if (msg.includes('Unsupported provider') || msg.includes('provider is not enabled')) {
         setErrorMessage(
           language === 'th'
-            ? '⚠️ ยังไม่ได้เปิดใช้งาน Google Provider บน Supabase Dashboard ท่านสามารถกดปุ่ม "เข้าสู่ระบบด่วน (Quick Demo)" ด้านล่างเพื่อทดสอบได้ทันทีครับ'
-            : '⚠️ Google provider is not yet enabled in Supabase Dashboard. You can use the Quick Demo login button below to test immediately.'
+            ? 'กรุณาเปิดใช้งาน Google Provider บน Supabase Dashboard หรือใช้อีเมลด้านล่างเพื่อเข้าสู่ระบบครับ'
+            : 'Google provider is not enabled. Please sign in with Email below.'
         );
       } else {
         setErrorMessage(msg || (language === 'th' ? 'เกิดข้อผิดพลาดในการล็อกอินด้วย Google' : 'Google sign-in failed'));
@@ -83,14 +81,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleDemoClick = () => {
-    onQuickDemoLogin?.();
-    onSuccess?.();
-    onClose();
-  };
-
   const modalContent = (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-stone-950/80 backdrop-blur-md transition-opacity"
@@ -98,9 +90,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       />
 
       {/* Card */}
-      <div className="relative w-full max-w-md bg-white rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10">
+      <div className="relative w-full max-w-md bg-white rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 max-h-[92vh] flex flex-col">
         {/* Header Graphic */}
-        <div className="p-6 bg-gradient-to-tr from-amber-600 via-orange-500 to-amber-400 text-white relative text-center">
+        <div className="p-5 sm:p-6 bg-gradient-to-tr from-amber-600 via-orange-500 to-amber-400 text-white relative text-center flex-shrink-0">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition cursor-pointer"
@@ -108,7 +100,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <X className="w-4 h-4" />
           </button>
 
-          <div className="w-16 h-16 rounded-2xl bg-white p-1 mx-auto shadow-lg shadow-black/10 overflow-hidden mb-3">
+          <div className="w-16 h-16 rounded-2xl bg-white p-1 mx-auto shadow-lg shadow-black/10 overflow-hidden mb-2.5">
             <img
               src={CAFE_ORDER_LOGO_DATA_URI}
               alt="Cafe Order Logo"
@@ -116,26 +108,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             />
           </div>
 
-          <h3 className="font-black text-xl tracking-tight">
+          <h3 className="font-black text-lg sm:text-xl tracking-tight">
             {language === 'th' ? 'เข้าสู่ระบบสำหรับทางร้าน' : 'Store Staff & Admin Portal'}
           </h3>
-          <p className="text-xs text-orange-100 mt-1 font-medium flex items-center justify-center gap-1.5">
+          <p className="text-xs text-orange-100 mt-0.5 font-medium flex items-center justify-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>{language === 'th' ? 'สำหรับผู้จัดการ, พนักงานครัว และแคชเชียร์' : 'For Managers, Kitchen Staff & Cashiers'}</span>
           </p>
         </div>
 
-        <div className="p-6 space-y-4">
-          {/* Quick Demo 1-Click Login Button */}
-          <button
-            type="button"
-            onClick={handleDemoClick}
-            className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-98 text-white rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition shadow-md shadow-emerald-600/20 cursor-pointer"
-          >
-            <Zap className="w-4 h-4 text-amber-300" />
-            <span>{language === 'th' ? '⚡ เข้าสู่ระบบพนักงานด่วน (1-Click Staff Demo)' : '⚡ Quick Staff Demo (1-Click)'}</span>
-          </button>
-
+        <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
           {/* Mode Switcher */}
           <div className="flex bg-stone-100 p-1 rounded-2xl border border-stone-200/80 text-xs font-black">
             <button

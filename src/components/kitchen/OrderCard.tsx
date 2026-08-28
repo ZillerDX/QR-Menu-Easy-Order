@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Utensils, Sparkles, CheckCheck, Banknote, QrCode, Flame, Hourglass } from 'lucide-react';
+import { Clock, Utensils, Sparkles, CheckCheck, Banknote, QrCode, Flame, Hourglass, Printer } from 'lucide-react';
 import { Order, OrderStatus, Language } from '../../types';
 import { t } from '../../utils/i18n';
 
@@ -7,9 +7,15 @@ interface OrderCardProps {
   order: Order;
   language: Language;
   onUpdateStatus: (orderId: string, status: OrderStatus, paymentStatus?: Order['paymentStatus']) => void;
+  onPrintReceipt?: (order: Order) => void;
 }
 
-export const OrderCard: React.FC<OrderCardProps> = ({ order, language, onUpdateStatus }) => {
+export const OrderCard: React.FC<OrderCardProps> = ({ 
+  order, 
+  language, 
+  onUpdateStatus,
+  onPrintReceipt,
+}) => {
   const timeFormatted = new Date(order.createdAt).toLocaleTimeString(language === 'th' ? 'th-TH' : 'en-US', {
     hour: '2-digit',
     minute: '2-digit',
@@ -141,9 +147,21 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, language, onUpdateS
 
       {/* Footer Controls */}
       <div className="mt-4 pt-3 border-t border-stone-100 space-y-2">
-        <div className="flex justify-between text-xs text-stone-500 font-bold">
-          <span>{t('total', language)}</span>
-          <span className="font-black text-stone-900 text-sm">฿{order.totalPrice.toLocaleString()}</span>
+        <div className="flex items-center justify-between text-xs text-stone-500 font-bold">
+          <button
+            type="button"
+            onClick={() => onPrintReceipt?.(order)}
+            className="flex items-center gap-1 text-[11px] text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 px-2.5 py-1 rounded-xl transition cursor-pointer font-black active:scale-95"
+            title="Print Receipt Slip"
+          >
+            <Printer className="w-3.5 h-3.5 text-orange-500" />
+            <span>{language === 'th' ? 'พิมพ์ใบเสร็จ' : 'Print Slip'}</span>
+          </button>
+          
+          <div className="text-right">
+            <span className="text-[10px] text-stone-400 mr-1">{t('total', language)}</span>
+            <span className="font-black text-stone-900 text-sm">฿{order.totalPrice.toLocaleString()}</span>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 pt-1">

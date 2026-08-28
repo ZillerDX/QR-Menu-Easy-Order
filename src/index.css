@@ -79,3 +79,18 @@
   background-size: 200% 100%;
   animation: shimmer 2.5s infinite;
 }
+
+/* POS Thermal Receipt & Printer Optimization */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  header, main, footer, nav, [role="navigation"], .no-print {
+    display: none !important;
+  }
+  @page {
+    margin: 4mm;
+    size: auto;
+  }
+}
