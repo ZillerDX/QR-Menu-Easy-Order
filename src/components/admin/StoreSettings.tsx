@@ -78,7 +78,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
               ) : (
                 <div className="w-full h-full bg-white rounded-[22px] flex flex-col items-center justify-center text-orange-600">
                   <Store className="w-8 h-8 mb-1" />
-                  <span className="text-[10px] font-black">Easy Menu</span>
+                  <span className="text-[10px] font-black">Cafe Order</span>
                 </div>
               )}
             </div>

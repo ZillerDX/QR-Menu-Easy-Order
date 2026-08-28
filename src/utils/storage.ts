@@ -198,7 +198,14 @@ class RealtimeSyncManager {
       const data = localStorage.getItem(STORE_KEY);
       if (!data) return initialStoreConfig;
       const parsed: StoreConfig = JSON.parse(data);
-      if (parsed.name === 'Easy Menu' || !parsed.logoUrl) {
+      if (
+        parsed.name === 'Easy Menu' || 
+        !parsed.logoUrl || 
+        parsed.logoUrl.includes('assets/logo') || 
+        parsed.logoUrl.startsWith('/assets') ||
+        parsed.logoUrl.startsWith('assets/') ||
+        parsed.logoUrl === ''
+      ) {
         const migrated: StoreConfig = {
           ...parsed,
           name: parsed.name === 'Easy Menu' ? initialStoreConfig.name : parsed.name,

@@ -1,12 +1,12 @@
 import { MenuCategory, MenuItem, StoreConfig } from '../types';
-import cafeLogo from '../assets/logo.jpg';
+import { CAFE_ORDER_LOGO_DATA_URI } from './logoData';
 
 export const initialStoreConfig: StoreConfig = {
   name: "Cafe Order",
   nameEn: "Cafe Order",
   tagline: "Order Easy • Enjoy More",
   taglineEn: "Order Easy • Enjoy More",
-  logoUrl: cafeLogo,
+  logoUrl: CAFE_ORDER_LOGO_DATA_URI,
   promptpayNumber: "0812345678",
   promptpayName: "คาเฟ่ ออเดอร์ (Cafe Order)",
   openTime: "08:00 - 22:00 น.",
