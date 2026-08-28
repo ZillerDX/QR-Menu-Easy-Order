@@ -15,6 +15,9 @@ import { MenuAdmin } from './components/admin/MenuAdmin';
 import { StoreSettings } from './components/admin/StoreSettings';
 import { QRGenerator } from './components/table-qr/QRGenerator';
 import { ConfirmModal } from './components/common/ConfirmModal';
+import { AuthModal } from './components/auth/AuthModal';
+import { supabase, authService } from './utils/supabaseClient';
+import { User } from '@supabase/supabase-js';
 import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight, Hourglass, Flame, CheckCircle2 } from 'lucide-react';
 
 export function App() {
@@ -29,6 +32,10 @@ export function App() {
   const [selectedCategory, setSelectedCategory] = useState<string>('popular');
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Supabase Auth & RBAC State
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
   // Modals & Sheets
   const [activeModalItem, setActiveModalItem] = useState<MenuItem | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -43,18 +50,39 @@ export function App() {
   const [isOrderTrackerOpen, setIsOrderTrackerOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
-  // Initialize and check URL query params
+  // Initialize Auth & Data
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tableParam = params.get('table');
-    if (tableParam) {
-      setTableNumber(tableParam);
-    }
-    const roleParam = params.get('role');
-    if (roleParam === 'kitchen' || roleParam === 'admin' || roleParam === 'settings' || roleParam === 'qr') {
-      setActiveRole(roleParam as AppRole);
-    }
+    // 1. Check existing Supabase session
+    authService.getSession().then((session) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      
+      // Check URL query params
+      const params = new URLSearchParams(window.location.search);
+      const tableParam = params.get('table');
+      if (tableParam) {
+        setTableNumber(tableParam);
+      }
+      const roleParam = params.get('role');
+      if (roleParam === 'kitchen' || roleParam === 'admin' || roleParam === 'settings' || roleParam === 'qr') {
+        if (currentUser) {
+          setActiveRole(roleParam as AppRole);
+        } else {
+          // If customer tries to access admin without auth, open login modal
+          setIsAuthModalOpen(true);
+        }
+      }
+    });
 
+    // 2. Listen to Auth State Changes
+    const { data: authListener } = authService.onAuthStateChange((newUser) => {
+      setUser(newUser);
+      if (!newUser) {
+        setActiveRole('customer');
+      }
+    });
+
+    // 3. Local & Sync Manager Data
     const currentOrders = syncManager.getOrders();
     setStoreConfig(syncManager.getStoreConfig());
     setCategories(syncManager.getCategories());
@@ -92,7 +120,38 @@ export function App() {
       }
     });
 
-    return () => unsubscribe();
+    // 4. Supabase Realtime Subscription for Orders
+    const orderSubscription = supabase
+      .channel('public:orders')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const newO: any = payload.new;
+          const mappedOrder: Order = {
+            id: newO.id,
+            orderNumber: newO.order_number,
+            tableNumber: newO.table_number,
+            status: newO.status,
+            paymentMethod: newO.payment_method,
+            paymentStatus: newO.payment_status,
+            subtotal: Number(newO.total_price),
+            totalPrice: Number(newO.total_price),
+            items: newO.items,
+            customerNote: newO.notes,
+            createdAt: newO.created_at,
+          };
+          setOrders((prev) => {
+            if (prev.some((o) => o.id === mappedOrder.id)) return prev;
+            return [mappedOrder, ...prev];
+          });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+      unsubscribe();
+      supabase.removeChannel(orderSubscription);
+    };
   }, []);
 
   // Update tracked order when tableNumber changes
@@ -111,6 +170,24 @@ export function App() {
     const url = new URL(window.location.href);
     url.searchParams.set('lang', nextLang);
     window.history.replaceState({}, '', url.toString());
+  };
+
+  const handleSelectRole = (role: AppRole) => {
+    if (role !== 'customer' && !user) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    setActiveRole(role);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authService.signOut();
+      setUser(null);
+      setActiveRole('customer');
+    } catch (e) {
+      console.error("Logout error:", e);
+    }
   };
 
   const handleSaveStoreConfig = (config: StoreConfig) => {
@@ -162,7 +239,7 @@ export function App() {
     setCart((prev) => prev.filter((item) => item.cartItemId !== cartItemId));
   };
 
-  const handleCheckout = (chosenPayment: PaymentMethod) => {
+  const handleCheckout = async (chosenPayment: PaymentMethod) => {
     if (cart.length === 0) return;
 
     const subtotal = cart.reduce((sum, item) => sum + item.totalItemPrice, 0);
@@ -181,9 +258,27 @@ export function App() {
       createdAt: new Date().toISOString(),
     };
 
+    // 1. Save locally for instant reactivity
     syncManager.saveOrder(newOrder);
     setCart([]);
     setIsCartOpen(false);
+
+    // 2. Sync to Supabase Database
+    try {
+      await supabase.from('orders').insert([{
+        id: newOrder.id,
+        order_number: newOrder.orderNumber,
+        table_number: newOrder.tableNumber,
+        status: newOrder.status,
+        payment_method: newOrder.paymentMethod,
+        payment_status: newOrder.paymentStatus,
+        total_price: newOrder.totalPrice,
+        items: newOrder.items,
+        notes: newOrder.customerNote || '',
+      }]);
+    } catch (e) {
+      console.error("Supabase insert order error:", e);
+    }
 
     if (chosenPayment === 'promptpay') {
       setActivePromptPayOrder(newOrder);
@@ -193,22 +288,43 @@ export function App() {
     }
   };
 
-  const handlePromptPayConfirmed = () => {
+  const handlePromptPayConfirmed = async () => {
     if (activePromptPayOrder) {
       syncManager.updateOrderStatus(activePromptPayOrder.id, 'pending', 'paid');
       const updated = { ...activePromptPayOrder, paymentStatus: 'paid' as const };
       setTrackedOrder(updated);
       setActivePromptPayOrder(null);
       setIsOrderTrackerOpen(true);
+
+      try {
+        await supabase
+          .from('orders')
+          .update({ payment_status: 'paid' })
+          .eq('id', activePromptPayOrder.id);
+      } catch (e) {
+        console.error("Supabase update payment error:", e);
+      }
     }
   };
 
-  const handleUpdateOrderStatus = (
+  const handleUpdateOrderStatus = async (
     orderId: string,
     status: OrderStatus,
     paymentStatus?: Order['paymentStatus']
   ) => {
     syncManager.updateOrderStatus(orderId, status, paymentStatus);
+    try {
+      await supabase
+        .from('orders')
+        .update({
+          status,
+          ...(paymentStatus ? { payment_status: paymentStatus } : {}),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', orderId);
+    } catch (e) {
+      console.error("Supabase update status error:", e);
+    }
   };
 
   const handleToggleStock = (itemId: string) => {
@@ -270,7 +386,6 @@ export function App() {
 
   const pendingCount = orders.filter((o) => o.status === 'pending' || o.status === 'cooking').length;
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const cartSubtotal = cart.reduce((sum, item) => sum + item.totalItemPrice, 0);
 
   return (
     <div className="min-h-screen bg-[#fafaf9] text-stone-900 flex flex-col selection:bg-orange-500 selection:text-white">
@@ -284,6 +399,9 @@ export function App() {
         onTableChange={setTableNumber}
         language={language}
         onToggleLanguage={handleToggleLanguage}
+        user={user}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
@@ -291,179 +409,107 @@ export function App() {
         {/* VIEW 1: CUSTOMER VIEW */}
         {activeRole === 'customer' && (
           <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
-            {/* Active Tracked Order Banner (Click anywhere to open OrderTracker) */}
+            {/* Active Tracked Order Banner */}
             {trackedOrder && (
               <div
                 onClick={() => setIsOrderTrackerOpen(true)}
                 className="relative overflow-hidden bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 rounded-3xl p-4 sm:p-5 text-white shadow-xl shadow-orange-500/25 flex items-center justify-between animate-pulse-subtle cursor-pointer hover:shadow-2xl hover:shadow-orange-500/35 transition-all duration-300 group hover:-translate-y-0.5"
               >
                 <div className="absolute inset-0 shimmer-gradient pointer-events-none opacity-30" />
-                <div className="relative z-10 space-y-1">
-                  <span className="text-[11px] font-black uppercase tracking-wider text-orange-100/90 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                    {t('recentOrderStatus', language)} ({trackedOrder.orderNumber})
-                  </span>
-                  <h3 className="text-base sm:text-lg font-black flex items-center gap-2">
-                    {trackedOrder.status === 'pending' && (
-                      <>
-                        <Hourglass className="w-4 h-4 animate-spin text-orange-100" />
-                        <span>{t('trackerStep1', language)}</span>
-                      </>
-                    )}
-                    {trackedOrder.status === 'cooking' && (
-                      <>
-                        <Flame className="w-4 h-4 animate-pulse text-amber-200" />
-                        <span>{t('trackerStep2', language)}</span>
-                      </>
-                    )}
-                    {trackedOrder.status === 'ready' && (
-                      <>
-                        <Sparkles className="w-4 h-4 animate-bounce text-yellow-200" />
-                        <span>{t('trackerStep3', language)}</span>
-                      </>
-                    )}
-                    {trackedOrder.status === 'completed' && (
-                      <>
-                        <CheckCircle2 className="w-4 h-4 text-emerald-200" />
-                        <span>{t('trackerStep4', language)}</span>
-                      </>
-                    )}
-                  </h3>
+                <div className="flex items-center gap-3.5 relative z-10">
+                  <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white flex-shrink-0 shadow-inner group-hover:scale-105 transition-transform duration-200">
+                    {trackedOrder.status === 'pending' && <Hourglass className="w-6 h-6 animate-spin" />}
+                    {trackedOrder.status === 'cooking' && <Flame className="w-6 h-6 animate-bounce" />}
+                    {trackedOrder.status === 'ready' && <Sparkles className="w-6 h-6 animate-pulse" />}
+                    {trackedOrder.status === 'completed' && <CheckCircle2 className="w-6 h-6" />}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-sm tracking-tight">
+                        {language === 'th' ? 'ติดตามออเดอร์' : 'Order Tracking'}: {trackedOrder.orderNumber}
+                      </span>
+                      <span className="bg-white/25 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-xs">
+                        {trackedOrder.tableNumber === 'TAKEAWAY' ? t('takeaway', language) : `${language === 'th' ? 'โต๊ะ' : 'Table'} ${trackedOrder.tableNumber}`}
+                      </span>
+                    </div>
+                    <p className="text-xs text-orange-100 font-medium mt-0.5">
+                      {trackedOrder.status === 'pending' && (language === 'th' ? 'กำลังรอคิวรับออเดอร์...' : 'Waiting for kitchen confirmation...')}
+                      {trackedOrder.status === 'cooking' && (language === 'th' ? 'ห้องครัวกำลังปรุงเมนูของคุณอย่างพิถีพิถัน 🔥' : 'Kitchen is preparing your meal 🔥')}
+                      {trackedOrder.status === 'ready' && (language === 'th' ? 'อาหารพร้อมเสิร์ฟแล้ว! กำลังนำไปส่งที่โต๊ะ ✨' : 'Food is ready to be served! ✨')}
+                      {trackedOrder.status === 'completed' && (language === 'th' ? 'ออเดอร์เสร็จสมบูรณ์ ทานให้อร่อยนะคะ' : 'Order completed. Enjoy your meal!')}
+                    </p>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsOrderTrackerOpen(true);
-                  }}
-                  className="relative z-10 px-4 py-2 rounded-2xl bg-white text-orange-600 font-black text-xs sm:text-sm shadow-md hover:bg-orange-50 active:scale-95 transition-all cursor-pointer flex-shrink-0 group-hover:scale-105 group-hover:shadow-lg"
-                >
-                  {t('viewStatus', language)}
-                </button>
+
+                <div className="flex items-center gap-1.5 relative z-10 pl-2">
+                  <span className="hidden sm:inline text-xs font-black bg-white text-orange-600 px-3 py-1.5 rounded-xl shadow-md group-hover:bg-orange-50 transition">
+                    {language === 'th' ? 'แตะเพื่อดูสถานะ' : 'View Status'}
+                  </span>
+                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center group-hover:translate-x-1 transition-transform">
+                    <ArrowRight className="w-4 h-4 text-white" />
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Banner / Store Intro with Standardized p-5 sm:p-6 Padding */}
-            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-stone-950 via-stone-900 to-stone-950 text-white p-5 sm:p-6 shadow-lg border border-stone-800">
-              <div className="relative z-10 max-w-xl space-y-2">
-                <span className="bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[11px] font-black px-3 py-1 rounded-full inline-flex items-center gap-1.5 shadow-md">
-                  <Sparkles className="w-3 h-3" />
-                  <span>{t('heroBadge', language)}</span>
-                </span>
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight leading-tight">
-                  {language === 'en' ? storeConfig.nameEn || storeConfig.name : storeConfig.name}
-                </h2>
-                <p className="text-xs sm:text-sm text-stone-300 font-normal leading-relaxed">
-                  {language === 'en' ? storeConfig.taglineEn || storeConfig.tagline : storeConfig.tagline}
-                </p>
-              </div>
-            </div>
-
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('searchPlaceholder', language)}
-                className="w-full pl-11 pr-4 py-3 bg-white border border-stone-200 rounded-2xl text-sm focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 shadow-xs font-medium transition-all"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-stone-400 hover:text-stone-600 font-bold cursor-pointer"
-                >
-                  {t('clear', language)}
-                </button>
-              )}
-            </div>
-
-            {/* Responsive Category Pills Bar with Padding & No Clipping */}
-            <div className="flex items-center gap-2 overflow-x-auto p-1 -m-1 no-scrollbar touch-pan-x">
-              {categories.map((cat) => {
-                const isActive = selectedCategory === cat.id;
+            {/* Category Navigation Pills */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar scroll-smooth">
+              {categories.map((category) => {
+                const isSelected = selectedCategory === category.id;
                 return (
                   <button
-                    key={cat.id}
-                    onClick={() => setSelectedCategory(cat.id)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex-shrink-0 cursor-pointer active:scale-95 ${
-                      isActive
-                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/30 ring-2 ring-orange-500/20'
-                        : 'bg-white hover:bg-orange-50/60 text-stone-600 hover:text-orange-950 border border-stone-200 shadow-2xs hover:border-orange-200'
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-xs sm:text-sm transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-95 ${
+                      isSelected
+                        ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25 ring-2 ring-orange-500/20'
+                        : 'bg-white text-stone-700 hover:bg-orange-50 hover:text-orange-600 border border-stone-200/80 shadow-2xs'
                     }`}
                   >
-                    {getCategoryIcon(cat.icon)}
-                    <span className="whitespace-nowrap">{language === 'en' ? (cat.nameEn || cat.name) : cat.name}</span>
+                    {getCategoryIcon(category.icon)}
+                    <span>{language === 'en' && category.nameEn ? category.nameEn : category.name}</span>
                   </button>
                 );
               })}
             </div>
 
-            {/* Menu Items Grid - Fully Responsive */}
-            <div>
-              <div className="flex items-center justify-between mb-3 px-1">
-                <h3 className="font-extrabold text-stone-900 text-sm sm:text-base">
-                  {language === 'en'
-                    ? (categories.find((c) => c.id === selectedCategory)?.nameEn || "Chef's Specials")
-                    : (categories.find((c) => c.id === selectedCategory)?.name || 'รายการเมนู')}
-                </h3>
-                <span className="text-xs text-stone-400 font-bold">
-                  {filteredMenuItems.length} {t('items', language)}
-                </span>
-              </div>
-
-              {filteredMenuItems.length === 0 ? (
-                <div className="bg-white rounded-3xl p-12 text-center border border-stone-200 shadow-xs text-stone-400">
-                  <Coffee className="w-10 h-10 mx-auto text-stone-300 mb-2" />
-                  <p className="font-bold text-stone-600 text-sm">
-                    {t('noMenuItems', language)}
-                  </p>
-                  <p className="text-xs text-stone-400 mt-1">
-                    {t('noMenuItemsDesc', language)}
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                  {filteredMenuItems.map((item) => (
-                    <MenuCard
-                      key={item.id}
-                      item={item}
-                      onSelect={(selected) => setActiveModalItem(selected)}
-                      language={language}
-                    />
-                  ))}
-                </div>
-              )}
+            {/* Search Input Bar */}
+            <div className="relative">
+              <Search className="w-4 h-4 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder={t('searchPlaceholder', language)}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-11 pr-4 py-3 bg-white border border-stone-200/90 rounded-2xl text-xs sm:text-sm focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 shadow-2xs transition font-medium"
+              />
             </div>
 
-            {/* Floating Quick Cart Bar (Mobile) */}
-            {cart.length > 0 && (
-              <div className="fixed bottom-16 left-4 right-4 z-30 max-w-md mx-auto animate-in slide-in-from-bottom-5">
-                <button
-                  onClick={() => setIsCartOpen(true)}
-                  className="w-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] text-white p-3.5 rounded-2xl shadow-xl shadow-orange-500/40 flex items-center justify-between transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center font-black text-xs">
-                      {totalCartCount}
-                    </div>
-                    <span className="font-extrabold text-sm">
-                      {t('viewCart', language)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 font-black text-sm">
-                    <span>฿{cartSubtotal.toLocaleString()}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </div>
-                </button>
+            {/* Menu Grid */}
+            {filteredMenuItems.length === 0 ? (
+              <div className="text-center py-16 bg-white rounded-3xl border border-stone-200 shadow-xs">
+                <Utensils className="w-12 h-12 mx-auto text-stone-300 mb-2" />
+                <p className="text-sm font-bold text-stone-500">
+                  {language === 'th' ? 'ไม่พบเมนูที่ค้นหา' : 'No menu items found'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+                {filteredMenuItems.map((item) => (
+                  <MenuCard
+                    key={item.id}
+                    item={item}
+                    language={language}
+                    onSelect={(it) => setActiveModalItem(it)}
+                  />
+                ))}
               </div>
             )}
           </div>
         )}
 
-        {/* VIEW 2: KITCHEN VIEW */}
-        {activeRole === 'kitchen' && (
+        {/* VIEW 2: KITCHEN DISPLAY SYSTEM (KDS) */}
+        {activeRole === 'kitchen' && user && (
           <KitchenDashboard
             orders={orders}
             menuItems={menuItems}
@@ -474,8 +520,8 @@ export function App() {
           />
         )}
 
-        {/* VIEW 3: MENU & STORE ADMIN */}
-        {activeRole === 'admin' && (
+        {/* VIEW 3: MENU & CATEGORY ADMIN */}
+        {activeRole === 'admin' && user && (
           <MenuAdmin
             menuItems={menuItems}
             categories={categories}
@@ -489,7 +535,7 @@ export function App() {
         )}
 
         {/* VIEW 4: STORE SETTINGS */}
-        {activeRole === 'settings' && (
+        {activeRole === 'settings' && user && (
           <StoreSettings
             storeConfig={storeConfig}
             language={language}
@@ -498,17 +544,30 @@ export function App() {
         )}
 
         {/* VIEW 5: TABLE QR GENERATOR */}
-        {activeRole === 'qr' && (
+        {activeRole === 'qr' && user && (
           <QRGenerator storeConfig={storeConfig} language={language} />
         )}
       </main>
 
-      {/* Role Switcher Floating Bar */}
+      {/* Role Switcher Floating Bar (Strictly visible ONLY to authenticated staff) */}
       <RoleSwitcher
         activeRole={activeRole}
-        onSelectRole={setActiveRole}
+        onSelectRole={handleSelectRole}
         language={language}
         pendingOrdersCount={pendingCount}
+        isAuthenticated={!!user}
+        onLogout={handleLogout}
+      />
+
+      {/* Auth Modal for Store Staff & Google Login */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        language={language}
+        onSuccess={() => {
+          setIsAuthModalOpen(false);
+          setActiveRole('kitchen');
+        }}
       />
 
       {/* Modals */}

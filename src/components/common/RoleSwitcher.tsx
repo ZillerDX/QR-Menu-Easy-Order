@@ -1,5 +1,5 @@
 import React from 'react';
-import { Smartphone, UtensilsCrossed, QrCode, Layers, Settings } from 'lucide-react';
+import { Smartphone, UtensilsCrossed, QrCode, Layers, Settings, LogOut, ShieldCheck } from 'lucide-react';
 import { Language } from '../../types';
 import { t } from '../../utils/i18n';
 
@@ -10,6 +10,8 @@ interface RoleSwitcherProps {
   onSelectRole: (role: AppRole) => void;
   language: Language;
   pendingOrdersCount?: number;
+  isAuthenticated: boolean;
+  onLogout?: () => void;
 }
 
 export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
@@ -17,11 +19,21 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
   onSelectRole,
   language,
   pendingOrdersCount = 0,
+  isAuthenticated,
+  onLogout,
 }) => {
+  // CRITICAL RBAC SECURITY RULE:
+  // If user is NOT authenticated as store staff/admin, the dock is 100% hidden.
+  // Customers scanning QR codes will never see this dock.
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
     <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 w-auto max-w-[98vw] px-2 animate-in fade-in slide-in-from-bottom-3 duration-300">
       <div className="bg-stone-950/90 backdrop-blur-xl p-1.5 rounded-full shadow-2xl border border-stone-800/80 flex items-center gap-1 overflow-x-auto max-w-full no-scrollbar ring-1 ring-white/10">
-        {/* Role 1: Customer */}
+        
+        {/* Role 1: Customer Preview */}
         <button
           onClick={() => onSelectRole('customer')}
           className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-black transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-95 ${
@@ -89,6 +101,17 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
         >
           <QrCode className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
           <span>{t('roleQR', language)}</span>
+        </button>
+
+        {/* Staff Indicator & Logout */}
+        <div className="h-4 w-px bg-stone-800 mx-1 hidden sm:block" />
+        <button
+          onClick={onLogout}
+          title={language === 'th' ? 'ออกจากระบบร้านค้า' : 'Logout Staff Portal'}
+          className="flex items-center gap-1 px-2.5 py-2 rounded-full text-xs font-bold text-stone-400 hover:text-red-400 hover:bg-white/10 transition cursor-pointer"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span className="hidden md:inline">{language === 'th' ? 'ออก' : 'Logout'}</span>
         </button>
       </div>
     </div>

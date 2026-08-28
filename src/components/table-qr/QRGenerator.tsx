@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
-import { Download, Printer, QrCode, ExternalLink, ChevronDown, Check, Store, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Download, Printer, QrCode, ExternalLink, ChevronDown, Check, Store, ChevronLeft, ChevronRight, ShieldCheck, Smartphone } from 'lucide-react';
 import { StoreConfig, Language } from '../../types';
 import { t } from '../../utils/i18n';
 
@@ -67,6 +67,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
     a.href = qrDataUrl;
     a.download = `QR_Menu_Table_${selectedTable}.png`;
     a.click();
+    document.body.removeChild(a);
   };
 
   const handlePrevTable = () => {
@@ -82,10 +83,6 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
       setSelectedTable((currentNum + 1).toString().padStart(2, '0'));
     }
   };
-
-  const tableList = Array.from({ length: storeConfig.tableCount }, (_, i) => 
-    (i + 1).toString().padStart(2, '0')
-  );
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
@@ -139,43 +136,44 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
               <Store className="w-4 h-4 text-orange-600 flex-shrink-0" />
               <span>{language === 'th' ? `โต๊ะ ${selectedTable}` : `Table ${selectedTable}`}</span>
               <ChevronDown
-                className={`w-4 h-4 text-orange-600 transition-transform duration-200 flex-shrink-0 ${
+                className={`w-4 h-4 text-orange-600 transition-transform duration-200 ${
                   isDropdownOpen ? 'rotate-180' : ''
                 }`}
               />
             </button>
 
-            {/* Dropdown Popover Card */}
+            {/* Dropdown Menu Popover */}
             {isDropdownOpen && (
-              <div className="absolute right-0 top-full mt-2 w-72 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-stone-200/90 p-3.5 z-50 animate-pop-in space-y-2.5">
-                <div className="flex items-center justify-between px-1 pb-2 border-b border-stone-100">
-                  <span className="text-[11px] font-black uppercase tracking-wider text-stone-400">
-                    {language === 'th' ? 'เลือกหมายเลขโต๊ะ' : 'Select Table'}
+              <div className="absolute right-0 top-12 z-50 w-72 bg-white rounded-3xl shadow-2xl border border-stone-200/90 p-4 space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between pb-2 border-b border-stone-100">
+                  <span className="text-xs font-black text-stone-800 uppercase tracking-wider">
+                    {language === 'th' ? 'เลือกโต๊ะที่ต้องการสร้าง QR' : 'Select Table'}
                   </span>
-                  <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] bg-orange-100 text-orange-800 font-bold px-2 py-0.5 rounded-full">
                     {storeConfig.tableCount} {language === 'th' ? 'โต๊ะ' : 'Tables'}
                   </span>
                 </div>
 
-                {/* Table Numbers Grid */}
-                <div className="grid grid-cols-4 gap-1.5 max-h-52 overflow-y-auto p-0.5">
-                  {tableList.map((tNum) => {
-                    const isSelected = selectedTable === tNum;
+                <div className="grid grid-cols-5 gap-1.5 max-h-56 overflow-y-auto pr-1 no-scrollbar">
+                  {Array.from({ length: storeConfig.tableCount }, (_, i) => {
+                    const tbl = (i + 1).toString().padStart(2, '0');
+                    const isSelected = selectedTable === tbl;
                     return (
                       <button
-                        key={tNum}
+                        key={tbl}
                         type="button"
                         onClick={() => {
-                          setSelectedTable(tNum);
+                          setSelectedTable(tbl);
                           setIsDropdownOpen(false);
                         }}
-                        className={`py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center relative ${
+                        className={`py-2 rounded-xl text-xs font-black transition-all duration-150 cursor-pointer flex flex-col items-center justify-center relative active:scale-95 ${
                           isSelected
-                            ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/30 scale-[1.03]'
-                            : 'bg-stone-50 hover:bg-orange-50 text-stone-700 hover:text-orange-950 border border-stone-200/70'
+                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30 ring-2 ring-orange-500/20'
+                            : 'bg-stone-50 hover:bg-orange-50 text-stone-700 hover:text-orange-700 border border-stone-100'
                         }`}
                       >
-                        <span>{tNum}</span>
+                        <span className="text-[9px] opacity-70">โต๊ะ</span>
+                        <span>{tbl}</span>
                         {isSelected && (
                           <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-white rounded-full" />
                         )}
@@ -189,9 +187,24 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
         </div>
       </div>
 
+      {/* Security & Access Protection Notice */}
+      <div className="p-4 bg-emerald-50/90 border border-emerald-200 rounded-3xl text-xs text-emerald-900 flex items-start gap-3 shadow-2xs">
+        <ShieldCheck className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <h4 className="font-black text-emerald-950">
+            {language === 'th' ? '🔒 ปลอดภัยสูงสุด: QR Code นี้ล็อคสิทธิ์เฉพาะลูกค้า (Customer-Only Link)' : '🔒 100% Protected: Customer-Only Link'}
+          </h4>
+          <p className="text-emerald-800 text-[11px] mt-0.5 leading-relaxed">
+            {language === 'th'
+              ? 'เมื่อลูกค้าสแกน QR Code ประจำโต๊ะ ระบบจะเปิดเฉพาะหน้าเมนู สั่งอาหาร และติดตามสถานะบิลเท่านั้น แถบเมนูควบคุมร้านและฟังก์ชันหลังร้านทั้งหมดจะถูกซ่อนอย่างสมบูรณ์แบบ'
+              : 'When customers scan this QR, they will only see the dining menu, cart, and live order tracker. All admin controls and management docks are strictly hidden.'}
+          </p>
+        </div>
+      </div>
+
       {/* Grid: Preview Card & Quick Settings */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-        {/* Printable Card Preview (Styled like Table Stand) */}
+        {/* Printable Card Preview */}
         <div className="bg-white rounded-3xl p-8 border-2 border-orange-100/90 shadow-xl flex flex-col items-center text-center space-y-5 relative overflow-hidden print:border-none print:shadow-none hover:shadow-2xl transition-shadow duration-300">
           <div className="w-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 text-white py-4 px-5 rounded-2xl shadow-md">
             <h3 className="font-black text-xl tracking-wide">

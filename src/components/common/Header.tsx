@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShoppingBag, Store, ChevronDown, Check, UtensilsCrossed, Package, Sparkles } from 'lucide-react';
+import { ShoppingBag, Store, ChevronDown, Check, UtensilsCrossed, Package, Sparkles, LogIn, LogOut, ShieldCheck, User as UserIcon } from 'lucide-react';
 import { StoreConfig, Language } from '../../types';
 import { t } from '../../utils/i18n';
+import { User } from '@supabase/supabase-js';
 
 interface HeaderProps {
   storeConfig: StoreConfig;
@@ -12,6 +13,9 @@ interface HeaderProps {
   onTableChange: (table: string) => void;
   language: Language;
   onToggleLanguage: () => void;
+  user: User | null;
+  onOpenAuth: () => void;
+  onLogout: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -23,6 +27,9 @@ export const Header: React.FC<HeaderProps> = ({
   onTableChange,
   language,
   onToggleLanguage,
+  user,
+  onOpenAuth,
+  onLogout,
 }) => {
   const [isTableDropdownOpen, setIsTableDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -57,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-xs h-16 flex items-center">
       <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between">
-        {/* Brand Logo & Name (Fixed & 100% Consistent across ALL views) */}
+        {/* Brand Logo & Name */}
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-2xl bg-gradient-to-tr from-amber-600 via-orange-500 to-amber-400 flex items-center justify-center text-white shadow-md shadow-orange-500/20 flex-shrink-0 overflow-hidden hover:scale-105 transition-transform duration-200">
             {storeConfig.logoUrl ? (
@@ -114,9 +121,10 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </div>
 
+          {/* Customer Specific Tools: Table Dropdown & Cart */}
           {activeRole === 'customer' && (
             <>
-              {/* Ultra-Modern Custom Table Dropdown (Non-rectangular, animated popover) */}
+              {/* Ultra-Modern Custom Table Dropdown */}
               <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
@@ -139,64 +147,70 @@ export const Header: React.FC<HeaderProps> = ({
 
                 {/* Animated Dropdown Menu Popover */}
                 {isTableDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-72 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-stone-200/90 p-3 z-50 animate-pop-in space-y-2.5">
-                    <div className="flex items-center justify-between px-2 pt-1 border-b border-stone-100 pb-2">
-                      <span className="text-[11px] font-black uppercase tracking-wider text-stone-400">
-                        {language === 'th' ? 'เลือกโต๊ะที่นั่ง' : 'Select Table'}
+                  <div className="absolute right-0 top-11 z-50 w-72 bg-white rounded-3xl shadow-2xl border border-stone-200/90 p-4 space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex items-center justify-between pb-2 border-b border-stone-100">
+                      <span className="text-xs font-black text-stone-800 uppercase tracking-wider">
+                        {language === 'th' ? 'เลือกตำแหน่งสั่งอาหาร' : 'Select Dining Option'}
                       </span>
-                      <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] bg-orange-100 text-orange-800 font-bold px-2 py-0.5 rounded-full">
                         {storeConfig.tableCount} {language === 'th' ? 'โต๊ะ' : 'Tables'}
                       </span>
                     </div>
 
-                    {/* Table Numbers Grid */}
-                    <div className="grid grid-cols-4 gap-1.5 max-h-48 overflow-y-auto p-0.5">
-                      {Array.from({ length: storeConfig.tableCount }, (_, i) => {
-                        const tNum = (i + 1).toString().padStart(2, '0');
-                        const isSelected = tableNumber === tNum;
-                        return (
-                          <button
-                            key={tNum}
-                            type="button"
-                            onClick={() => handleSelectTable(tNum)}
-                            className={`py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex flex-col items-center justify-center relative ${
-                              isSelected
-                                ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-[1.03]'
-                                : 'bg-stone-50 hover:bg-orange-50 text-stone-700 hover:text-orange-900 border border-stone-200/60'
-                            }`}
-                          >
-                            <span>{tNum}</span>
-                            {isSelected && (
-                              <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-white rounded-full" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-
                     {/* Takeaway Option */}
-                    <div className="pt-1 border-t border-stone-100">
-                      <button
-                        type="button"
-                        onClick={() => handleSelectTable('TAKEAWAY')}
-                        className={`w-full py-2 px-3 rounded-2xl text-xs font-black transition-all cursor-pointer flex items-center justify-between ${
-                          tableNumber === 'TAKEAWAY'
-                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
-                            : 'bg-stone-50 hover:bg-orange-50 text-stone-800 border border-stone-200/60'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Package className="w-3.5 h-3.5 text-orange-400" />
-                          <span>{t('takeaway', language)}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectTable('TAKEAWAY')}
+                      className={`w-full flex items-center justify-between p-2.5 rounded-2xl border transition-all duration-150 cursor-pointer active:scale-98 ${
+                        tableNumber === 'TAKEAWAY'
+                          ? 'border-orange-500 bg-orange-50/80 text-orange-950 font-black shadow-xs'
+                          : 'border-stone-100 bg-stone-50/70 hover:bg-stone-100 text-stone-700 font-bold'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center">
+                          <Package className="w-4 h-4" />
                         </div>
-                        {tableNumber === 'TAKEAWAY' && <Check className="w-3.5 h-3.5 text-white" />}
-                      </button>
+                        <div className="text-left">
+                          <div className="text-xs font-black">{t('takeaway', language)}</div>
+                          <div className="text-[10px] text-stone-400 font-normal">สั่งกลับบ้าน / Takeaway Order</div>
+                        </div>
+                      </div>
+                      {tableNumber === 'TAKEAWAY' && <Check className="w-4 h-4 text-orange-600 font-black" />}
+                    </button>
+
+                    {/* Table Numbers Grid */}
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-black text-stone-400 uppercase">
+                        {language === 'th' ? 'โต๊ะนั่งทานในร้าน:' : 'Dine-In Tables:'}
+                      </span>
+                      <div className="grid grid-cols-4 gap-1.5 max-h-44 overflow-y-auto pr-1 no-scrollbar">
+                        {Array.from({ length: storeConfig.tableCount }, (_, i) => {
+                          const tbl = (i + 1).toString().padStart(2, '0');
+                          const isSelected = tableNumber === tbl;
+                          return (
+                            <button
+                              key={tbl}
+                              type="button"
+                              onClick={() => handleSelectTable(tbl)}
+                              className={`py-2 rounded-xl text-xs font-black transition-all duration-150 cursor-pointer flex flex-col items-center justify-center active:scale-95 ${
+                                isSelected
+                                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30 ring-2 ring-orange-500/20'
+                                  : 'bg-stone-50 hover:bg-orange-50 text-stone-700 hover:text-orange-700 border border-stone-100'
+                              }`}
+                            >
+                              <span className="text-[9px] opacity-70">โต๊ะ</span>
+                              <span>{tbl}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Cart Button with badge & micro-bounce */}
+              {/* Cart Drawer Trigger */}
               <button
                 onClick={onOpenCart}
                 className="relative p-2 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-95 text-white transition shadow-md shadow-orange-500/25 flex items-center gap-1.5 cursor-pointer h-9 px-3 hover:shadow-lg hover:shadow-orange-500/35"
@@ -215,6 +229,7 @@ export const Header: React.FC<HeaderProps> = ({
             </>
           )}
 
+          {/* Staff Mode Role Badges */}
           {activeRole === 'kitchen' && (
             <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1.5 rounded-2xl text-xs font-black shadow-2xs whitespace-nowrap h-9">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -237,6 +252,36 @@ export const Header: React.FC<HeaderProps> = ({
           {activeRole === 'qr' && (
             <div className="flex items-center gap-1.5 bg-blue-50 text-blue-800 border border-blue-200 px-3 py-1.5 rounded-2xl text-xs font-black shadow-2xs whitespace-nowrap h-9">
               Table QR Stand
+            </div>
+          )}
+
+          {/* Staff Auth Indicator / Login Button */}
+          {!user ? (
+            <button
+              type="button"
+              onClick={onOpenAuth}
+              className="px-3 py-1.5 rounded-2xl border border-stone-200/90 bg-stone-50 hover:bg-stone-100 text-stone-700 text-xs font-black flex items-center gap-1.5 transition shadow-2xs cursor-pointer h-9 active:scale-95"
+              title={language === 'th' ? 'เข้าสู่ระบบสำหรับทางร้าน' : 'Staff Login'}
+            >
+              <LogIn className="w-3.5 h-3.5 text-orange-500" />
+              <span className="hidden sm:inline">{language === 'th' ? 'เข้าสู่ระบบร้าน' : 'Staff Login'}</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5 bg-stone-100 border border-stone-200/90 pl-2 pr-1 py-1 rounded-2xl h-9">
+              <div className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center text-[10px] font-black">
+                {user.email ? user.email.slice(0, 1).toUpperCase() : 'S'}
+              </div>
+              <span className="text-[11px] font-bold text-stone-700 max-w-[100px] truncate hidden md:inline">
+                {user.email || 'Staff'}
+              </span>
+              <button
+                type="button"
+                onClick={onLogout}
+                className="p-1 rounded-xl hover:bg-stone-200 text-stone-400 hover:text-red-600 transition cursor-pointer"
+                title={language === 'th' ? 'ออกจากระบบ' : 'Log Out'}
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
             </div>
           )}
         </div>
