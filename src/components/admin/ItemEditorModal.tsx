@@ -677,7 +677,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
                 className="px-3.5 py-1.5 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-black text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>{language === 'th' ? '+ สร้างกลุ่มใหม่' : '+ Add Group'}</span>
+                <span>{language === 'th' ? 'สร้างกลุ่มใหม่' : 'Add Group'}</span>
               </button>
             </div>
 
@@ -709,7 +709,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
                   {language === 'th' ? 'ยังไม่มีกลุ่มตัวเลือกสำหรับเมนูนี้' : 'No option groups yet'}
                 </p>
                 <p className="text-[11px] text-stone-400 mt-0.5">
-                  {language === 'th' ? 'กดเลือกเทมเพลตด้านบน หรือกด "+ สร้างกลุ่มใหม่" เพื่อเพิ่มความหวานหรือท็อปปิ้ง' : 'Click a preset above or "+ Add Group" to add customization'}
+                  {language === 'th' ? 'กดเลือกเทมเพลตด้านบน หรือกดปุ่ม "สร้างกลุ่มใหม่" เพื่อเพิ่มความหวานหรือท็อปปิ้ง' : 'Click a preset above or "Add Group" to add customization'}
                 </p>
               </div>
             ) : (
@@ -812,7 +812,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
                           className="text-[11px] font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1 cursor-pointer"
                         >
                           <Plus className="w-3 h-3" />
-                          <span>{language === 'th' ? '+ เพิ่มตัวเลือก' : '+ Add Choice'}</span>
+                          <span>{language === 'th' ? 'เพิ่มตัวเลือก' : 'Add Choice'}</span>
                         </button>
                       </div>
 
