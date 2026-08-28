@@ -25,7 +25,17 @@ export function App() {
   const [storeConfig, setStoreConfig] = useState<StoreConfig>(() => syncManager.getStoreConfig());
   const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
   const [activeRole, setActiveRole] = useState<AppRole>('customer');
-  const [tableNumber, setTableNumber] = useState('01');
+  
+  // 1. Synchronously resolve Table Number from URL query parameter
+  const [tableNumber, setTableNumber] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tbl = params.get('table');
+      if (tbl) return tbl;
+    }
+    return '01';
+  });
+
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -44,22 +54,34 @@ export function App() {
   const [activePromptPayOrder, setActivePromptPayOrder] = useState<Order | null>(null);
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
   
-  // Tracked order initialization (from latest active order)
+  // 2. Tracked order strictly scoped to ONLY matching the current scanned table
   const [trackedOrder, setTrackedOrder] = useState<Order | null>(() => {
-    const all = syncManager.getOrders();
-    return all.find((o) => o.status !== 'completed' && o.status !== 'cancelled') || all[0] || null;
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const currentTable = params.get('table') || '01';
+      const all = syncManager.getOrders();
+      return (
+        all.find(
+          (o) =>
+            o.tableNumber === currentTable &&
+            o.status !== 'completed' &&
+            o.status !== 'cancelled'
+        ) || null
+      );
+    }
+    return null;
   });
+
   const [isOrderTrackerOpen, setIsOrderTrackerOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
   // Initialize Auth & Data
   useEffect(() => {
-    // 1. Check existing Supabase session
+    // Check existing Supabase session
     authService.getSession().then((session) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       
-      // Check URL query params
       const params = new URLSearchParams(window.location.search);
       const tableParam = params.get('table');
       if (tableParam) {
@@ -70,13 +92,12 @@ export function App() {
         if (currentUser) {
           setActiveRole(roleParam as AppRole);
         } else {
-          // If customer tries to access admin without auth, open login modal
           setIsAuthModalOpen(true);
         }
       }
     });
 
-    // 2. Listen to Auth State Changes
+    // Listen to Auth State Changes
     const { data: authListener } = authService.onAuthStateChange((newUser) => {
       setUser(newUser);
       if (!newUser) {
@@ -84,27 +105,28 @@ export function App() {
       }
     });
 
-    // 3. Local & Sync Manager Data
+    // Local & Sync Manager Data
     const currentOrders = syncManager.getOrders();
     setStoreConfig(syncManager.getStoreConfig());
     setCategories(syncManager.getCategories());
     setMenuItems(syncManager.getMenuItems());
     setOrders(currentOrders);
 
-    if (!trackedOrder && currentOrders.length > 0) {
-      setTrackedOrder(currentOrders[0]);
-    }
-
     const unsubscribe = syncManager.subscribe((event) => {
       if (event.type === 'ORDER_CREATED') {
         const updated = syncManager.getOrders();
         setOrders(updated);
-        setTrackedOrder(event.payload);
+        // Only show tracked banner if it's the customer's own table
+        if (event.payload.tableNumber === tableNumber) {
+          setTrackedOrder(event.payload);
+        }
         soundService.playNewOrderChime();
       } else if (event.type === 'ORDER_STATUS_UPDATED') {
         const updated = syncManager.getOrders();
         setOrders(updated);
-        setTrackedOrder((prev) => (prev?.id === event.payload.id ? event.payload : prev));
+        if (event.payload.tableNumber === tableNumber) {
+          setTrackedOrder((prev) => (prev?.id === event.payload.id ? event.payload : prev));
+        }
       } else if (event.type === 'MENU_UPDATED') {
         setMenuItems(event.payload);
       } else if (event.type === 'CATEGORIES_UPDATED') {
@@ -122,7 +144,7 @@ export function App() {
       }
     });
 
-    // 4. Supabase Realtime Subscription for Orders
+    // Supabase Realtime Subscription for Orders
     const orderSubscription = supabase
       .channel('public:orders')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
@@ -154,15 +176,18 @@ export function App() {
       unsubscribe();
       supabase.removeChannel(orderSubscription);
     };
-  }, []);
+  }, [tableNumber]);
 
-  // Update tracked order when tableNumber changes
+  // Strictly synchronize trackedOrder whenever tableNumber changes
   useEffect(() => {
     const all = syncManager.getOrders();
-    const match = all.find((o) => o.tableNumber === tableNumber && o.status !== 'cancelled');
-    if (match) {
-      setTrackedOrder(match);
-    }
+    const match = all.find(
+      (o) =>
+        o.tableNumber === tableNumber &&
+        o.status !== 'completed' &&
+        o.status !== 'cancelled'
+    );
+    setTrackedOrder(match || null);
   }, [tableNumber]);
 
   const handleToggleLanguage = () => {
@@ -412,7 +437,7 @@ export function App() {
         {/* VIEW 1: CUSTOMER VIEW */}
         {activeRole === 'customer' && (
           <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
-            {/* Active Tracked Order Banner */}
+            {/* Active Tracked Order Banner (Strictly shown only if this table has an active pending/cooking/ready order) */}
             {trackedOrder && (
               <div
                 onClick={() => setIsOrderTrackerOpen(true)}

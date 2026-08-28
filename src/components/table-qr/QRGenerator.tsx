@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
-import { Download, Printer, QrCode, ExternalLink, ChevronDown, Check, Store, ChevronLeft, ChevronRight, ShieldCheck, Smartphone } from 'lucide-react';
+import { Download, Printer, QrCode, ExternalLink, ChevronDown, Store, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
 import { StoreConfig, Language } from '../../types';
 import { t } from '../../utils/i18n';
 
@@ -18,8 +18,12 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
 
   const getTableUrl = (table: string) => {
     if (typeof window === 'undefined') return '';
-    const base = window.location.origin + window.location.pathname;
-    return `${base}?table=${table}&lang=${language}`;
+    const origin = window.location.origin;
+    let pathname = window.location.pathname;
+    if (!pathname.endsWith('/')) {
+      pathname += '/';
+    }
+    return `${origin}${pathname}?table=${table}&lang=${language}`;
   };
 
   const currentUrl = getTableUrl(selectedTable);
@@ -226,6 +230,9 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
             <div className="text-4xl font-black text-stone-900 tracking-tight">
               {language === 'th' ? `โต๊ะ ${selectedTable}` : `Table ${selectedTable}`}
             </div>
+            <div className="text-[10px] text-stone-400 font-mono break-all px-4 pt-1">
+              {currentUrl}
+            </div>
           </div>
 
           <div className="text-xs text-stone-600 max-w-xs leading-relaxed bg-stone-50 p-3.5 rounded-2xl border border-stone-100 font-medium">
@@ -264,7 +271,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
                 className="w-full py-3 px-4 rounded-2xl border border-stone-200 bg-stone-50 hover:bg-orange-50/60 hover:border-orange-200 text-stone-700 hover:text-orange-950 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition"
               >
                 <ExternalLink className="w-4 h-4 text-orange-500" />
-                <span>{t('qrOpenTestBtn', language)}</span>
+                <span>{t('qrOpenTestBtn', language)} ({selectedTable})</span>
               </a>
             </div>
           </div>
