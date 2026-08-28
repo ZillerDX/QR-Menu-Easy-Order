@@ -180,6 +180,17 @@ export function App() {
     setActiveRole(role);
   };
 
+  const handleQuickDemoLogin = () => {
+    const mockUser: any = {
+      id: 'demo-staff-id',
+      email: 'staff@cafeorder.com',
+      user_metadata: { name: 'Store Staff' },
+      app_metadata: { provider: 'demo' },
+    };
+    setUser(mockUser);
+    setActiveRole('kitchen');
+  };
+
   const handleLogout = async () => {
     try {
       await authService.signOut();
@@ -187,6 +198,8 @@ export function App() {
       setActiveRole('customer');
     } catch (e) {
       console.error("Logout error:", e);
+      setUser(null);
+      setActiveRole('customer');
     }
   };
 
@@ -566,8 +579,8 @@ export function App() {
         language={language}
         onSuccess={() => {
           setIsAuthModalOpen(false);
-          setActiveRole('kitchen');
         }}
+        onQuickDemoLogin={handleQuickDemoLogin}
       />
 
       {/* Modals */}

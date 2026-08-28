@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Lock, Mail, KeyRound, AlertCircle, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { X, Lock, Mail, KeyRound, AlertCircle, Sparkles, CheckCircle2, ShieldCheck, Zap, ExternalLink } from 'lucide-react';
 import { authService } from '../../utils/supabaseClient';
 import { Language } from '../../types';
 import { CAFE_ORDER_LOGO_DATA_URI } from '../../data/logoData';
@@ -10,6 +10,7 @@ interface AuthModalProps {
   onClose: () => void;
   language: Language;
   onSuccess?: () => void;
+  onQuickDemoLogin?: () => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -17,6 +18,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   language,
   onSuccess,
+  onQuickDemoLogin,
 }) => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
@@ -33,7 +35,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setErrorMessage('');
       await authService.signInWithGoogle();
     } catch (err: any) {
-      setErrorMessage(err?.message || (language === 'th' ? 'เกิดข้อผิดพลาดในการล็อกอินด้วย Google' : 'Google sign-in failed'));
+      const msg = err?.message || '';
+      if (msg.includes('Unsupported provider') || msg.includes('provider is not enabled')) {
+        setErrorMessage(
+          language === 'th'
+            ? '⚠️ ยังไม่ได้เปิดใช้งาน Google Provider บน Supabase Dashboard ท่านสามารถกดปุ่ม "เข้าสู่ระบบด่วน (Quick Demo)" ด้านล่างเพื่อทดสอบได้ทันทีครับ'
+            : '⚠️ Google provider is not yet enabled in Supabase Dashboard. You can use the Quick Demo login button below to test immediately.'
+        );
+      } else {
+        setErrorMessage(msg || (language === 'th' ? 'เกิดข้อผิดพลาดในการล็อกอินด้วย Google' : 'Google sign-in failed'));
+      }
       setIsLoading(false);
     }
   };
@@ -56,16 +67,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setTimeout(() => {
           onSuccess?.();
           onClose();
-        }, 1000);
+        }, 800);
       } else {
         await authService.signUpWithEmail(email, password);
-        setSuccessMessage(language === 'th' ? 'ลงทะเบียนสำเร็จ! กรุณาตรวจสอบอีเมลเพื่อยืนยันตัวตน' : 'Account created! Please check your email.');
+        setSuccessMessage(language === 'th' ? 'ลงทะเบียนสำเร็จ! เข้าสู่ระบบได้ทันที' : 'Account registered successfully!');
+        setTimeout(() => {
+          onSuccess?.();
+          onClose();
+        }, 1000);
       }
     } catch (err: any) {
       setErrorMessage(err?.message || (language === 'th' ? 'การยืนยันตัวตนล้มเหลว กรุณาตรวจสอบข้อมูล' : 'Authentication failed. Please check your credentials.'));
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleDemoClick = () => {
+    onQuickDemoLogin?.();
+    onSuccess?.();
+    onClose();
   };
 
   const modalContent = (
@@ -104,7 +125,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </p>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-4">
+          {/* Quick Demo 1-Click Login Button */}
+          <button
+            type="button"
+            onClick={handleDemoClick}
+            className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-98 text-white rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition shadow-md shadow-emerald-600/20 cursor-pointer"
+          >
+            <Zap className="w-4 h-4 text-amber-300" />
+            <span>{language === 'th' ? '⚡ เข้าสู่ระบบพนักงานด่วน (1-Click Staff Demo)' : '⚡ Quick Staff Demo (1-Click)'}</span>
+          </button>
+
           {/* Mode Switcher */}
           <div className="flex bg-stone-100 p-1 rounded-2xl border border-stone-200/80 text-xs font-black">
             <button
@@ -131,7 +162,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           {errorMessage && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-2xl text-xs font-bold text-red-700 flex items-start gap-2 animate-in fade-in">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>{errorMessage}</span>
+              <span className="leading-relaxed">{errorMessage}</span>
             </div>
           )}
 
@@ -185,7 +216,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
 
           {/* 2. Email & Password Form */}
-          <form onSubmit={handleEmailAuth} className="space-y-3.5">
+          <form onSubmit={handleEmailAuth} className="space-y-3">
             <div>
               <label className="block text-xs font-black text-stone-700 mb-1">
                 {language === 'th' ? 'อีเมลพนักงาน' : 'Email Address'}
@@ -237,19 +268,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </span>
             </button>
           </form>
-
-          {/* Quick Demo Credentials Tip */}
-          <div className="p-3 bg-amber-50/80 rounded-2xl border border-amber-200/80 text-[11px] text-amber-900 flex items-start gap-2">
-            <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <span className="font-black">{language === 'th' ? '💡 สำหรับทดสอบระบบด่วน:' : '💡 Quick Test:'}</span>
-              <p className="mt-0.5 text-amber-800">
-                {language === 'th' 
-                  ? 'สามารถกดปุ่ม "เข้าสู่ระบบด้วย Google" หรือลงทะเบียนด้วยอีเมลใดก็ได้เพื่อทดลองสิทธิ์พนักงานร้าน'
-                  : 'Click "Sign in with Google" or register any email to test store management privileges.'}
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
