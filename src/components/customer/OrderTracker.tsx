@@ -10,7 +10,6 @@ interface OrderTrackerProps {
   onClose: () => void;
   order: Order | null;
   language: Language;
-  onPrintReceipt?: (order: Order) => void;
 }
 
 export const OrderTracker: React.FC<OrderTrackerProps> = ({
@@ -18,7 +17,6 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
   onClose,
   order,
   language,
-  onPrintReceipt,
 }) => {
   useEffect(() => {
     if (isOpen && (order?.status === 'ready' || order?.status === 'completed')) {
@@ -214,70 +212,61 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
 
             <div className="divide-y divide-stone-100">
               {(order.items || []).map((item, i) => (
-                <div key={i} className="py-2.5 flex justify-between items-start">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg text-xs">
+                <div key={i} className="py-2.5 flex justify-between items-start gap-3">
+                  <div className="space-y-0.5 flex-1 min-w-0">
+                    <div className="flex items-start gap-2">
+                      <span className="font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg text-xs flex-shrink-0">
                         {item.quantity}x
                       </span>
-                      <span className="text-stone-900 font-bold text-xs sm:text-sm">
+                      <span className="text-stone-900 font-black text-xs sm:text-sm leading-snug">
                         {language === 'en' && item.menuItem?.nameEn ? item.menuItem.nameEn : item.menuItem?.name}
                       </span>
                     </div>
                     {item.selectedOptions && item.selectedOptions.length > 0 && (
-                      <p className="text-[11px] text-stone-400 font-medium pl-8">
+                      <p className="text-[11px] text-stone-400 font-medium pl-7">
                         {item.selectedOptions.map((o) => o.choiceName).join(', ')}
                       </p>
                     )}
                     {item.specialNote && (
-                      <p className="text-[11px] text-amber-600 font-medium pl-8">
+                      <p className="text-[11px] text-amber-600 font-medium pl-7">
                         ✏️ {item.specialNote}
                       </p>
                     )}
                   </div>
-                  <span className="font-black text-stone-800 text-xs sm:text-sm pt-0.5">
+                  <span className="font-black text-stone-900 text-xs sm:text-sm pt-0.5 flex-shrink-0 whitespace-nowrap">
                     ฿{item.totalItemPrice?.toLocaleString()}
                   </span>
                 </div>
               ))}
             </div>
 
-            {/* Total & Payment Method */}
+            {/* Total & Payment Note */}
             <div className="pt-3 border-t border-stone-200/80 space-y-2">
               <div className="flex justify-between items-center font-black text-base">
                 <span className="text-stone-900">{t('total', language)}</span>
-                <span className="text-orange-600 text-lg">฿{order.totalPrice?.toLocaleString()}</span>
+                <span className="text-orange-600 text-lg font-black">฿{order.totalPrice?.toLocaleString()}</span>
               </div>
 
-              <div className="flex justify-between items-center text-xs text-stone-500 pt-1 font-medium bg-stone-50 p-2.5 rounded-xl border border-stone-200/60">
-                <span>{t('trackerPaymentMethod', language)}:</span>
-                <span className="font-black text-stone-800">
-                  {order.paymentMethod === 'promptpay' ? t('promptpayQR', language) : t('cashAtCounter', language)}
-                  <span className={`ml-1.5 px-2 py-0.5 rounded-md text-[10px] font-black ${
-                    order.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                  }`}>
-                    {order.paymentStatus === 'paid' ? t('kdsPaid', language) : t('kdsUnpaid', language)}
-                  </span>
-                </span>
+              <div className="p-3 rounded-2xl bg-orange-50/80 border border-orange-100 text-xs text-orange-950 space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <span>ℹ️</span>
+                  <span>{language === 'th' ? 'การชำระเงิน' : 'Payment Information'}</span>
+                </p>
+                <p className="text-[11px] text-stone-600 leading-relaxed font-medium">
+                  {language === 'th' 
+                    ? 'พนักงานจะนำใบเสร็จพร้อม PromptPay QR มาให้ท่านสแกนจ่ายหรือชำระด้วยเงินสดเมื่ออาหารพร้อมเสิร์ฟ' 
+                    : 'Staff will deliver the bill slip with PromptPay QR directly to your table when food is served.'}
+                </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 bg-stone-50 border-t border-stone-200/80 flex items-center justify-between gap-3 flex-shrink-0">
-          <button
-            type="button"
-            onClick={() => onPrintReceipt?.(order)}
-            className="py-3 px-4 rounded-2xl bg-stone-100 hover:bg-stone-200 active:scale-[0.98] text-stone-800 font-bold text-xs sm:text-sm transition cursor-pointer flex items-center justify-center gap-1.5 border border-stone-200/80 shadow-2xs"
-          >
-            <Receipt className="w-4 h-4 text-orange-500" />
-            <span>{language === 'th' ? 'พิมพ์ใบเสร็จ' : 'Receipt Slip'}</span>
-          </button>
-
+        {/* Customer Clean Footer */}
+        <div className="px-6 py-4 bg-stone-50 border-t border-stone-200/80 flex-shrink-0">
           <button
             onClick={onClose}
-            className="flex-1 py-3 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-black text-xs sm:text-sm shadow-md shadow-orange-500/25 transition cursor-pointer flex items-center justify-center gap-2"
+            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] text-white font-black text-sm shadow-md shadow-orange-500/25 transition cursor-pointer flex items-center justify-center gap-2"
           >
             <Plus className="w-4 h-4" />
             <span>{t('trackerOrderMore', language)}</span>

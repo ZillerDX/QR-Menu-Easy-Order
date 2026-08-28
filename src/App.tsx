@@ -9,6 +9,7 @@ import { MenuCard } from './components/customer/MenuCard';
 import { ItemModal } from './components/customer/ItemModal';
 import { CartDrawer } from './components/customer/CartDrawer';
 import { OrderTracker } from './components/customer/OrderTracker';
+import { OrderCountdownModal } from './components/customer/OrderCountdownModal';
 import { KitchenDashboard } from './components/kitchen/KitchenDashboard';
 import { MenuAdmin } from './components/admin/MenuAdmin';
 import { StoreSettings } from './components/admin/StoreSettings';
@@ -18,7 +19,7 @@ import { AuthModal } from './components/auth/AuthModal';
 import { ReceiptModal } from './components/common/ReceiptModal';
 import { supabase, authService } from './utils/supabaseClient';
 import { User } from '@supabase/supabase-js';
-import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight, Hourglass, Flame, CheckCircle2 } from 'lucide-react';
+import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight, Hourglass, Flame, CheckCircle2, ShoppingBag } from 'lucide-react';
 
 export function App() {
   const [storeConfig, setStoreConfig] = useState<StoreConfig>(() => syncManager.getStoreConfig());
@@ -49,10 +50,10 @@ export function App() {
   // Modals & Sheets
   const [activeModalItem, setActiveModalItem] = useState<MenuItem | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCountdownOpen, setIsCountdownOpen] = useState(false);
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
   
   // 2. Tracked order strictly scoped to THIS CUSTOMER'S ACTIVE BROWSER SESSION ONLY!
-  // New customers sitting down at the table will NEVER see previous customers' orders.
   const [trackedOrder, setTrackedOrder] = useState<Order | null>(() => {
     if (typeof window !== 'undefined') {
       const sessionOrderId = sessionStorage.getItem('my_active_order_id');
@@ -276,8 +277,15 @@ export function App() {
     setCart((prev) => prev.filter((item) => item.cartItemId !== cartItemId));
   };
 
-  // Direct Kitchen Order Process (No upfront customer payment modal)
-  const handleCheckout = async () => {
+  // Step 1: Trigger 3-second countdown modal
+  const handleStartCheckout = () => {
+    if (cart.length === 0) return;
+    setIsCartOpen(false);
+    setIsCountdownOpen(true);
+  };
+
+  // Step 2: Finalize Submission after 3 seconds without cancellation
+  const handleFinalizeOrder = async () => {
     if (cart.length === 0) return;
 
     const subtotal = cart.reduce((sum, item) => sum + item.totalItemPrice, 0);
@@ -299,7 +307,7 @@ export function App() {
     // 1. Save locally for instant reactivity
     syncManager.saveOrder(newOrder);
     setCart([]);
-    setIsCartOpen(false);
+    setIsCountdownOpen(false);
 
     // 2. Track this order strictly in this customer's active session
     sessionStorage.setItem('my_active_order_id', newOrder.id);
@@ -416,6 +424,7 @@ export function App() {
 
   const pendingCount = orders.filter((o) => o.status === 'pending' || o.status === 'cooking').length;
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const cartSubtotal = cart.reduce((sum, item) => sum + item.totalItemPrice, 0);
 
   return (
     <div className="min-h-screen bg-[#fafaf9] text-stone-900 flex flex-col selection:bg-orange-500 selection:text-white">
@@ -534,6 +543,29 @@ export function App() {
                 ))}
               </div>
             )}
+
+            {/* Floating Action Button (FAB) Cart Button on Bottom-Right */}
+            {totalCartCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setIsCartOpen(true)}
+                className="fixed bottom-6 right-5 sm:right-8 z-30 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-full p-3.5 sm:px-5 sm:py-3.5 shadow-2xl shadow-orange-500/40 hover:shadow-orange-500/50 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-2.5 cursor-pointer ring-4 ring-white/90 group animate-in slide-in-from-bottom-5"
+                title="View Cart"
+              >
+                <div className="relative">
+                  <ShoppingBag className="w-6 h-6 sm:w-5 sm:h-5 text-white group-hover:rotate-12 transition-transform duration-300" />
+                  <span className="absolute -top-2.5 -right-2.5 bg-red-600 text-white text-[11px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white animate-heartbeat shadow-sm">
+                    {totalCartCount}
+                  </span>
+                </div>
+                <span className="hidden sm:inline font-black text-sm">
+                  {language === 'th' ? 'ดูตะกร้า' : 'Cart'}
+                </span>
+                <span className="font-black text-xs bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-xs">
+                  ฿{cartSubtotal.toLocaleString()}
+                </span>
+              </button>
+            )}
           </div>
         )}
 
@@ -617,7 +649,20 @@ export function App() {
         language={language}
         onUpdateQuantity={handleUpdateCartQuantity}
         onRemoveItem={handleRemoveCartItem}
-        onCheckout={handleCheckout}
+        onCheckout={handleStartCheckout}
+      />
+
+      {/* 3-Second Undo / Cancellation Countdown Modal */}
+      <OrderCountdownModal
+        isOpen={isCountdownOpen}
+        onCancel={() => {
+          setIsCountdownOpen(false);
+          setIsCartOpen(true);
+        }}
+        onComplete={handleFinalizeOrder}
+        language={language}
+        tableNumber={tableNumber}
+        totalPrice={cartSubtotal}
       />
 
       {/* Live Order Tracker Modal Dialog */}
@@ -626,7 +671,6 @@ export function App() {
         onClose={() => setIsOrderTrackerOpen(false)}
         order={trackedOrder}
         language={language}
-        onPrintReceipt={(order) => setReceiptOrder(order)}
       />
 
       {/* Receipt Printing Modal Slip with Dynamic PromptPay QR */}

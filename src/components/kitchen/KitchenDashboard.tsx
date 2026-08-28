@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Volume2, RotateCcw, UtensilsCrossed, Sparkles, Layers, PackageOpen, BarChart3, TrendingUp } from 'lucide-react';
-import { Order, MenuItem, OrderStatus, Language } from '../../types';
+import { UtensilsCrossed, Volume2, PackageOpen, RotateCcw, Sparkles, TrendingUp, BarChart3, Clock, ChefHat } from 'lucide-react';
+import { Order, MenuItem, Language, OrderStatus } from '../../types';
+import { t } from '../../utils/i18n';
 import { OrderCard } from './OrderCard';
 import { StockManager } from './StockManager';
 import { SalesDashboardModal } from './SalesDashboardModal';
 import { soundService } from '../../utils/sound';
-import { t } from '../../utils/i18n';
 
 interface KitchenDashboardProps {
   orders: Order[];
@@ -30,12 +30,14 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
   const [showStock, setShowStock] = useState(false);
   const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
 
-  const activeOrders = orders.filter((o) => o.status === 'pending' || o.status === 'cooking');
+  const inProgressOrders = orders.filter((o) => o.status === 'pending' || o.status === 'cooking' || o.status === 'ready');
+  const pendingOrders = orders.filter((o) => o.status === 'pending');
+  const cookingOrders = orders.filter((o) => o.status === 'cooking');
   const readyOrders = orders.filter((o) => o.status === 'ready');
   const completedOrders = orders.filter((o) => o.status === 'completed');
 
   const filteredOrders = orders.filter((o) => {
-    if (filter === 'active') return o.status === 'pending' || o.status === 'cooking';
+    if (filter === 'active') return o.status === 'pending' || o.status === 'cooking' || o.status === 'ready';
     if (filter === 'ready') return o.status === 'ready';
     if (filter === 'completed') return o.status === 'completed';
     return true;
@@ -71,14 +73,14 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
           {/* In Progress Count Card */}
           <div className="bg-orange-50 border border-orange-200/90 rounded-2xl px-4 py-2 text-center flex-1 md:flex-none">
             <span className="text-[11px] font-black text-orange-950 uppercase block">
-              {t('kdsCooking', language)}
+              {language === 'th' ? 'ออเดอร์กำลังทำ' : 'In Kitchen'}
             </span>
             <span className="text-xl font-black text-orange-600">
-              {activeOrders.length}
+              {inProgressOrders.length}
             </span>
           </div>
 
-          {/* Interactive Sales Metric Card (Click to open Sales Dashboard Popup) */}
+          {/* Interactive Sales Metric Card */}
           <button
             type="button"
             onClick={() => setIsSalesModalOpen(true)}
@@ -98,7 +100,6 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
 
           {/* Sound & Actions */}
           <div className="flex items-center gap-1.5 ml-auto">
-            {/* Sales Dashboard dedicated Button */}
             <button
               onClick={() => setIsSalesModalOpen(true)}
               className="p-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-emerald-600/20 active:scale-95"
@@ -160,7 +161,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
           <UtensilsCrossed className="w-3.5 h-3.5" />
           <span>{t('kdsFilterActive', language)}</span>
           <span className="ml-1 bg-white/30 text-white px-1.5 py-0.2 rounded-full text-[10px]">
-            {activeOrders.length}
+            {inProgressOrders.length}
           </span>
         </button>
 
@@ -187,7 +188,6 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
               : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
           }`}
         >
-          <Layers className="w-3.5 h-3.5" />
           <span>{t('kdsFilterCompleted', language)}</span>
           <span className="ml-1 bg-stone-100 text-stone-700 px-1.5 py-0.2 rounded-full text-[10px]">
             {completedOrders.length}
@@ -198,22 +198,26 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
           onClick={() => setFilter('all')}
           className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
             filter === 'all'
-              ? 'bg-stone-900 text-white shadow-md'
+              ? 'bg-stone-700 text-white shadow-md'
               : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
           }`}
         >
-          <Layers className="w-3.5 h-3.5" />
-          <span>{t('kdsFilterAll', language)} ({orders.length})</span>
+          <span>{t('kdsFilterAll', language)}</span>
+          <span className="ml-1 bg-stone-100 text-stone-700 px-1.5 py-0.2 rounded-full text-[10px]">
+            {orders.length}
+          </span>
         </button>
       </div>
 
       {/* Orders Grid */}
       {filteredOrders.length === 0 ? (
-        <div className="bg-white rounded-3xl p-12 text-center border border-stone-200 shadow-xs text-stone-400">
-          <UtensilsCrossed className="w-12 h-12 mx-auto text-stone-300 mb-3" />
-          <h3 className="font-extrabold text-stone-700 text-base">{t('kdsNoOrders', language)}</h3>
-          <p className="text-xs text-stone-400 mt-1">
-            {t('kdsNoOrdersDesc', language)}
+        <div className="bg-white rounded-3xl border border-stone-200 p-12 text-center text-stone-400 space-y-2">
+          <UtensilsCrossed className="w-12 h-12 mx-auto text-stone-300 stroke-[1.5]" />
+          <p className="text-sm font-bold text-stone-600">
+            {language === 'th' ? 'ไม่มีออเดอร์ในหมวดหมู่นี้' : 'No orders in this category'}
+          </p>
+          <p className="text-xs text-stone-400">
+            {language === 'th' ? 'เมื่อมีลูกค้าสั่งอาหาร ออเดอร์จะปรากฏที่นี่แบบเรียลไทม์' : 'New orders will appear here in real-time'}
           </p>
         </div>
       ) : (
@@ -230,7 +234,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
         </div>
       )}
 
-      {/* Live Sales & Analytics Dashboard Modal */}
+      {/* Sales Analytics Popup Dashboard Modal */}
       <SalesDashboardModal
         isOpen={isSalesModalOpen}
         onClose={() => setIsSalesModalOpen(false)}
