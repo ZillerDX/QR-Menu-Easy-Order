@@ -1,18 +1,23 @@
 import React, { useState, useRef } from 'react';
-import { Store, Upload, Image as ImageIcon, CheckCircle2, QrCode, Clock, Hash, Sparkles } from 'lucide-react';
+import { Store, Upload, CheckCircle2, QrCode, Clock, Hash, LogOut, ShieldCheck } from 'lucide-react';
 import { StoreConfig, Language } from '../../types';
 import { t } from '../../utils/i18n';
+import { User } from '@supabase/supabase-js';
 
 interface StoreSettingsProps {
   storeConfig: StoreConfig;
   language: Language;
   onSave: (config: StoreConfig) => void;
+  user?: User | null;
+  onLogout?: () => void;
 }
 
 export const StoreSettings: React.FC<StoreSettingsProps> = ({
   storeConfig,
   language,
   onSave,
+  user,
+  onLogout,
 }) => {
   const [formData, setFormData] = useState<StoreConfig>({ ...storeConfig });
   const [isSaved, setIsSaved] = useState(false);
@@ -132,7 +137,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
               className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm"
-              placeholder="เช่น Easy Menu Cafe"
+              placeholder="เช่น Cafe Order"
             />
           </div>
 
@@ -146,7 +151,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
               onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
               required
               className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm"
-              placeholder="e.g. Easy Menu Cafe"
+              placeholder="e.g. Cafe Order"
             />
           </div>
         </div>
@@ -161,7 +166,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
               value={formData.tagline}
               onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
               className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 text-sm font-medium"
-              placeholder="เช่น สั่งง่าย ไม่ต้องรอคิว"
+              placeholder="เช่น สั่งง่าย อร่อยฟิน"
             />
           </div>
 
@@ -174,7 +179,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
               value={formData.taglineEn}
               onChange={(e) => setFormData({ ...formData, taglineEn: e.target.value })}
               className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 text-sm font-medium"
-              placeholder="e.g. Scan & Order Instantly"
+              placeholder="e.g. Order Easy • Enjoy More"
             />
           </div>
         </div>
@@ -184,7 +189,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
           <div>
             <label className="block font-black text-stone-800 text-xs sm:text-sm mb-1.5 flex items-center gap-1.5">
               <QrCode className="w-4 h-4 text-blue-600" />
-              <span>{t('settingsPromptPayNo', language)}</span>
+              <span>{t('settingsPromptPayNo', language)} (เบอร์มือถือ/เลขบัตร ปชช.) *</span>
             </label>
             <input
               type="text"
@@ -197,14 +202,14 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
 
           <div>
             <label className="block font-black text-stone-800 text-xs sm:text-sm mb-1.5">
-              {t('settingsPromptPayName', language)}
+              {t('settingsPromptPayName', language)} *
             </label>
             <input
               type="text"
               value={formData.promptpayName}
               onChange={(e) => setFormData({ ...formData, promptpayName: e.target.value })}
               className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm"
-              placeholder="เช่น บจก. อีซี่ เมนู"
+              placeholder="เช่น คาเฟ่ ออเดอร์ (Cafe Order)"
             />
           </div>
         </div>
@@ -250,6 +255,39 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
           </button>
         </div>
       </form>
+
+      {/* Staff Session & Logout Card */}
+      {user && (
+        <div className="bg-white rounded-3xl p-6 border border-stone-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-700 flex items-center justify-center font-black text-lg">
+              {user.email ? user.email.slice(0, 1).toUpperCase() : 'S'}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-black text-stone-900 text-sm sm:text-base">
+                  {user.email || 'Staff User'}
+                </span>
+                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-md">
+                  เข้าสู่ระบบแล้ว (Active)
+                </span>
+              </div>
+              <p className="text-xs text-stone-400 font-medium mt-0.5">
+                สิทธิ์การเข้าถึง: จัดการร้านค้า, ครัว KDS, เมนู และการ์ด QR โต๊ะ
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onLogout}
+            className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-red-50 hover:bg-red-100 active:scale-95 text-red-600 font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition cursor-pointer border border-red-200/60"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>{language === 'th' ? 'ออกจากระบบสำหรับทางร้าน' : 'Logout Staff Portal'}</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };

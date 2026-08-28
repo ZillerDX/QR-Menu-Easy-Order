@@ -164,6 +164,19 @@ export function App() {
             if (prev.some((o) => o.id === mappedOrder.id)) return prev;
             return [mappedOrder, ...prev];
           });
+        } else if (payload.eventType === 'UPDATE') {
+          const updatedO: any = payload.new;
+          setOrders((prev) =>
+            prev.map((o) =>
+              o.id === updatedO.id
+                ? {
+                    ...o,
+                    status: updatedO.status,
+                    paymentStatus: updatedO.payment_status,
+                  }
+                : o
+            )
+          );
         }
       })
       .subscribe();
@@ -312,12 +325,17 @@ export function App() {
     setIsOrderTrackerOpen(true);
   };
 
+  // Immediate reactive state update for kitchen status
   const handleUpdateOrderStatus = async (
     orderId: string,
     status: OrderStatus,
     paymentStatus?: Order['paymentStatus']
   ) => {
-    syncManager.updateOrderStatus(orderId, status, paymentStatus);
+    const updated = syncManager.updateOrderStatus(orderId, status, paymentStatus);
+    setOrders(updated);
+    if (trackedOrder && trackedOrder.id === orderId) {
+      setTrackedOrder((prev) => (prev ? { ...prev, status, ...(paymentStatus ? { paymentStatus } : {}) } : null));
+    }
     try {
       await supabase
         .from('orders')
@@ -545,6 +563,8 @@ export function App() {
             storeConfig={storeConfig}
             language={language}
             onSave={handleSaveStoreConfig}
+            user={user}
+            onLogout={handleLogout}
           />
         )}
 
@@ -554,14 +574,13 @@ export function App() {
         )}
       </main>
 
-      {/* Role Switcher Floating Bar (Strictly visible ONLY to authenticated staff) */}
+      {/* Role Switcher Floating Bar (Strictly visible ONLY to authenticated staff - without logout button) */}
       <RoleSwitcher
         activeRole={activeRole}
         onSelectRole={handleSelectRole}
         language={language}
         pendingOrdersCount={pendingCount}
         isAuthenticated={!!user}
-        onLogout={handleLogout}
       />
 
       {/* Auth Modal for Store Staff & Google Login */}

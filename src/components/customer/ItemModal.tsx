@@ -28,21 +28,23 @@ export const ItemModal: React.FC<ItemModalProps> = ({
   const [selectedChoices, setSelectedChoices] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
-    if (item && item.optionGroups) {
-      const initial: Record<string, string[]> = {};
-      item.optionGroups.forEach((group) => {
-        const defaultChoice = group.choices.find((c) => c.isDefault);
-        if (defaultChoice) {
-          initial[group.id] = [defaultChoice.id];
-        } else if (group.required && group.choices.length > 0) {
-          initial[group.id] = [group.choices[0].id];
-        } else {
-          initial[group.id] = [];
-        }
-      });
-      setSelectedChoices(initial);
+    if (item) {
       setQuantity(1);
       setSpecialNote('');
+      const initial: Record<string, string[]> = {};
+      if (item.optionGroups && item.optionGroups.length > 0) {
+        item.optionGroups.forEach((group) => {
+          const defaultChoice = group.choices.find((c) => c.isDefault);
+          if (defaultChoice) {
+            initial[group.id] = [defaultChoice.id];
+          } else if (group.required && group.choices.length > 0) {
+            initial[group.id] = [group.choices[0].id];
+          } else {
+            initial[group.id] = [];
+          }
+        });
+      }
+      setSelectedChoices(initial);
     }
   }, [item]);
 
