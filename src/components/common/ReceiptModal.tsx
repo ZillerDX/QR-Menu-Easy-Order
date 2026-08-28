@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Printer, CheckCircle2, QrCode, Store, Clock, Utensils } from 'lucide-react';
+import QRCode from 'qrcode';
+import { X, Printer, QrCode, Store, Clock, Utensils, ShieldCheck } from 'lucide-react';
 import { Order, StoreConfig, Language } from '../../types';
 import { CAFE_ORDER_LOGO_DATA_URI } from '../../data/logoData';
+import { generatePromptPayPayload } from '../../utils/promptpay';
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -19,6 +21,22 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   storeConfig,
   language,
 }) => {
+  const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    if (isOpen && order && qrCanvasRef.current && storeConfig.promptpayNumber) {
+      const payload = generatePromptPayPayload(storeConfig.promptpayNumber, order.totalPrice);
+      QRCode.toCanvas(qrCanvasRef.current, payload, {
+        width: 160,
+        margin: 1,
+        color: {
+          dark: '#002d62',
+          light: '#ffffff',
+        },
+      });
+    }
+  }, [isOpen, order, storeConfig.promptpayNumber]);
+
   if (!isOpen || !order) return null;
 
   const handlePrint = () => {
@@ -52,7 +70,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           <div className="flex items-center gap-2">
             <Printer className="w-4 h-4 text-orange-400" />
             <span className="font-black text-xs">
-              {language === 'th' ? 'ใบเสร็จรับเงิน / ใบสั่งอาหาร' : 'Order Receipt / Slip'}
+              {language === 'th' ? 'ใบแจ้งยอด / ใบเสร็จรับเงิน' : 'Order Bill & Receipt'}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -61,7 +79,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-black text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>{language === 'th' ? 'พิมพ์ใบเสร็จ' : 'Print'}</span>
+              <span>{language === 'th' ? 'พิมพ์ใบเสร็จ' : 'Print Slip'}</span>
             </button>
             <button
               onClick={onClose}
@@ -147,38 +165,50 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             ))}
           </div>
 
-          {/* Totals & Payment */}
+          {/* Totals & Net */}
           <div className="space-y-1.5 py-2 border-b border-dashed border-stone-300 font-sans text-xs">
             <div className="flex justify-between text-stone-600">
               <span>ยอดรวม (Subtotal):</span>
               <span>฿{order.subtotal.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-base font-black text-stone-950 pt-1 border-t border-stone-100">
-              <span>ยอดสุทธิ (Total Net):</span>
-              <span className="text-orange-600">฿{order.totalPrice.toLocaleString()}</span>
+              <span>ยอดสุทธิที่ต้องชำระ (Total Due):</span>
+              <span className="text-orange-600 text-lg">฿{order.totalPrice.toLocaleString()}</span>
             </div>
           </div>
 
-          {/* Payment Method & Status */}
-          <div className="p-2.5 rounded-xl bg-stone-100/80 space-y-1 font-sans text-xs">
-            <div className="flex justify-between">
-              <span className="text-stone-500">วิธีชำระ (Payment):</span>
-              <span className="font-bold text-stone-900">
-                {order.paymentMethod === 'promptpay' ? 'พร้อมเพย์ QR' : 'เงินสด (Cash)'}
-              </span>
+          {/* DYNAMIC PROMPTPAY QR PAYMENT BOX FOR CUSTOMER SCAN */}
+          <div className="p-3.5 rounded-2xl bg-white border-2 border-blue-200 text-center space-y-2 font-sans shadow-xs">
+            <div className="flex items-center justify-center gap-1.5 text-blue-900 font-black text-xs">
+              <QrCode className="w-4 h-4 text-blue-700" />
+              <span>สแกนจ่ายผ่านพร้อมเพย์ (PromptPay QR)</span>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-stone-500">สถานะ (Status):</span>
-              <span className={`font-black px-2 py-0.5 rounded text-[10px] ${
-                order.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-              }`}>
-                {order.paymentStatus === 'paid' ? '✓ ชำระแล้ว (Paid)' : 'รอชำระเงิน (Unpaid)'}
-              </span>
+
+            <div className="p-2 bg-white rounded-xl inline-block border border-blue-100 shadow-2xs">
+              <canvas ref={qrCanvasRef} className="mx-auto rounded-lg" />
+            </div>
+
+            <div className="space-y-0.5 text-xs text-stone-700">
+              <p className="font-bold text-stone-900">{storeConfig.promptpayName}</p>
+              <p className="text-[11px] text-stone-500 font-mono">PromptPay: {storeConfig.promptpayNumber}</p>
+              <p className="text-[10px] text-blue-700 font-semibold pt-0.5">
+                ยอดเงินระบุอัตโนมัติ ฿{order.totalPrice.toLocaleString()} • ปลอดภัยไร้เงินสด
+              </p>
             </div>
           </div>
 
-          {/* Thank you note & barcode */}
-          <div className="text-center pt-2 space-y-1 font-sans text-[11px] text-stone-400">
+          {/* Payment Status Label */}
+          <div className="p-2 rounded-xl bg-stone-100/80 flex items-center justify-between font-sans text-xs">
+            <span className="text-stone-500">สถานะบิล (Status):</span>
+            <span className={`font-black px-2.5 py-0.5 rounded text-[10px] ${
+              order.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+            }`}>
+              {order.paymentStatus === 'paid' ? '✓ ชำระแล้ว (Paid)' : 'รอการชำระเงิน (Pending Payment)'}
+            </span>
+          </div>
+
+          {/* Thank you note & footer */}
+          <div className="text-center pt-1 space-y-1 font-sans text-[11px] text-stone-400">
             <p className="font-bold text-stone-600">*** ขอบคุณที่ใช้บริการ (Thank You) ***</p>
             <p className="text-[10px]">Please come again • Order Easy Enjoy More</p>
           </div>
@@ -188,14 +218,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         <div className="p-4 bg-stone-50 border-t border-stone-200 flex items-center justify-between flex-shrink-0 print:hidden">
           <button
             onClick={handlePrint}
-            className="flex-1 py-2.5 bg-stone-900 hover:bg-black active:scale-98 text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 transition cursor-pointer mr-2 shadow-xs"
+            className="flex-1 py-3 bg-stone-900 hover:bg-black active:scale-98 text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 transition cursor-pointer mr-2 shadow-xs"
           >
             <Printer className="w-4 h-4" />
             <span>{language === 'th' ? 'สั่งพิมพ์ใบเสร็จ (Print Slip)' : 'Print Receipt'}</span>
           </button>
           <button
             onClick={onClose}
-            className="px-5 py-2.5 bg-stone-200 hover:bg-stone-300 text-stone-700 font-bold text-xs rounded-2xl transition cursor-pointer active:scale-95"
+            className="px-5 py-3 bg-stone-200 hover:bg-stone-300 text-stone-700 font-bold text-xs rounded-2xl transition cursor-pointer active:scale-95"
           >
             {language === 'th' ? 'ปิด' : 'Close'}
           </button>

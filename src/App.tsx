@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MenuItem, MenuCategory, CartItem, Order, OrderStatus, PaymentMethod, SelectedOption, Language, StoreConfig } from './types';
+import { MenuItem, MenuCategory, CartItem, Order, OrderStatus, SelectedOption, Language, StoreConfig } from './types';
 import { syncManager } from './utils/storage';
 import { soundService } from './utils/sound';
 import { t, getInitialLanguage, saveLanguagePreference } from './utils/i18n';
@@ -8,7 +8,6 @@ import { RoleSwitcher, AppRole } from './components/common/RoleSwitcher';
 import { MenuCard } from './components/customer/MenuCard';
 import { ItemModal } from './components/customer/ItemModal';
 import { CartDrawer } from './components/customer/CartDrawer';
-import { PromptPayModal } from './components/customer/PromptPayModal';
 import { OrderTracker } from './components/customer/OrderTracker';
 import { KitchenDashboard } from './components/kitchen/KitchenDashboard';
 import { MenuAdmin } from './components/admin/MenuAdmin';
@@ -50,8 +49,6 @@ export function App() {
   // Modals & Sheets
   const [activeModalItem, setActiveModalItem] = useState<MenuItem | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('promptpay');
-  const [activePromptPayOrder, setActivePromptPayOrder] = useState<Order | null>(null);
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
   
   // 2. Tracked order strictly scoped to ONLY matching the current scanned table
@@ -268,7 +265,8 @@ export function App() {
     setCart((prev) => prev.filter((item) => item.cartItemId !== cartItemId));
   };
 
-  const handleCheckout = async (chosenPayment: PaymentMethod) => {
+  // Direct Kitchen Order Process (No upfront customer payment modal)
+  const handleCheckout = async () => {
     if (cart.length === 0) return;
 
     const subtotal = cart.reduce((sum, item) => sum + item.totalItemPrice, 0);
@@ -281,7 +279,7 @@ export function App() {
       items: [...cart],
       subtotal,
       totalPrice: subtotal,
-      paymentMethod: chosenPayment,
+      paymentMethod: 'promptpay',
       paymentStatus: 'unpaid',
       status: 'pending',
       createdAt: new Date().toISOString(),
@@ -309,31 +307,9 @@ export function App() {
       console.error("Supabase insert order error:", e);
     }
 
-    if (chosenPayment === 'promptpay') {
-      setActivePromptPayOrder(newOrder);
-    } else {
-      setTrackedOrder(newOrder);
-      setIsOrderTrackerOpen(true);
-    }
-  };
-
-  const handlePromptPayConfirmed = async () => {
-    if (activePromptPayOrder) {
-      syncManager.updateOrderStatus(activePromptPayOrder.id, 'pending', 'paid');
-      const updated = { ...activePromptPayOrder, paymentStatus: 'paid' as const };
-      setTrackedOrder(updated);
-      setActivePromptPayOrder(null);
-      setIsOrderTrackerOpen(true);
-
-      try {
-        await supabase
-          .from('orders')
-          .update({ payment_status: 'paid' })
-          .eq('id', activePromptPayOrder.id);
-      } catch (e) {
-        console.error("Supabase update payment error:", e);
-      }
-    }
+    // 3. Immediately open OrderTracker for customer
+    setTrackedOrder(newOrder);
+    setIsOrderTrackerOpen(true);
   };
 
   const handleUpdateOrderStatus = async (
@@ -616,26 +592,6 @@ export function App() {
         onUpdateQuantity={handleUpdateCartQuantity}
         onRemoveItem={handleRemoveCartItem}
         onCheckout={handleCheckout}
-        paymentMethod={paymentMethod}
-        setPaymentMethod={setPaymentMethod}
-      />
-
-      {/* PromptPay Modal */}
-      <PromptPayModal
-        isOpen={!!activePromptPayOrder}
-        onClose={() => {
-          if (activePromptPayOrder) {
-            setTrackedOrder(activePromptPayOrder);
-            setIsOrderTrackerOpen(true);
-          }
-          setActivePromptPayOrder(null);
-        }}
-        amount={activePromptPayOrder?.totalPrice || 0}
-        promptpayNumber={storeConfig.promptpayNumber}
-        promptpayName={storeConfig.promptpayName}
-        orderNumber={activePromptPayOrder?.orderNumber || ''}
-        language={language}
-        onPaymentConfirmed={handlePromptPayConfirmed}
       />
 
       {/* Live Order Tracker Modal Dialog */}
@@ -647,7 +603,7 @@ export function App() {
         onPrintReceipt={(order) => setReceiptOrder(order)}
       />
 
-      {/* Receipt Printing Modal Slip */}
+      {/* Receipt Printing Modal Slip with Dynamic PromptPay QR */}
       <ReceiptModal
         isOpen={!!receiptOrder}
         onClose={() => setReceiptOrder(null)}
