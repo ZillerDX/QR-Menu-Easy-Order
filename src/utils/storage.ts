@@ -196,7 +196,22 @@ class RealtimeSyncManager {
   getStoreConfig(): StoreConfig {
     try {
       const data = localStorage.getItem(STORE_KEY);
-      return data ? JSON.parse(data) : initialStoreConfig;
+      if (!data) return initialStoreConfig;
+      const parsed: StoreConfig = JSON.parse(data);
+      if (parsed.name === 'Easy Menu' || !parsed.logoUrl) {
+        const migrated: StoreConfig = {
+          ...parsed,
+          name: parsed.name === 'Easy Menu' ? initialStoreConfig.name : parsed.name,
+          nameEn: parsed.nameEn === 'Easy Menu' ? initialStoreConfig.nameEn : parsed.nameEn,
+          tagline: parsed.tagline === 'ระบบสั่งอาหารและจัดการร้านอัจฉริยะ' ? initialStoreConfig.tagline : parsed.tagline,
+          taglineEn: parsed.taglineEn === 'Smart Ordering & Kitchen Management System' ? initialStoreConfig.taglineEn : parsed.taglineEn,
+          logoUrl: initialStoreConfig.logoUrl,
+          promptpayName: parsed.promptpayName === 'อีซี่ เมนู (Easy Menu)' ? initialStoreConfig.promptpayName : parsed.promptpayName,
+        };
+        localStorage.setItem(STORE_KEY, JSON.stringify(migrated));
+        return migrated;
+      }
+      return parsed;
     } catch {
       return initialStoreConfig;
     }

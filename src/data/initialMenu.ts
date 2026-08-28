@@ -1,13 +1,14 @@
 import { MenuCategory, MenuItem, StoreConfig } from '../types';
+import cafeLogo from '../assets/logo.jpg';
 
 export const initialStoreConfig: StoreConfig = {
-  name: "Easy Menu",
-  nameEn: "Easy Menu",
-  tagline: "ระบบสั่งอาหารและจัดการร้านอัจฉริยะ",
-  taglineEn: "Smart Ordering & Kitchen Management System",
-  logoUrl: "",
+  name: "Cafe Order",
+  nameEn: "Cafe Order",
+  tagline: "Order Easy • Enjoy More",
+  taglineEn: "Order Easy • Enjoy More",
+  logoUrl: cafeLogo,
   promptpayNumber: "0812345678",
-  promptpayName: "อีซี่ เมนู (Easy Menu)",
+  promptpayName: "คาเฟ่ ออเดอร์ (Cafe Order)",
   openTime: "08:00 - 22:00 น.",
   tableCount: 15,
 };
