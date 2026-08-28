@@ -13,13 +13,13 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, onSelect, language }) 
   return (
     <div
       onClick={() => item.isAvailable && onSelect(item)}
-      className={`group relative bg-white rounded-3xl p-3 sm:p-4 border border-stone-200/80 shadow-xs transition-all duration-300 flex flex-col justify-between ${
+      className={`group relative bg-white rounded-3xl p-3 sm:p-4 border border-stone-200/80 shadow-2xs transition-all duration-300 flex flex-col justify-between h-full ${
         item.isAvailable
           ? 'hover:shadow-xl hover:shadow-orange-500/10 hover:border-orange-300 hover:-translate-y-1 cursor-pointer active:scale-[0.98]'
           : 'opacity-60 cursor-not-allowed bg-stone-50'
       }`}
     >
-      <div>
+      <div className="flex flex-col flex-1">
         {/* Image Container */}
         <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden mb-3 bg-stone-100 shadow-2xs">
           <img
@@ -51,27 +51,29 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, onSelect, language }) 
           </div>
         </div>
 
-        {/* Info */}
-        <div className="space-y-1">
-          <h3 className="font-extrabold text-stone-900 text-sm sm:text-base leading-snug line-clamp-1 group-hover:text-orange-600 transition-colors">
-            {language === 'en' ? (item.nameEn || item.name) : item.name}
-          </h3>
-          {language === 'th' && item.nameEn && (
-            <p className="text-[11px] text-stone-400 font-medium line-clamp-1">
-              {item.nameEn}
-            </p>
-          )}
-          <p className="text-xs text-stone-500 line-clamp-2 pt-0.5 leading-relaxed font-normal">
+        {/* Info Container with min-height for uniform card grid alignment */}
+        <div className="space-y-1 flex-1 flex flex-col justify-start">
+          <div className="min-h-[38px] sm:min-h-[42px] flex flex-col justify-start">
+            <h3 className="font-black text-stone-900 text-sm sm:text-base leading-snug line-clamp-1 group-hover:text-orange-600 transition-colors">
+              {language === 'en' ? (item.nameEn || item.name) : item.name}
+            </h3>
+            {language === 'th' && item.nameEn && (
+              <p className="text-[11px] text-stone-400 font-semibold line-clamp-1 truncate">
+                {item.nameEn}
+              </p>
+            )}
+          </div>
+          <p className="text-[11px] sm:text-xs text-stone-500 line-clamp-2 leading-relaxed font-normal min-h-[32px]">
             {language === 'en' ? (item.descriptionEn || item.description) : item.description}
           </p>
         </div>
       </div>
 
       {/* Price & Action Button */}
-      <div className="mt-3 pt-2.5 border-t border-stone-100 flex items-center justify-between">
+      <div className="mt-3 pt-2.5 border-t border-stone-100 flex items-center justify-between flex-shrink-0">
         <div>
-          <span className="text-xs text-stone-400 font-medium">฿</span>
-          <span className="text-base font-black text-stone-900 ml-0.5">
+          <span className="text-xs text-stone-400 font-bold">฿</span>
+          <span className="text-base sm:text-lg font-black text-stone-900 ml-0.5">
             {item.price.toLocaleString()}
           </span>
         </div>
@@ -79,7 +81,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({ item, onSelect, language }) 
         {item.isAvailable && (
           <button
             type="button"
-            className="w-8 h-8 rounded-2xl bg-orange-100 group-hover:bg-orange-500 text-orange-600 group-hover:text-white flex items-center justify-center transition-all duration-300 shadow-2xs font-bold group-hover:scale-105 active:scale-95"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-orange-100 group-hover:bg-orange-500 text-orange-600 group-hover:text-white flex items-center justify-center transition-all duration-300 shadow-2xs font-bold group-hover:scale-105 active:scale-95"
           >
             <Plus className="w-4 h-4 transition-transform duration-300 group-hover:rotate-90" />
           </button>

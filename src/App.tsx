@@ -51,20 +51,18 @@ export function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
   
-  // 2. Tracked order strictly scoped to ONLY matching the current scanned table
+  // 2. Tracked order strictly scoped to THIS CUSTOMER'S ACTIVE BROWSER SESSION ONLY!
+  // New customers sitting down at the table will NEVER see previous customers' orders.
   const [trackedOrder, setTrackedOrder] = useState<Order | null>(() => {
     if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const currentTable = params.get('table') || '01';
+      const sessionOrderId = sessionStorage.getItem('my_active_order_id');
+      if (!sessionOrderId) return null;
       const all = syncManager.getOrders();
-      return (
-        all.find(
-          (o) =>
-            o.tableNumber === currentTable &&
-            o.status !== 'completed' &&
-            o.status !== 'cancelled'
-        ) || null
-      );
+      const match = all.find((o) => o.id === sessionOrderId);
+      if (match && match.status !== 'completed' && match.status !== 'cancelled') {
+        return match;
+      }
+      sessionStorage.removeItem('my_active_order_id');
     }
     return null;
   });
@@ -113,16 +111,18 @@ export function App() {
       if (event.type === 'ORDER_CREATED') {
         const updated = syncManager.getOrders();
         setOrders(updated);
-        // Only show tracked banner if it's the customer's own table
-        if (event.payload.tableNumber === tableNumber) {
-          setTrackedOrder(event.payload);
-        }
         soundService.playNewOrderChime();
       } else if (event.type === 'ORDER_STATUS_UPDATED') {
         const updated = syncManager.getOrders();
         setOrders(updated);
-        if (event.payload.tableNumber === tableNumber) {
-          setTrackedOrder((prev) => (prev?.id === event.payload.id ? event.payload : prev));
+        const myOrderId = sessionStorage.getItem('my_active_order_id');
+        if (myOrderId && event.payload.id === myOrderId) {
+          if (event.payload.status === 'completed' || event.payload.status === 'cancelled') {
+            setTrackedOrder(null);
+            sessionStorage.removeItem('my_active_order_id');
+          } else {
+            setTrackedOrder(event.payload);
+          }
         }
       } else if (event.type === 'MENU_UPDATED') {
         setMenuItems(event.payload);
@@ -137,6 +137,7 @@ export function App() {
         setOrders([]);
         setCart([]);
         setTrackedOrder(null);
+        sessionStorage.removeItem('my_active_order_id');
         setIsOrderTrackerOpen(false);
       }
     });
@@ -177,6 +178,15 @@ export function App() {
                 : o
             )
           );
+          const myOrderId = sessionStorage.getItem('my_active_order_id');
+          if (myOrderId && updatedO.id === myOrderId) {
+            if (updatedO.status === 'completed' || updatedO.status === 'cancelled') {
+              setTrackedOrder(null);
+              sessionStorage.removeItem('my_active_order_id');
+            } else {
+              setTrackedOrder((prev) => prev ? { ...prev, status: updatedO.status, paymentStatus: updatedO.payment_status } : null);
+            }
+          }
         }
       })
       .subscribe();
@@ -186,19 +196,7 @@ export function App() {
       unsubscribe();
       supabase.removeChannel(orderSubscription);
     };
-  }, [tableNumber]);
-
-  // Strictly synchronize trackedOrder whenever tableNumber changes
-  useEffect(() => {
-    const all = syncManager.getOrders();
-    const match = all.find(
-      (o) =>
-        o.tableNumber === tableNumber &&
-        o.status !== 'completed' &&
-        o.status !== 'cancelled'
-    );
-    setTrackedOrder(match || null);
-  }, [tableNumber]);
+  }, []);
 
   const handleToggleLanguage = () => {
     const nextLang: Language = language === 'en' ? 'th' : 'en';
@@ -303,7 +301,12 @@ export function App() {
     setCart([]);
     setIsCartOpen(false);
 
-    // 2. Sync to Supabase Database
+    // 2. Track this order strictly in this customer's active session
+    sessionStorage.setItem('my_active_order_id', newOrder.id);
+    setTrackedOrder(newOrder);
+    setIsOrderTrackerOpen(true);
+
+    // 3. Sync to Supabase Database
     try {
       await supabase.from('orders').insert([{
         id: newOrder.id,
@@ -319,10 +322,6 @@ export function App() {
     } catch (e) {
       console.error("Supabase insert order error:", e);
     }
-
-    // 3. Immediately open OrderTracker for customer
-    setTrackedOrder(newOrder);
-    setIsOrderTrackerOpen(true);
   };
 
   // Immediate reactive state update for kitchen status
@@ -333,8 +332,14 @@ export function App() {
   ) => {
     const updated = syncManager.updateOrderStatus(orderId, status, paymentStatus);
     setOrders(updated);
-    if (trackedOrder && trackedOrder.id === orderId) {
-      setTrackedOrder((prev) => (prev ? { ...prev, status, ...(paymentStatus ? { paymentStatus } : {}) } : null));
+    const myOrderId = sessionStorage.getItem('my_active_order_id');
+    if (myOrderId && orderId === myOrderId) {
+      if (status === 'completed' || status === 'cancelled') {
+        setTrackedOrder(null);
+        sessionStorage.removeItem('my_active_order_id');
+      } else {
+        setTrackedOrder((prev) => (prev ? { ...prev, status, ...(paymentStatus ? { paymentStatus } : {}) } : null));
+      }
     }
     try {
       await supabase
@@ -376,6 +381,8 @@ export function App() {
 
   const handleExecuteResetData = () => {
     syncManager.resetAll();
+    sessionStorage.removeItem('my_active_order_id');
+    setTrackedOrder(null);
     setIsResetConfirmOpen(false);
   };
 
@@ -431,7 +438,7 @@ export function App() {
         {/* VIEW 1: CUSTOMER VIEW */}
         {activeRole === 'customer' && (
           <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
-            {/* Active Tracked Order Banner (Strictly shown only if this table has an active pending/cooking/ready order) */}
+            {/* Active Tracked Order Banner (Strictly shown only if THIS session placed an order that is currently pending/cooking/ready) */}
             {trackedOrder && (
               <div
                 onClick={() => setIsOrderTrackerOpen(true)}

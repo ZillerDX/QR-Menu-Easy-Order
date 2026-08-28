@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Plus, Minus, ShoppingBag } from 'lucide-react';
-import { MenuItem, SelectedOption, Language } from '../../types';
+import { MenuItem, Language, SelectedOption } from '../../types';
 import { soundService } from '../../utils/sound';
 
 interface ItemModalProps {
   item: MenuItem | null;
   onClose: () => void;
-  language: Language;
   onAddToCart: (
     item: MenuItem,
     quantity: number,
@@ -15,6 +14,7 @@ interface ItemModalProps {
     specialNote: string,
     unitPriceWithDelta: number
   ) => void;
+  language: Language;
 }
 
 export const ItemModal: React.FC<ItemModalProps> = ({
@@ -115,7 +115,9 @@ export const ItemModal: React.FC<ItemModalProps> = ({
 
   const handleAdd = () => {
     soundService.playClickPop();
-    onAddToCart(item, quantity, flatSelectedOptions, specialNote, unitPrice);
+    const noteToSend = specialNote.trim();
+    onAddToCart(item, quantity, flatSelectedOptions, noteToSend, unitPrice);
+    setSpecialNote('');
     onClose();
   };
 
@@ -141,19 +143,19 @@ export const ItemModal: React.FC<ItemModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1 min-h-0">
+        {/* Scrollable Modal Content */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
           <div>
-            <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-xl font-extrabold text-stone-900">
+                <h2 className="text-lg sm:text-xl font-black text-stone-900 leading-tight">
                   {language === 'en' && item.nameEn ? item.nameEn : item.name}
                 </h2>
                 {language === 'th' && item.nameEn && (
-                  <p className="text-xs text-stone-400">{item.nameEn}</p>
+                  <p className="text-xs text-stone-400 mt-0.5">{item.nameEn}</p>
                 )}
               </div>
-              <div className="text-right">
+              <div className="text-right flex-shrink-0">
                 <span className="text-xs text-stone-400 font-medium">
                   {language === 'th' ? 'เริ่มต้น ' : 'From '}
                 </span>
@@ -175,10 +177,10 @@ export const ItemModal: React.FC<ItemModalProps> = ({
             return (
               <div key={group.id} className="pt-3.5 border-t border-stone-100">
                 <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-sm font-bold text-stone-800">
+                  <span className="text-sm font-black text-stone-800">
                     {language === 'en' && group.nameEn ? group.nameEn : group.name}
                   </span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-medium">
+                  <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-600 font-bold">
                     {group.required
                       ? language === 'th' ? 'จำเป็น' : 'Required'
                       : language === 'th' ? 'ไม่บังคับ' : 'Optional'}
@@ -199,17 +201,17 @@ export const ItemModal: React.FC<ItemModalProps> = ({
                             handleCheckboxToggle(group.id, choice.id, group.maxSelect);
                           }
                         }}
-                        className={`flex items-center justify-between p-3 rounded-2xl border text-sm cursor-pointer transition ${
+                        className={`flex items-center justify-between gap-3 p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm cursor-pointer transition ${
                           isChecked
-                            ? 'border-orange-500 bg-orange-50/50 text-orange-950 font-bold shadow-2xs'
-                            : 'border-stone-200 hover:border-stone-300 text-stone-700'
+                            ? 'border-orange-500 bg-orange-50/70 text-orange-950 font-black shadow-2xs'
+                            : 'border-stone-200/90 hover:border-stone-300 bg-white text-stone-700 font-medium'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <div
                             className={`w-4 h-4 rounded-${
                               isSingleChoice ? 'full' : 'md'
-                            } border flex items-center justify-center ${
+                            } border flex items-center justify-center flex-shrink-0 ${
                               isChecked
                                 ? 'border-orange-500 bg-orange-500 text-white'
                                 : 'border-stone-300 bg-white'
@@ -219,13 +221,13 @@ export const ItemModal: React.FC<ItemModalProps> = ({
                               <span className="w-1.5 h-1.5 rounded-full bg-white block" />
                             )}
                           </div>
-                          <span>
+                          <span className="leading-snug">
                             {language === 'en' && choice.nameEn ? choice.nameEn : choice.name}
                           </span>
                         </div>
 
                         {choice.priceDelta > 0 && (
-                          <span className="text-xs font-bold text-orange-600">
+                          <span className="text-xs sm:text-sm font-black text-orange-600 flex-shrink-0 whitespace-nowrap pl-2">
                             +฿{choice.priceDelta}
                           </span>
                         )}
@@ -257,8 +259,8 @@ export const ItemModal: React.FC<ItemModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 bg-stone-50 border-t border-stone-100 flex items-center justify-between gap-4 flex-shrink-0">
-          <div className="flex items-center bg-white border border-stone-200 rounded-2xl p-1 shadow-xs">
+        <div className="p-4 bg-stone-50 border-t border-stone-100 flex items-center justify-between gap-3 flex-shrink-0 pb-6 sm:pb-4">
+          <div className="flex items-center bg-white border border-stone-200 rounded-2xl p-1 shadow-2xs">
             <button
               onClick={() => setQuantity((q) => Math.max(1, q - 1))}
               disabled={quantity <= 1}
@@ -266,7 +268,7 @@ export const ItemModal: React.FC<ItemModalProps> = ({
             >
               <Minus className="w-4 h-4" />
             </button>
-            <span className="w-9 text-center font-bold text-sm">{quantity}</span>
+            <span className="w-8 text-center font-black text-sm text-stone-900">{quantity}</span>
             <button
               onClick={() => setQuantity((q) => q + 1)}
               className="w-8 h-8 rounded-xl flex items-center justify-center text-stone-600 hover:bg-stone-100 cursor-pointer"
@@ -277,13 +279,13 @@ export const ItemModal: React.FC<ItemModalProps> = ({
 
           <button
             onClick={handleAdd}
-            className="flex-1 py-3 px-4 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-black text-sm shadow-md shadow-orange-500/25 flex items-center justify-between transition cursor-pointer"
+            className="flex-1 py-3.5 px-4 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-[0.98] text-white font-black text-sm shadow-md shadow-orange-500/25 flex items-center justify-between transition cursor-pointer"
           >
             <span className="flex items-center gap-2">
               <ShoppingBag className="w-4 h-4" />
               {language === 'th' ? 'ใส่ตะกร้า' : 'Add to Order'}
             </span>
-            <span>฿{totalPrice.toLocaleString()}</span>
+            <span className="text-base font-black">฿{totalPrice.toLocaleString()}</span>
           </button>
         </div>
       </div>

@@ -1,7 +1,8 @@
-import React from 'react';
-import { ShoppingBag, Store, LogIn, LogOut, ShieldCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShoppingBag, Store, LogIn, LogOut } from 'lucide-react';
 import { StoreConfig, Language } from '../../types';
 import { t } from '../../utils/i18n';
+import { AppRole } from './RoleSwitcher';
 import { User } from '@supabase/supabase-js';
 
 interface HeaderProps {
@@ -9,7 +10,7 @@ interface HeaderProps {
   tableNumber: string;
   cartCount: number;
   onOpenCart: () => void;
-  activeRole: 'customer' | 'kitchen' | 'admin' | 'settings' | 'qr';
+  activeRole: AppRole;
   language: Language;
   onToggleLanguage: () => void;
   user: User | null;
@@ -29,53 +30,66 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAuth,
   onLogout,
 }) => {
-  const getTableDisplayLabel = (tbl: string) => {
-    if (tbl === 'TAKEAWAY') {
-      return t('takeaway', language);
+  const [logoClickCount, setLogoClickCount] = useState(0);
+
+  const getTableDisplayLabel = (table: string) => {
+    if (table === 'TAKEAWAY') {
+      return language === 'th' ? 'กลับบ้าน' : 'Takeaway';
     }
-    return language === 'th' ? `โต๊ะ ${tbl}` : `Table ${tbl}`;
+    return `${language === 'th' ? 'โต๊ะ' : 'Table'} ${table}`;
+  };
+
+  // Staff Secret Login Trigger: Click logo 3 times to open auth modal if not logged in
+  const handleLogoClick = () => {
+    if (!user) {
+      const nextCount = logoClickCount + 1;
+      if (nextCount >= 3) {
+        setLogoClickCount(0);
+        onOpenAuth();
+      } else {
+        setLogoClickCount(nextCount);
+        setTimeout(() => setLogoClickCount(0), 2000);
+      }
+    }
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-xs h-16 flex items-center">
-      <div className="w-full max-w-6xl mx-auto px-3 sm:px-6 flex items-center justify-between gap-2">
-        {/* Brand Logo & Name */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 min-w-[36px] min-h-[36px] sm:min-w-[40px] sm:min-h-[40px] rounded-2xl bg-gradient-to-tr from-amber-600 via-orange-500 to-amber-400 flex items-center justify-center text-white shadow-md shadow-orange-500/20 flex-shrink-0 overflow-hidden hover:scale-105 transition-transform duration-200">
-            {storeConfig.logoUrl ? (
-              <img
-                src={storeConfig.logoUrl}
-                alt="Store Logo"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <Store className="w-5 h-5" />
-            )}
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-2xs">
+      <div className="max-w-6xl mx-auto px-3.5 sm:px-6 py-2.5 flex items-center justify-between gap-2">
+        {/* Left: Brand Logo & Title */}
+        <div 
+          onClick={handleLogoClick}
+          className="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none group"
+          title={!user ? "Cafe Order" : "Staff Portal"}
+        >
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl overflow-hidden shadow-xs border border-orange-200/80 p-0.5 bg-gradient-to-tr from-amber-500 to-orange-500 flex-shrink-0 group-hover:scale-105 transition-transform duration-200">
+            <img
+              src={storeConfig.logoUrl}
+              alt={storeConfig.name}
+              className="w-full h-full object-cover rounded-[14px]"
+            />
           </div>
-          <div className="min-w-0">
-            <h1 className="font-black text-stone-900 leading-tight text-sm sm:text-base md:text-lg truncate">
-              {language === 'en' ? storeConfig.nameEn || storeConfig.name : storeConfig.name}
+          <div>
+            <h1 className="font-black text-stone-900 text-sm sm:text-base leading-tight tracking-tight group-hover:text-orange-600 transition-colors">
+              {language === 'en' ? (storeConfig.nameEn || storeConfig.name) : storeConfig.name}
             </h1>
-            <p className="text-[11px] text-stone-500 hidden sm:block font-medium truncate">
-              {language === 'en' ? storeConfig.taglineEn || storeConfig.tagline : storeConfig.tagline}
+            <p className="text-[10px] sm:text-xs text-stone-500 font-medium leading-none mt-0.5 hidden sm:block">
+              {language === 'en' ? (storeConfig.taglineEn || storeConfig.tagline) : storeConfig.tagline}
             </p>
           </div>
         </div>
 
-        {/* Action area */}
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-          {/* Dual Toggle Switch for Language (TH / EN) */}
+        {/* Right Action Tools */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
+          {/* Dual Language Switcher Toggle */}
           <div
             onClick={onToggleLanguage}
-            role="button"
-            tabIndex={0}
-            title="Toggle Language (TH / EN)"
-            className="relative flex items-center bg-stone-100 border border-stone-200/90 p-1 rounded-2xl cursor-pointer select-none transition shadow-2xs hover:border-stone-300 hover:shadow-xs h-9 active:scale-95 flex-shrink-0"
+            className="relative bg-stone-100/90 hover:bg-stone-200/90 border border-stone-200 p-0.5 rounded-2xl flex items-center cursor-pointer transition-all shadow-2xs select-none h-9 flex-shrink-0"
+            title="Switch Language"
           >
-            {/* Sliding Pill Indicator */}
             <div
-              className={`absolute top-1 bottom-1 w-[28px] sm:w-[32px] rounded-xl bg-orange-500 shadow-sm transition-all duration-200 ease-out ${
-                language === 'en' ? 'left-[32px] sm:left-[36px]' : 'left-1'
+              className={`absolute top-0.5 bottom-0.5 w-[28px] sm:w-[32px] bg-orange-500 rounded-[13px] shadow-xs transition-all duration-200 ease-out ${
+                language === 'th' ? 'left-0.5' : 'left-[29px] sm:left-[33px]'
               }`}
             />
             {/* TH Option */}
@@ -96,10 +110,10 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </div>
 
-          {/* Customer Specific Tools: Fixed Table Badge & Cart */}
+          {/* CUSTOMER SPECIFIC VIEW: ONLY Table Badge and Cart (NO LOGIN / LOGOUT BUTTONS) */}
           {activeRole === 'customer' && (
             <>
-              {/* Fixed Table Badge (Customers CANNOT change table) */}
+              {/* Fixed Table Badge (Customer Dining Location) */}
               <div 
                 className="flex items-center gap-1 px-2.5 sm:px-3 bg-orange-50/90 border border-orange-200/90 text-orange-950 text-xs font-black rounded-2xl shadow-2xs h-9 flex-shrink-0"
                 title="Your Table"
@@ -111,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({
               {/* Cart Drawer Trigger */}
               <button
                 onClick={onOpenCart}
-                className="relative p-2 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-95 text-white transition shadow-md shadow-orange-500/25 flex items-center gap-1.5 cursor-pointer h-9 px-2.5 sm:px-3 hover:shadow-lg hover:shadow-orange-500/35 flex-shrink-0"
+                className="relative p-2 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-95 text-white transition shadow-md shadow-orange-500/25 flex items-center gap-1.5 cursor-pointer h-9 px-2.5 sm:px-3.5 hover:shadow-lg hover:shadow-orange-500/35 flex-shrink-0"
                 title="View Cart"
               >
                 <ShoppingBag className="w-4 h-4" />
@@ -127,60 +141,51 @@ export const Header: React.FC<HeaderProps> = ({
             </>
           )}
 
-          {/* Staff Mode Role Badges */}
-          {activeRole === 'kitchen' && (
-            <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-black shadow-2xs whitespace-nowrap h-9">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Kitchen KDS
-            </div>
-          )}
+          {/* STAFF MODE ONLY ROLE BADGES & LOGOUT (HIDDEN FROM CUSTOMERS) */}
+          {activeRole !== 'customer' && user && (
+            <>
+              {activeRole === 'kitchen' && (
+                <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-black shadow-2xs whitespace-nowrap h-9">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Kitchen KDS
+                </div>
+              )}
 
-          {activeRole === 'admin' && (
-            <div className="flex items-center gap-1.5 bg-purple-50 text-purple-800 border border-purple-200 px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-black shadow-2xs whitespace-nowrap h-9">
-              Admin Mode
-            </div>
-          )}
+              {activeRole === 'admin' && (
+                <div className="flex items-center gap-1.5 bg-purple-50 text-purple-800 border border-purple-200 px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-black shadow-2xs whitespace-nowrap h-9">
+                  Admin Mode
+                </div>
+              )}
 
-          {activeRole === 'settings' && (
-            <div className="flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-200 px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-black shadow-2xs whitespace-nowrap h-9">
-              Settings
-            </div>
-          )}
+              {activeRole === 'settings' && (
+                <div className="flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-200 px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-black shadow-2xs whitespace-nowrap h-9">
+                  Settings
+                </div>
+              )}
 
-          {activeRole === 'qr' && (
-            <div className="flex items-center gap-1.5 bg-blue-50 text-blue-800 border border-blue-200 px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-black shadow-2xs whitespace-nowrap h-9">
-              Table QR
-            </div>
-          )}
+              {activeRole === 'qr' && (
+                <div className="flex items-center gap-1.5 bg-blue-50 text-blue-800 border border-blue-200 px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-black shadow-2xs whitespace-nowrap h-9">
+                  Table QR
+                </div>
+              )}
 
-          {/* Staff Auth Indicator / Login Button */}
-          {!user ? (
-            <button
-              type="button"
-              onClick={onOpenAuth}
-              className="px-2.5 sm:px-3 py-1.5 rounded-2xl border border-stone-200/90 bg-stone-50 hover:bg-stone-100 text-stone-700 text-xs font-black flex items-center gap-1.5 transition shadow-2xs cursor-pointer h-9 active:scale-95 flex-shrink-0"
-              title={language === 'th' ? 'เข้าสู่ระบบสำหรับทางร้าน' : 'Staff Login'}
-            >
-              <LogIn className="w-3.5 h-3.5 text-orange-500" />
-              <span className="hidden sm:inline">{language === 'th' ? 'เข้าสู่ระบบร้าน' : 'Staff Login'}</span>
-            </button>
-          ) : (
-            <div className="flex items-center gap-1.5 bg-stone-100 border border-stone-200/90 pl-2 pr-1 py-1 rounded-2xl h-9 flex-shrink-0">
-              <div className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center text-[10px] font-black">
-                {user.email ? user.email.slice(0, 1).toUpperCase() : 'S'}
+              <div className="flex items-center gap-1.5 bg-stone-100 border border-stone-200/90 pl-2 pr-1 py-1 rounded-2xl h-9 flex-shrink-0">
+                <div className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center text-[10px] font-black">
+                  {user.email ? user.email.slice(0, 1).toUpperCase() : 'S'}
+                </div>
+                <span className="text-[11px] font-bold text-stone-700 max-w-[90px] truncate hidden md:inline">
+                  {user.email || 'Staff'}
+                </span>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="p-1 rounded-xl hover:bg-stone-200 text-stone-400 hover:text-red-600 transition cursor-pointer"
+                  title={language === 'th' ? 'ออกจากระบบ' : 'Log Out'}
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <span className="text-[11px] font-bold text-stone-700 max-w-[90px] truncate hidden md:inline">
-                {user.email || 'Staff'}
-              </span>
-              <button
-                type="button"
-                onClick={onLogout}
-                className="p-1 rounded-xl hover:bg-stone-200 text-stone-400 hover:text-red-600 transition cursor-pointer"
-                title={language === 'th' ? 'ออกจากระบบ' : 'Log Out'}
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            </>
           )}
         </div>
       </div>
