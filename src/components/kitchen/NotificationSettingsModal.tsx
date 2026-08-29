@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Bell, 
   Check, 
@@ -23,6 +24,17 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
 }) => {
   const [selectedPreset, setSelectedPreset] = useState<SoundPreset>('cheerful');
   const [playingId, setPlayingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     try {
@@ -100,15 +112,15 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
     },
   ];
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-white/90 backdrop-blur-2xl rounded-[32px] max-w-md w-full border border-white/70 shadow-[0_25px_70px_rgba(0,0,0,0.25)] overflow-hidden animate-in zoom-in-95 duration-200">
+  const modalContent = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-lg bg-white rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 flex flex-col max-h-[92vh]">
         
         {/* Top Header Card */}
-        <div className="p-5 sm:p-6 pb-4 border-b border-stone-200/50 flex items-center justify-between bg-gradient-to-b from-white/80 to-white/40 backdrop-blur-xl">
+        <div className="px-6 py-5 border-b border-stone-100 flex items-center justify-between flex-shrink-0 bg-[#fffdfa]">
           <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-orange-500/15 border border-orange-500/30 text-orange-600 flex items-center justify-center shadow-2xs flex-shrink-0">
-              <Bell className="w-5 h-5 animate-pulse" />
+            <div className="w-11 h-11 rounded-2xl bg-orange-500/10 border border-orange-200 text-orange-600 flex items-center justify-center shadow-2xs flex-shrink-0">
+              <Bell className="w-5 h-5 text-orange-600" />
             </div>
             <div>
               <h3 className="font-black text-stone-900 text-base sm:text-lg tracking-tight">
@@ -123,7 +135,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-stone-200/70 hover:bg-stone-300/80 text-stone-600 hover:text-stone-900 flex items-center justify-center transition cursor-pointer active:scale-95 flex-shrink-0 backdrop-blur-md"
+            className="w-9 h-9 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-800 flex items-center justify-center transition cursor-pointer active:scale-95 flex-shrink-0"
             title="Close"
           >
             <X className="w-4 h-4" />
@@ -131,17 +143,18 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
         </div>
 
         {/* Content Body with 6 Sound Choices */}
-        <div className="p-5 sm:p-6 space-y-4">
+        <div className="p-6 overflow-y-auto space-y-4 flex-1">
           <div className="flex items-center justify-between">
             <label className="text-xs font-black text-stone-700 uppercase tracking-wider block">
               {language === 'th' ? 'รูปแบบเสียงเตือน (6 สไตล์)' : 'Sound Chime Presets (6 Styles)'}
             </label>
-            <span className="text-[11px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
-              {language === 'th' ? '● เปิดเสียงตลอดเวลา' : '● Always Active'}
+            <span className="text-[11px] text-emerald-600 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              {language === 'th' ? 'เปิดเสียงตลอดเวลา' : 'Always Active'}
             </span>
           </div>
           
-          <div className="space-y-2 max-h-[52vh] overflow-y-auto pr-1">
+          <div className="space-y-2.5">
             {soundOptions.map((opt) => {
               const isSelected = selectedPreset === opt.id;
               const isPlayingThis = playingId === opt.id;
@@ -150,10 +163,10 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
                 <div
                   key={opt.id}
                   onClick={() => handleSelectPreset(opt.id)}
-                  className={`p-3 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 select-none backdrop-blur-xl ${
+                  className={`p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 select-none ${
                     isSelected
-                      ? 'border-orange-500 bg-orange-500/12 ring-2 ring-orange-500/25 shadow-xs'
-                      : 'border-stone-200/60 bg-white/70 hover:border-stone-300 hover:bg-white/90 shadow-2xs'
+                      ? 'border-orange-500 bg-orange-50/70 ring-2 ring-orange-500/20 shadow-xs'
+                      : 'border-stone-200/80 bg-stone-50/50 hover:border-stone-300 hover:bg-stone-50 shadow-2xs'
                   }`}
                 >
                   {/* Left: Radio check indicator + Emoji Squircle + Info */}
@@ -166,7 +179,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
                     </div>
 
                     {/* Emoji Badge */}
-                    <div className="w-9 h-9 rounded-xl bg-white/90 border border-stone-200/60 flex items-center justify-center text-base shadow-2xs flex-shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-white border border-stone-200/80 flex items-center justify-center text-base shadow-2xs flex-shrink-0">
                       {opt.emoji}
                     </div>
 
@@ -189,14 +202,15 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
                       e.stopPropagation();
                       handleSelectPreset(opt.id);
                     }}
-                    className={`w-9 h-9 rounded-xl border flex items-center justify-center transition cursor-pointer active:scale-90 flex-shrink-0 shadow-2xs ${
+                    className={`px-3.5 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-black transition cursor-pointer active:scale-90 flex-shrink-0 shadow-2xs ${
                       isPlayingThis
-                        ? 'bg-orange-500 border-orange-600 text-white'
-                        : 'bg-white/80 hover:bg-orange-50 hover:border-orange-300 text-orange-600 border-stone-200/90'
+                        ? 'bg-orange-500 border-orange-600 text-white shadow-orange-500/30'
+                        : 'bg-white hover:bg-orange-50 hover:border-orange-300 text-orange-600 border-stone-200/90'
                     }`}
                     title="Play Preview"
                   >
-                    <Play className={`w-4 h-4 ${isPlayingThis ? 'fill-white' : 'fill-orange-600'}`} />
+                    <Play className={`w-3.5 h-3.5 ${isPlayingThis ? 'fill-white' : 'fill-orange-600'}`} />
+                    <span>{language === 'th' ? 'ฟังเสียง' : 'Play'}</span>
                   </button>
                 </div>
               );
@@ -204,18 +218,28 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="p-4 sm:p-5 bg-white/60 backdrop-blur-xl border-t border-stone-200/50 flex items-center">
+        {/* Footer Action Bar */}
+        <div className="px-6 py-4 bg-stone-50 border-t border-stone-200/80 flex items-center justify-end gap-3 flex-shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-3 px-5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs sm:text-sm font-black transition cursor-pointer active:scale-[0.98] shadow-md shadow-orange-500/25 flex items-center justify-center gap-2"
+            className="px-5 py-2.5 rounded-2xl border border-stone-200 hover:bg-stone-200 text-stone-700 font-black transition text-xs sm:text-sm cursor-pointer active:scale-95"
           >
-            <Check className="w-4 h-4" />
+            {language === 'th' ? 'ยกเลิก' : 'Cancel'}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-8 py-2.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] text-white font-black shadow-lg shadow-orange-500/25 transition text-xs sm:text-sm cursor-pointer flex items-center gap-2"
+          >
+            <Check className="w-4 h-4 stroke-[3]" />
             <span>{language === 'th' ? 'บันทึกและเสร็จสิ้น' : 'Save & Done'}</span>
           </button>
         </div>
+
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 };
