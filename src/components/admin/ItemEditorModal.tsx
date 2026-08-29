@@ -115,7 +115,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
   const [formData, setFormData] = useState<Partial<MenuItem>>({
     name: '',
     nameEn: '',
-    categoryId: categories[0]?.id || 'coffee',
+    categoryId: categories.find((c) => c.id !== 'popular')?.id || 'coffee',
     price: undefined,
     imageUrl: defaultPlaceholderImage,
     description: '',

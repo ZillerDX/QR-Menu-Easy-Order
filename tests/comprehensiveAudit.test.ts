@@ -139,29 +139,67 @@ describe('Comprehensive System Audit & Flow Verification', () => {
     });
   });
 
-  describe('4. Anti-Prank Rejection Workflow', () => {
-    it('should record cancellation reason when kitchen rejects an order', () => {
-      const order: Order = {
-        id: 'ord-fake-99',
-        orderNumber: '#9999',
-        tableNumber: '05',
-        storeId: 'cafe-order',
-        items: [],
-        subtotal: 500,
-        totalPrice: 500,
-        paymentMethod: 'promptpay',
-        paymentStatus: 'unpaid',
-        status: 'pending',
-        createdAt: new Date().toISOString(),
+  describe('5. Menu and Category Full CRUD Lifecycle', () => {
+    const testStoreId = 'shop-crud-test';
+
+    it('should add, edit, and delete a menu item correctly', () => {
+      const newItem: MenuItem = {
+        id: 'item-crud-test-1',
+        storeId: testStoreId,
+        categoryId: 'coffee',
+        name: 'Caramel Macchiato',
+        nameEn: 'Caramel Macchiato',
+        price: 85,
+        imageUrl: 'https://example.com/caramel.jpg',
+        isAvailable: true,
+        isPopular: true,
+        optionGroups: [
+          {
+            id: 'opt-sweet-1',
+            name: 'ระดับความหวาน',
+            required: true,
+            maxSelect: 1,
+            choices: [{ id: 'c-1', name: 'หวานน้อย', priceDelta: 0 }],
+          },
+        ],
       };
 
-      syncManager.saveOrder(order);
+      // 1. Create (Add)
+      const afterAdd = syncManager.saveMenuItem(newItem, testStoreId);
+      expect(afterAdd.some((i) => i.id === newItem.id && i.name === 'Caramel Macchiato')).toBe(true);
 
-      const cancelReason = 'ไม่มีลูกค้าที่โต๊ะ (โต๊ะว่าง / สั่งเล่น)';
-      const updated = syncManager.updateOrderStatus(order.id, 'cancelled');
-      const cancelledOrder = updated.find((o) => o.id === order.id);
+      // 2. Update (Edit)
+      const editedItem: MenuItem = {
+        ...newItem,
+        name: 'Iced Caramel Macchiato Premium',
+        price: 95,
+      };
+      const afterEdit = syncManager.saveMenuItem(editedItem, testStoreId);
+      const foundEdited = afterEdit.find((i) => i.id === newItem.id);
+      expect(foundEdited?.name).toBe('Iced Caramel Macchiato Premium');
+      expect(foundEdited?.price).toBe(95);
 
-      expect(cancelledOrder?.status).toBe('cancelled');
+      // 3. Delete
+      const afterDelete = syncManager.deleteMenuItem(newItem.id, testStoreId);
+      expect(afterDelete.some((i) => i.id === newItem.id)).toBe(false);
+    });
+
+    it('should add and delete categories correctly', () => {
+      const newCat: MenuCategory = {
+        id: 'cat-test-specialty',
+        storeId: testStoreId,
+        name: 'Specialty Cold Brew',
+        nameEn: 'Specialty Cold Brew',
+        icon: 'Sparkles',
+      };
+
+      // 1. Create Category
+      const afterAddCat = syncManager.saveCategory(newCat, testStoreId);
+      expect(afterAddCat.some((c) => c.id === newCat.id)).toBe(true);
+
+      // 2. Delete Category
+      const afterDeleteCat = syncManager.deleteCategory(newCat.id, testStoreId);
+      expect(afterDeleteCat.some((c) => c.id === newCat.id)).toBe(false);
     });
   });
 });

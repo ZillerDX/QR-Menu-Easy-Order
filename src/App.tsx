@@ -163,7 +163,7 @@ export function App() {
         icon: c.icon,
         sort_order: 0,
       }));
-      await supabase.from('categories').upsert(initialCatsForStore);
+      await supabase.from('categories').upsert(initialCatsForStore, { onConflict: 'store_id, id' });
 
       // 5. Provision default menu items for new store
       const initialItemsForStore = initialMenuItems.map((item) => ({
@@ -181,7 +181,7 @@ export function App() {
         is_available: item.isAvailable !== false,
         option_groups: item.optionGroups || [],
       }));
-      await supabase.from('menu_items').upsert(initialItemsForStore);
+      await supabase.from('menu_items').upsert(initialItemsForStore, { onConflict: 'store_id, id' });
 
       // Save locally
       syncManager.saveStoreConfig(newStoreConfig, newShopId);
@@ -194,6 +194,48 @@ export function App() {
       return { shopId: `shop-${currentUser.id.slice(0, 8)}`, config: syncManager.getStoreConfig(shopId) };
     }
   }, [shopId]);
+
+  // Fetch Orders Only (for light background polling without overwriting menu state)
+  const fetchOrdersOnly = useCallback(async (targetShopId: string) => {
+    try {
+      const { data: ordersData } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('store_id', targetShopId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (ordersData) {
+        const mappedOrders: Order[] = ordersData.map((row: any) => ({
+          id: row.id,
+          orderNumber: row.order_number,
+          tableNumber: row.table_number,
+          storeId: row.store_id || targetShopId,
+          status: row.status,
+          paymentMethod: row.payment_method,
+          paymentStatus: row.payment_status,
+          subtotal: Number(row.total_price),
+          totalPrice: Number(row.total_price),
+          items: row.items || [],
+          customerNote: row.notes,
+          cancelReason: row.cancel_reason,
+          createdAt: row.created_at,
+        }));
+        setOrders(mappedOrders);
+        syncManager.setOrders(mappedOrders, targetShopId);
+
+        const myOrderId = sessionStorage.getItem('my_active_order_id');
+        if (myOrderId) {
+          const myOrder = mappedOrders.find((o) => o.id === myOrderId);
+          if (myOrder) {
+            setTrackedOrder(myOrder);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Fetch orders error:", err);
+    }
+  }, []);
 
   // Fetch full store data (config, categories, menu, orders) from Supabase for current shopId
   const fetchStoreData = useCallback(async (targetShopId: string) => {
@@ -280,45 +322,11 @@ export function App() {
       }
 
       // 4. Fetch Orders
-      const { data: ordersData } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('store_id', targetShopId)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (ordersData) {
-        const mappedOrders: Order[] = ordersData.map((row: any) => ({
-          id: row.id,
-          orderNumber: row.order_number,
-          tableNumber: row.table_number,
-          storeId: row.store_id || targetShopId,
-          status: row.status,
-          paymentMethod: row.payment_method,
-          paymentStatus: row.payment_status,
-          subtotal: Number(row.total_price),
-          totalPrice: Number(row.total_price),
-          items: row.items || [],
-          customerNote: row.notes,
-          cancelReason: row.cancel_reason,
-          createdAt: row.created_at,
-        }));
-        setOrders(mappedOrders);
-        syncManager.setOrders(mappedOrders, targetShopId);
-
-        // Sync customer tracked order
-        const myOrderId = sessionStorage.getItem('my_active_order_id');
-        if (myOrderId) {
-          const myOrder = mappedOrders.find((o) => o.id === myOrderId);
-          if (myOrder) {
-            setTrackedOrder(myOrder);
-          }
-        }
-      }
+      await fetchOrdersOnly(targetShopId);
     } catch (err) {
       console.warn("Supabase fetch store data error:", err);
     }
-  }, []);
+  }, [fetchOrdersOnly]);
 
   // Initialize Auth, Routing & Isolated Store Resolution
   useEffect(() => {
@@ -367,14 +375,14 @@ export function App() {
       }
     });
 
-    const handleFocus = () => fetchStoreData(shopId);
+    const handleFocus = () => fetchOrdersOnly(shopId);
     const handleVisibilityChange = () => {
-      if (!document.hidden) fetchStoreData(shopId);
+      if (!document.hidden) fetchOrdersOnly(shopId);
     };
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    const pollInterval = setInterval(() => fetchStoreData(shopId), 4000);
+    const pollInterval = setInterval(() => fetchOrdersOnly(shopId), 4000);
 
     const unsubscribe = syncManager.subscribe((event) => {
       if (event.storeId && event.storeId !== shopId) return;
@@ -410,7 +418,7 @@ export function App() {
 
     // Realtime channel strictly filtered to current shopId
     const orderSubscription = supabase
-      .channel(`public:orders:${shopId}`)
+      .channel(`public:store:${shopId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${shopId}` }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newO: any = payload.new;
@@ -456,6 +464,66 @@ export function App() {
           }
         }
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items', filter: `store_id=eq.${shopId}` }, (payload) => {
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          const it: any = payload.new;
+          const mappedItem: MenuItem = {
+            id: it.id,
+            storeId: it.store_id || shopId,
+            categoryId: it.category_id,
+            name: it.name,
+            nameEn: it.name_en,
+            description: it.description || '',
+            descriptionEn: it.description_en || '',
+            price: Number(it.price),
+            imageUrl: it.image_url || '',
+            isAvailable: it.is_available !== false,
+            isPopular: !!it.is_popular,
+            isChefRecommend: !!it.is_recommended,
+            optionGroups: it.option_groups || [],
+          };
+          setMenuItems((prev) => {
+            const idx = prev.findIndex((i) => i.id === mappedItem.id);
+            if (idx >= 0) {
+              const updated = [...prev];
+              updated[idx] = mappedItem;
+              return updated;
+            }
+            return [mappedItem, ...prev];
+          });
+        } else if (payload.eventType === 'DELETE') {
+          const oldIt: any = payload.old;
+          if (oldIt?.id) {
+            setMenuItems((prev) => prev.filter((i) => i.id !== oldIt.id));
+          }
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `store_id=eq.${shopId}` }, (payload) => {
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          const c: any = payload.new;
+          const mappedCat: MenuCategory = {
+            id: c.id,
+            storeId: c.store_id || shopId,
+            name: c.name,
+            nameEn: c.name_en || c.name,
+            icon: c.icon || 'Coffee',
+          };
+          setCategories((prev) => {
+            const idx = prev.findIndex((cat) => cat.id === mappedCat.id);
+            if (idx >= 0) {
+              const updated = [...prev];
+              updated[idx] = mappedCat;
+              return updated;
+            }
+            return [...prev, mappedCat];
+          });
+        } else if (payload.eventType === 'DELETE') {
+          const oldCat: any = payload.old;
+          if (oldCat?.id) {
+            setCategories((prev) => prev.filter((c) => c.id !== oldCat.id));
+          }
+        }
+      })
       .subscribe();
 
     return () => {
@@ -466,7 +534,7 @@ export function App() {
       clearInterval(pollInterval);
       supabase.removeChannel(orderSubscription);
     };
-  }, [fetchStoreData, hasTableParam, resolveUserStore, shopId]);
+  }, [fetchOrdersOnly, fetchStoreData, hasTableParam, resolveUserStore, shopId]);
 
   const handleToggleLanguage = () => {
     const nextLang: Language = language === 'en' ? 'th' : 'en';
@@ -508,7 +576,7 @@ export function App() {
     const saved = syncManager.saveStoreConfig(config, shopId);
     setStoreConfig(saved);
     try {
-      await supabase.from('store_config').upsert({
+      const { error } = await supabase.from('store_config').upsert({
         id: shopId,
         user_id: user?.id,
         name: config.name,
@@ -524,7 +592,8 @@ export function App() {
         address: config.address,
         branch_number: config.branchNumber,
         updated_at: new Date().toISOString(),
-      });
+      }, { onConflict: 'id' });
+      if (error) throw error;
     } catch (err) {
       console.error("Supabase upsert store_config error:", err);
       setErrorToast(language === 'th' ? '⚠️ บันทึกการตั้งค่าไปยังเซิร์ฟเวอร์ไม่สำเร็จ' : '⚠️ Failed to save store settings to server');
@@ -708,21 +777,22 @@ export function App() {
     const updated = syncManager.saveMenuItem(itemWithStore, shopId);
     setMenuItems(updated);
     try {
-      await supabase.from('menu_items').upsert({
+      const { error } = await supabase.from('menu_items').upsert({
         id: item.id,
         store_id: shopId,
         category_id: item.categoryId,
         name: item.name,
-        name_en: item.nameEn,
-        description: item.description,
-        description_en: item.descriptionEn,
+        name_en: item.nameEn || '',
+        description: item.description || '',
+        description_en: item.descriptionEn || '',
         price: item.price,
-        image_url: item.imageUrl,
+        image_url: item.imageUrl || '',
         is_popular: !!item.isPopular,
         is_recommended: !!item.isChefRecommend,
         is_available: item.isAvailable !== false,
         option_groups: item.optionGroups || [],
-      });
+      }, { onConflict: 'store_id, id' });
+      if (error) throw error;
     } catch (err) {
       console.error("Supabase upsert menu item error:", err);
       setErrorToast(language === 'th' ? '⚠️ บันทึกเมนูไปยังเซิร์ฟเวอร์ไม่สำเร็จ' : '⚠️ Failed to save menu item to server');
@@ -734,9 +804,12 @@ export function App() {
     const updated = syncManager.deleteMenuItem(itemId, shopId);
     setMenuItems(updated);
     try {
-      await supabase.from('menu_items').delete().eq('store_id', shopId).eq('id', itemId);
+      const { error } = await supabase.from('menu_items').delete().eq('store_id', shopId).eq('id', itemId);
+      if (error) throw error;
     } catch (err) {
       console.error("Supabase delete menu item error:", err);
+      setErrorToast(language === 'th' ? '⚠️ ลบเมนูจากเซิร์ฟเวอร์ไม่สำเร็จ' : '⚠️ Failed to delete menu item from server');
+      setTimeout(() => setErrorToast(null), 5000);
     }
   };
 
@@ -745,14 +818,15 @@ export function App() {
     const updated = syncManager.saveCategory(catWithStore, shopId);
     setCategories(updated);
     try {
-      await supabase.from('categories').upsert({
+      const { error } = await supabase.from('categories').upsert({
         id: cat.id,
         store_id: shopId,
         name: cat.name,
-        name_en: cat.nameEn,
-        icon: cat.icon,
+        name_en: cat.nameEn || cat.name,
+        icon: cat.icon || 'Coffee',
         sort_order: 0,
-      });
+      }, { onConflict: 'store_id, id' });
+      if (error) throw error;
     } catch (err) {
       console.error("Supabase upsert category error:", err);
       setErrorToast(language === 'th' ? '⚠️ บันทึกหมวดหมู่ไปยังเซิร์ฟเวอร์ไม่สำเร็จ' : '⚠️ Failed to save category to server');
@@ -764,9 +838,12 @@ export function App() {
     const updated = syncManager.deleteCategory(catId, shopId);
     setCategories(updated);
     try {
-      await supabase.from('categories').delete().eq('store_id', shopId).eq('id', catId);
+      const { error } = await supabase.from('categories').delete().eq('store_id', shopId).eq('id', catId);
+      if (error) throw error;
     } catch (err) {
       console.error("Supabase delete category error:", err);
+      setErrorToast(language === 'th' ? '⚠️ ลบหมวดหมู่จากเซิร์ฟเวอร์ไม่สำเร็จ' : '⚠️ Failed to delete category from server');
+      setTimeout(() => setErrorToast(null), 5000);
     }
   };
 
