@@ -224,7 +224,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
 
           <div className="space-y-1">
             <div className="text-[11px] font-black text-stone-400 print:text-black uppercase tracking-wider">
-              TABLE NUMBER
+              {language === 'th' ? 'หมายเลขโต๊ะ' : 'TABLE NUMBER'}
             </div>
             <div className="text-4xl font-black text-stone-900 print:text-black tracking-tight">
               {language === 'th' ? `โต๊ะ ${selectedTable}` : `Table ${selectedTable}`}
@@ -262,7 +262,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
                 className="w-full py-3.5 px-4 rounded-2xl bg-stone-900 hover:bg-black active:scale-[0.98] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition shadow-md cursor-pointer"
               >
                 <Printer className="w-4 h-4" />
-                <span>{t('qrPrintBtn', language)} (โต๊ะ {selectedTable})</span>
+                <span>{t('qrPrintBtn', language)} ({language === 'th' ? 'โต๊ะ' : 'Table'} {selectedTable})</span>
               </button>
 
               <a

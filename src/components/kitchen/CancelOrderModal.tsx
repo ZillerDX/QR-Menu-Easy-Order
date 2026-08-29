@@ -71,7 +71,7 @@ export const CancelOrderModal: React.FC<CancelOrderModalProps> = ({
                 {language === 'th' ? 'ปฏิเสธ / ยกเลิกออเดอร์' : 'Reject / Cancel Order'}
               </h3>
               <p className="text-xs text-stone-500 font-bold">
-                {order.orderNumber} • {order.tableNumber === 'TAKEAWAY' ? 'กลับบ้าน' : `โต๊ะ ${order.tableNumber}`}
+                {order.orderNumber} • {order.tableNumber === 'TAKEAWAY' ? (language === 'th' ? 'สั่งกลับบ้าน' : 'Takeaway') : `${language === 'th' ? 'โต๊ะ' : 'Table'} ${order.tableNumber}`}
               </p>
             </div>
           </div>

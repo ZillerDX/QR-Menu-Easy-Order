@@ -326,7 +326,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
                 {inKitchenOrders.length}
               </span>
               <span className="text-[10px] text-orange-700/80 font-bold">
-                (รอ {pendingCount} • ทำ {cookingCount})
+                {language === 'th' ? `(รอ ${pendingCount} • ทำ ${cookingCount})` : `(wait ${pendingCount} • cook ${cookingCount})`}
               </span>
             </div>
           </div>
@@ -385,7 +385,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
                 {completedOrders.length}
               </span>
               <span className="text-[10px] text-stone-500 font-bold">
-                (ยกเลิก {cancelledOrders.length})
+                {language === 'th' ? `(ยกเลิก ${cancelledOrders.length})` : `(cancelled ${cancelledOrders.length})`}
               </span>
             </div>
           </div>

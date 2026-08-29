@@ -248,7 +248,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               {item.specialNote && (
                 <div className="ml-8 mt-1.5 text-[11px] text-amber-900 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-xl font-bold flex items-center gap-1.5 shadow-2xs">
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
-                  <span>หมายเหตุ: {item.specialNote}</span>
+                  <span>{language === 'th' ? 'หมายเหตุ: ' : 'Note: '}{item.specialNote}</span>
                 </div>
               )}
             </div>

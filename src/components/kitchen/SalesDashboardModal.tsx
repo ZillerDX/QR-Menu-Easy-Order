@@ -293,7 +293,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                   onChange={(e) => setCustomStart(e.target.value)}
                   className="px-2.5 py-1 rounded-xl border border-stone-200 text-xs font-bold bg-white text-stone-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 />
-                <span className="text-xs text-stone-400 font-black">ถึง</span>
+                <span className="text-xs text-stone-400 font-black">{language === 'th' ? 'ถึง' : 'to'}</span>
                 <input
                   type="date"
                   value={customEnd}
@@ -341,7 +341,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
               </div>
               <div className="mt-3">
                 <div className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
-                  {metrics.totalBills} <span className="text-xs font-bold text-stone-400">บิล</span>
+                  {metrics.totalBills} <span className="text-xs font-bold text-stone-400">{language === 'th' ? 'บิล' : 'bills'}</span>
                 </div>
                 <div className="text-[11px] text-orange-800 font-bold flex items-center gap-1.5 mt-1 bg-orange-50/80 px-2 py-0.5 rounded-lg w-fit">
                   <span>{language === 'th' ? 'ในรอบเวลาที่เลือก' : 'in timeframe'}</span>
@@ -401,14 +401,14 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                   <div className="flex items-center justify-between font-bold">
                     <span className="flex items-center gap-1 text-blue-700">
                       <span className="w-2 h-2 rounded-full bg-blue-500" />
-                      พร้อมเพย์ ({metrics.promptpayCount})
+                      {language === 'th' ? 'พร้อมเพย์' : 'PromptPay'} ({metrics.promptpayCount})
                     </span>
                     <span className="font-black text-stone-800">฿{metrics.promptpaySales.toLocaleString()}</span>
                   </div>
                   <div className="flex items-center justify-between font-bold">
                     <span className="flex items-center gap-1 text-emerald-700">
                       <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                      เงินสด ({metrics.cashCount})
+                      {language === 'th' ? 'เงินสด' : 'Cash'} ({metrics.cashCount})
                     </span>
                     <span className="font-black text-stone-800">฿{metrics.cashSales.toLocaleString()}</span>
                   </div>
@@ -481,7 +481,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                                 {language === 'en' && item.nameEn ? item.nameEn : item.name}
                               </h5>
                               <div className="text-[11px] text-stone-400 font-bold flex items-center gap-1.5 mt-0.5">
-                                <span>ยอดขาย:</span>
+                                <span>{language === 'th' ? 'ยอดขาย:' : 'Revenue:'}</span>
                                 <span className="font-extrabold text-stone-700">฿{item.revenue.toLocaleString()}</span>
                               </div>
                             </div>
@@ -521,7 +521,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                 {metrics.peakHourSales > 0 && (
                   <span className="text-[11px] font-black text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                     <Flame className="w-3 h-3 text-orange-500" />
-                    พีคสุด: {metrics.peakHourIndex}:00 น.
+                    {language === 'th' ? `พีคสุด: ${metrics.peakHourIndex}:00 น.` : `Peak: ${metrics.peakHourIndex}:00`}
                   </span>
                 )}
               </div>
@@ -538,7 +538,9 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                       <div key={hr} className="flex-1 flex flex-col items-center gap-1 group relative h-full justify-end">
                         {/* Hover Floating Tooltip */}
                         <div className="absolute -top-10 bg-stone-900 text-white text-[10px] font-black px-2.5 py-1 rounded-xl opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-30 pointer-events-none shadow-xl border border-stone-700">
-                          {hr}:00 น. • ฿{sales.toLocaleString()} ({orderCount} บิล)
+                          {language === 'th'
+                            ? `${hr}:00 น. • ฿${sales.toLocaleString()} (${orderCount} บิล)`
+                            : `${hr}:00 • ฿${sales.toLocaleString()} (${orderCount} bills)`}
                         </div>
 
                         <div
@@ -605,12 +607,12 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-stone-100 text-[11px] font-black text-stone-400 uppercase">
-                      <th className="pb-2.5 pl-3"># ออเดอร์</th>
-                      <th className="pb-2.5">โต๊ะ / ประเภท</th>
-                      <th className="pb-2.5">เวลาที่สั่ง</th>
-                      <th className="pb-2.5">วิธีชำระเงิน</th>
-                      <th className="pb-2.5">สถานะ</th>
-                      <th className="pb-2.5 pr-3 text-right">ยอดรวม</th>
+                      <th className="pb-2.5 pl-3">{language === 'th' ? '# ออเดอร์' : '# Order'}</th>
+                      <th className="pb-2.5">{language === 'th' ? 'โต๊ะ / ประเภท' : 'Table / Type'}</th>
+                      <th className="pb-2.5">{language === 'th' ? 'เวลาที่สั่ง' : 'Time'}</th>
+                      <th className="pb-2.5">{language === 'th' ? 'วิธีชำระเงิน' : 'Payment'}</th>
+                      <th className="pb-2.5">{language === 'th' ? 'สถานะ' : 'Status'}</th>
+                      <th className="pb-2.5 pr-3 text-right">{language === 'th' ? 'ยอดรวม' : 'Total'}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-50">
@@ -624,18 +626,18 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                             </span>
                           ) : (
                             <span className="bg-stone-100 text-stone-800 px-2 py-0.5 rounded-md text-[10px]">
-                              โต๊ะ {o.tableNumber}
+                              {language === 'th' ? 'โต๊ะ' : 'Table'} {o.tableNumber}
                             </span>
                           )}
                         </td>
                         <td className="py-3 text-stone-400 font-bold">
-                          {new Date(o.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                          {new Date(o.createdAt).toLocaleTimeString(language === 'th' ? 'th-TH' : 'en-US', { hour: '2-digit', minute: '2-digit' })}{language === 'th' ? ' น.' : ''}
                         </td>
                         <td className="py-3">
                           <span className={`px-2.5 py-0.5 rounded-lg font-black text-[10px] inline-flex items-center gap-1 ${
                             o.paymentMethod === 'promptpay' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'
                           }`}>
-                            {o.paymentMethod === 'promptpay' ? 'พร้อมเพย์' : 'เงินสด'}
+                            {o.paymentMethod === 'promptpay' ? (language === 'th' ? 'พร้อมเพย์' : 'PromptPay') : (language === 'th' ? 'เงินสด' : 'Cash')}
                           </span>
                         </td>
                         <td className="py-3">
@@ -646,7 +648,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                               ? 'bg-blue-100 text-blue-800'
                               : 'bg-amber-100 text-amber-800'
                           }`}>
-                            {o.status === 'completed' ? 'เสร็จสิ้น' : o.status === 'ready' ? 'พร้อมเสิร์ฟ' : 'กำลังทำ'}
+                            {o.status === 'completed' ? (language === 'th' ? 'เสร็จสิ้น' : 'Completed') : o.status === 'ready' ? (language === 'th' ? 'พร้อมเสิร์ฟ' : 'Ready') : (language === 'th' ? 'กำลังทำ' : 'Cooking')}
                           </span>
                         </td>
                         <td className="py-3 pr-3 font-black text-stone-900 text-right text-sm">
@@ -665,9 +667,9 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
         {/* 3. Footer with Clean Controls & Totals */}
         <div className="px-6 py-4 bg-white border-t border-stone-200/80 flex items-center justify-between flex-shrink-0">
           <div className="text-xs sm:text-sm font-bold text-stone-600 flex items-center gap-2">
-            <span>สรุปยอดทั้งหมด:</span>
+            <span>{language === 'th' ? 'สรุปยอดทั้งหมด:' : 'Grand Total:'}</span>
             <span className="text-lg font-black text-emerald-600">฿{metrics.totalSales.toLocaleString()}</span>
-            <span className="text-stone-400 text-xs">({metrics.totalBills} บิล)</span>
+            <span className="text-stone-400 text-xs">({metrics.totalBills} {language === 'th' ? 'บิล' : 'bills'})</span>
           </div>
           <button
             onClick={onClose}

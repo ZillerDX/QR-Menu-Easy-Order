@@ -321,11 +321,11 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
                   {user.email || 'Staff User'}
                 </span>
                 <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-md">
-                  เข้าสู่ระบบแล้ว (Active)
+                  {language === 'th' ? 'เข้าสู่ระบบแล้ว (Active)' : 'Logged In (Active)'}
                 </span>
               </div>
               <p className="text-xs text-stone-400 font-medium mt-0.5">
-                สิทธิ์การเข้าถึง: จัดการร้านค้า, ครัว KDS, เมนู และการ์ด QR โต๊ะ
+                {language === 'th' ? 'สิทธิ์การเข้าถึง: จัดการร้านค้า, ครัว KDS, เมนู และการ์ด QR โต๊ะ' : 'Access Permissions: Store Management, Kitchen KDS, Menus & Table QRs'}
               </p>
             </div>
           </div>
