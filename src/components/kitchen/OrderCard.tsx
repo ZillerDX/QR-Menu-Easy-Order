@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Clock, Utensils, Sparkles, CheckCheck, Banknote, QrCode, Flame, Hourglass, Printer } from 'lucide-react';
 import { Order, OrderStatus, Language } from '../../types';
 import { t } from '../../utils/i18n';
@@ -16,6 +16,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   onUpdateStatus,
   onPrintReceipt,
 }) => {
+  const [isUpdating, setIsUpdating] = useState(false);
+
   const timeFormatted = new Date(order.createdAt).toLocaleTimeString(language === 'th' ? 'th-TH' : 'en-US', {
     hour: '2-digit',
     minute: '2-digit',
@@ -25,29 +27,29 @@ export const OrderCard: React.FC<OrderCardProps> = ({
     switch (order.status) {
       case 'pending':
         return {
-          border: 'border-red-400/80 ring-2 ring-red-100 shadow-md shadow-red-500/10',
+          border: 'border-red-400/90 ring-2 ring-red-100 shadow-md shadow-red-500/10',
           badge: 'bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-xs',
           label: t('kdsPendingBadge', language),
           icon: <Hourglass className="w-3.5 h-3.5 animate-spin text-white" />,
         };
       case 'cooking':
         return {
-          border: 'border-amber-400/80 ring-2 ring-amber-100 shadow-md shadow-amber-500/10',
+          border: 'border-amber-400/90 ring-2 ring-amber-100 shadow-md shadow-amber-500/10',
           badge: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs',
           label: t('kdsCookingBadge', language),
           icon: <Flame className="w-3.5 h-3.5 animate-pulse text-white" />,
         };
       case 'ready':
         return {
-          border: 'border-emerald-400/80 ring-2 ring-emerald-100 shadow-md shadow-emerald-500/10',
+          border: 'border-emerald-400/90 ring-2 ring-emerald-100 shadow-md shadow-emerald-500/10',
           badge: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-xs',
           label: t('kdsReadyBadge', language),
           icon: <Sparkles className="w-3.5 h-3.5 animate-bounce text-white" />,
         };
       case 'completed':
         return {
-          border: 'border-stone-200 opacity-65',
-          badge: 'bg-stone-500 text-white',
+          border: 'border-stone-200 opacity-70 bg-stone-50/50',
+          badge: 'bg-stone-600 text-white',
           label: t('kdsCompletedBadge', language),
           icon: <CheckCheck className="w-3.5 h-3.5 text-white" />,
         };
@@ -62,6 +64,16 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   };
 
   const theme = getCardTheme();
+
+  const handleStepUpdate = async (nextStatus: OrderStatus, nextPaymentStatus?: Order['paymentStatus']) => {
+    if (isUpdating) return;
+    setIsUpdating(true);
+    try {
+      await onUpdateStatus(order.id, nextStatus, nextPaymentStatus);
+    } finally {
+      setTimeout(() => setIsUpdating(false), 400);
+    }
+  };
 
   return (
     <div className={`bg-white rounded-3xl p-4 sm:p-5 border flex flex-col justify-between transition-all duration-300 hover:shadow-lg ${theme.border}`}>
@@ -145,56 +157,99 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         </div>
       </div>
 
-      {/* Footer Controls */}
-      <div className="mt-4 pt-3 border-t border-stone-100 space-y-2">
+      {/* Footer Controls & Explicit Workflow Buttons */}
+      <div className="mt-4 pt-3 border-t border-stone-100 space-y-2.5">
         <div className="flex items-center justify-between text-xs text-stone-500 font-bold">
           <button
             type="button"
             onClick={() => onPrintReceipt?.(order)}
-            className="flex items-center gap-1 text-[11px] text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 px-2.5 py-1 rounded-xl transition cursor-pointer font-black active:scale-95"
+            className="flex items-center gap-1 text-[11px] text-stone-700 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 px-3 py-1.5 rounded-xl transition cursor-pointer font-black active:scale-95 shadow-2xs"
             title="Print Receipt Slip"
           >
             <Printer className="w-3.5 h-3.5 text-orange-500" />
-            <span>{language === 'th' ? 'พิมพ์ใบเสร็จ' : 'Print Slip'}</span>
+            <span>{language === 'th' ? '🖨️ พิมพ์ใบเสร็จ' : 'Print Slip'}</span>
           </button>
           
           <div className="text-right">
             <span className="text-[10px] text-stone-400 mr-1">{t('total', language)}</span>
-            <span className="font-black text-stone-900 text-sm">฿{order.totalPrice.toLocaleString()}</span>
+            <span className="font-black text-stone-900 text-base">฿{order.totalPrice.toLocaleString()}</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 pt-1">
+        {/* Step-by-Step Explicit Action Buttons with Click Protection */}
+        <div className="pt-1">
           {order.status === 'pending' && (
             <button
-              onClick={() => onUpdateStatus(order.id, 'cooking')}
-              className="col-span-2 py-2.5 px-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-orange-500/25 active:scale-95 cursor-pointer"
+              type="button"
+              disabled={isUpdating}
+              onClick={() => handleStepUpdate('cooking')}
+              className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-orange-500/25 active:scale-95 transition cursor-pointer disabled:opacity-50"
             >
-              <Utensils className="w-4 h-4" /> {t('kdsStartCooking', language)}
+              <Utensils className="w-4 h-4" />
+              <span>{language === 'th' ? '🍳 เริ่มปรุงอาหาร (Start Cooking)' : 'Start Cooking'}</span>
             </button>
           )}
 
           {order.status === 'cooking' && (
-            <button
-              onClick={() => onUpdateStatus(order.id, 'ready')}
-              className="col-span-2 py-2.5 px-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-600/25 active:scale-95 cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4" /> {t('kdsReadyToServe', language)}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={isUpdating}
+                onClick={() => handleStepUpdate('pending')}
+                className="px-3 py-3 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold text-xs transition cursor-pointer active:scale-95"
+                title={language === 'th' ? 'ย้อนกลับไปรอทำ' : 'Back to Pending'}
+              >
+                ↩️
+              </button>
+              <button
+                type="button"
+                disabled={isUpdating}
+                onClick={() => handleStepUpdate('ready')}
+                className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-600/25 active:scale-95 transition cursor-pointer disabled:opacity-50"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>{language === 'th' ? '✨ ปรุงเสร็จแล้ว (พร้อมเสิร์ฟ)' : 'Ready to Serve'}</span>
+              </button>
+            </div>
           )}
 
           {order.status === 'ready' && (
-            <button
-              onClick={() => onUpdateStatus(order.id, 'completed', 'paid')}
-              className="col-span-2 py-2.5 px-3 rounded-2xl bg-stone-900 hover:bg-black text-white font-black text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
-            >
-              <CheckCheck className="w-4 h-4" /> {t('kdsCloseBill', language)}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={isUpdating}
+                onClick={() => handleStepUpdate('cooking')}
+                className="px-3 py-3 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold text-xs transition cursor-pointer active:scale-95"
+                title={language === 'th' ? 'ย้อนกลับไปกำลังปรุง' : 'Back to Cooking'}
+              >
+                ↩️
+              </button>
+              <button
+                type="button"
+                disabled={isUpdating}
+                onClick={() => handleStepUpdate('completed', 'paid')}
+                className="flex-1 py-3 px-4 rounded-2xl bg-stone-900 hover:bg-black text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md active:scale-95 transition cursor-pointer disabled:opacity-50"
+              >
+                <CheckCheck className="w-4 h-4 text-emerald-400" />
+                <span>{language === 'th' ? '✓ ปิดบิล (ชำระเงินแล้ว)' : 'Complete & Close Bill'}</span>
+              </button>
+            </div>
           )}
 
           {order.status === 'completed' && (
-            <div className="col-span-2 text-center text-xs text-stone-400 py-1.5 font-bold bg-stone-100 rounded-2xl">
-              ✓ {t('kdsCompletedBadge', language)}
+            <div className="flex items-center justify-between bg-stone-100/90 py-2.5 px-3.5 rounded-2xl">
+              <span className="text-xs font-black text-emerald-700 flex items-center gap-1.5">
+                <CheckCheck className="w-4 h-4" />
+                <span>{language === 'th' ? 'ปิดบิลเสร็จสิ้นเรียบร้อย' : 'Order Completed & Paid'}</span>
+              </span>
+              <button
+                type="button"
+                disabled={isUpdating}
+                onClick={() => handleStepUpdate('ready')}
+                className="text-[11px] font-bold text-stone-500 hover:text-stone-800 underline cursor-pointer"
+              >
+                {language === 'th' ? 'เปิดบิลใหม่' : 'Reopen'}
+              </button>
             </div>
           )}
         </div>

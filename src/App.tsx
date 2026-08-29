@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MenuItem, MenuCategory, CartItem, Order, OrderStatus, SelectedOption, Language, StoreConfig } from './types';
 import { syncManager } from './utils/storage';
 import { soundService } from './utils/sound';
@@ -60,16 +60,53 @@ export function App() {
       if (!sessionOrderId) return null;
       const all = syncManager.getOrders();
       const match = all.find((o) => o.id === sessionOrderId);
-      if (match && match.status !== 'completed' && match.status !== 'cancelled') {
-        return match;
-      }
-      sessionStorage.removeItem('my_active_order_id');
+      return match || null;
     }
     return null;
   });
 
   const [isOrderTrackerOpen, setIsOrderTrackerOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+
+  // Fetch Latest Orders from Supabase (Full Database Sync)
+  const fetchRemoteOrders = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (!error && data && data.length > 0) {
+        const mapped: Order[] = data.map((row: any) => ({
+          id: row.id,
+          orderNumber: row.order_number,
+          tableNumber: row.table_number,
+          status: row.status,
+          paymentMethod: row.payment_method,
+          paymentStatus: row.payment_status,
+          subtotal: Number(row.total_price),
+          totalPrice: Number(row.total_price),
+          items: row.items || [],
+          customerNote: row.notes,
+          createdAt: row.created_at,
+        }));
+
+        setOrders(mapped);
+
+        // Sync customer tracked order
+        const myOrderId = sessionStorage.getItem('my_active_order_id');
+        if (myOrderId) {
+          const myOrder = mapped.find((o) => o.id === myOrderId);
+          if (myOrder) {
+            setTrackedOrder(myOrder);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Supabase fetch orders error:", err);
+    }
+  }, []);
 
   // Initialize Auth & Data
   useEffect(() => {
@@ -101,13 +138,27 @@ export function App() {
       }
     });
 
-    // Local & Sync Manager Data
-    const currentOrders = syncManager.getOrders();
+    // Initial Local Data
     setStoreConfig(syncManager.getStoreConfig());
     setCategories(syncManager.getCategories());
     setMenuItems(syncManager.getMenuItems());
-    setOrders(currentOrders);
+    setOrders(syncManager.getOrders());
 
+    // Fetch live remote orders from Supabase on mount
+    fetchRemoteOrders();
+
+    // Re-fetch on Window Focus / Screen Wakeup on Mobile
+    const handleFocus = () => fetchRemoteOrders();
+    const handleVisibilityChange = () => {
+      if (!document.hidden) fetchRemoteOrders();
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Heartbeat Polling every 4 seconds for reliable real-time mobile sync
+    const pollInterval = setInterval(fetchRemoteOrders, 4000);
+
+    // Local Sync Manager Listener
     const unsubscribe = syncManager.subscribe((event) => {
       if (event.type === 'ORDER_CREATED') {
         const updated = syncManager.getOrders();
@@ -118,12 +169,7 @@ export function App() {
         setOrders(updated);
         const myOrderId = sessionStorage.getItem('my_active_order_id');
         if (myOrderId && event.payload.id === myOrderId) {
-          if (event.payload.status === 'completed' || event.payload.status === 'cancelled') {
-            setTrackedOrder(null);
-            sessionStorage.removeItem('my_active_order_id');
-          } else {
-            setTrackedOrder(event.payload);
-          }
+          setTrackedOrder(event.payload);
         }
       } else if (event.type === 'MENU_UPDATED') {
         setMenuItems(event.payload);
@@ -145,7 +191,7 @@ export function App() {
 
     // Supabase Realtime Subscription for Orders
     const orderSubscription = supabase
-      .channel('public:orders')
+      .channel('public:orders:realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newO: any = payload.new;
@@ -158,7 +204,7 @@ export function App() {
             paymentStatus: newO.payment_status,
             subtotal: Number(newO.total_price),
             totalPrice: Number(newO.total_price),
-            items: newO.items,
+            items: newO.items || [],
             customerNote: newO.notes,
             createdAt: newO.created_at,
           };
@@ -166,6 +212,7 @@ export function App() {
             if (prev.some((o) => o.id === mappedOrder.id)) return prev;
             return [mappedOrder, ...prev];
           });
+          soundService.playNewOrderChime();
         } else if (payload.eventType === 'UPDATE') {
           const updatedO: any = payload.new;
           setOrders((prev) =>
@@ -181,12 +228,9 @@ export function App() {
           );
           const myOrderId = sessionStorage.getItem('my_active_order_id');
           if (myOrderId && updatedO.id === myOrderId) {
-            if (updatedO.status === 'completed' || updatedO.status === 'cancelled') {
-              setTrackedOrder(null);
-              sessionStorage.removeItem('my_active_order_id');
-            } else {
-              setTrackedOrder((prev) => prev ? { ...prev, status: updatedO.status, paymentStatus: updatedO.payment_status } : null);
-            }
+            setTrackedOrder((prev) => 
+              prev ? { ...prev, status: updatedO.status, paymentStatus: updatedO.payment_status } : null
+            );
           }
         }
       })
@@ -195,9 +239,12 @@ export function App() {
     return () => {
       authListener?.subscription.unsubscribe();
       unsubscribe();
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(pollInterval);
       supabase.removeChannel(orderSubscription);
     };
-  }, []);
+  }, [fetchRemoteOrders]);
 
   const handleToggleLanguage = () => {
     const nextLang: Language = language === 'en' ? 'th' : 'en';
@@ -338,17 +385,16 @@ export function App() {
     status: OrderStatus,
     paymentStatus?: Order['paymentStatus']
   ) => {
+    // 1. Update local storage & broadcast
     const updated = syncManager.updateOrderStatus(orderId, status, paymentStatus);
     setOrders(updated);
+
     const myOrderId = sessionStorage.getItem('my_active_order_id');
     if (myOrderId && orderId === myOrderId) {
-      if (status === 'completed' || status === 'cancelled') {
-        setTrackedOrder(null);
-        sessionStorage.removeItem('my_active_order_id');
-      } else {
-        setTrackedOrder((prev) => (prev ? { ...prev, status, ...(paymentStatus ? { paymentStatus } : {}) } : null));
-      }
+      setTrackedOrder((prev) => (prev ? { ...prev, status, ...(paymentStatus ? { paymentStatus } : {}) } : null));
     }
+
+    // 2. Update Supabase
     try {
       await supabase
         .from('orders')
@@ -394,6 +440,14 @@ export function App() {
     setIsResetConfirmOpen(false);
   };
 
+  const handleCloseTracker = () => {
+    setIsOrderTrackerOpen(false);
+    if (trackedOrder?.status === 'completed' || trackedOrder?.status === 'cancelled') {
+      sessionStorage.removeItem('my_active_order_id');
+      setTrackedOrder(null);
+    }
+  };
+
   const filteredMenuItems = menuItems.filter((item) => {
     const matchesSearch =
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -422,7 +476,7 @@ export function App() {
     }
   };
 
-  const pendingCount = orders.filter((o) => o.status === 'pending' || o.status === 'cooking').length;
+  const pendingCount = orders.filter((o) => o.status === 'pending' || o.status === 'cooking' || o.status === 'ready').length;
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const cartSubtotal = cart.reduce((sum, item) => sum + item.totalItemPrice, 0);
 
@@ -447,7 +501,7 @@ export function App() {
         {/* VIEW 1: CUSTOMER VIEW */}
         {activeRole === 'customer' && (
           <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
-            {/* Active Tracked Order Banner (Strictly shown only if THIS session placed an order that is currently pending/cooking/ready) */}
+            {/* Active Tracked Order Banner (Shown if customer has an active order) */}
             {trackedOrder && (
               <div
                 onClick={() => setIsOrderTrackerOpen(true)}
@@ -668,7 +722,7 @@ export function App() {
       {/* Live Order Tracker Modal Dialog */}
       <OrderTracker
         isOpen={isOrderTrackerOpen}
-        onClose={() => setIsOrderTrackerOpen(false)}
+        onClose={handleCloseTracker}
         order={trackedOrder}
         language={language}
       />
