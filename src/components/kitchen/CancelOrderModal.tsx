@@ -21,6 +21,20 @@ export const CancelOrderModal: React.FC<CancelOrderModalProps> = ({
   const [selectedReason, setSelectedReason] = useState<string>('ไม่มีลูกค้าที่โต๊ะ (โต๊ะว่าง/สั่งเล่น)');
   const [customReason, setCustomReason] = useState('');
 
+  React.useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    };
+  }, [isOpen]);
+
   if (!isOpen || !order) return null;
 
   const presetReasons = [

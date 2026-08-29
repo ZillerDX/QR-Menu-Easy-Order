@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Trash2, Plus, Minus, Store, ArrowRight, Utensils } from 'lucide-react';
 import { CartItem, Language } from '../../types';
 import { t } from '../../utils/i18n';
@@ -24,15 +25,36 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onRemoveItem,
   onCheckout,
 }) => {
+  // Lock background scroll when drawer is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const subtotal = items.reduce((sum, item) => sum + item.totalItemPrice, 0);
 
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/65 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-white h-full flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
+  const drawerContent = (
+    <div 
+      className="fixed inset-0 z-[9999] flex justify-end bg-stone-950/70 backdrop-blur-xs animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div 
+        className="w-full max-w-md bg-white h-full flex flex-col shadow-2xl animate-in slide-in-from-right duration-200 overscroll-contain"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Cart Header */}
-        <div className="p-4 border-b border-stone-100 flex items-center justify-between bg-stone-50/80">
+        <div className="p-4 border-b border-stone-100 flex items-center justify-between bg-stone-50/90 flex-shrink-0">
           <div className="flex items-center gap-2">
             <h2 className="font-extrabold text-stone-900 text-base">
               {language === 'th' ? 'รายการอาหารของคุณ' : 'Your Order Items'}
@@ -42,15 +64,17 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             </span>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-stone-200 hover:bg-stone-300 text-stone-700 flex items-center justify-center transition cursor-pointer"
+            title="Close"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Table Indicator */}
-        <div className="bg-orange-50/80 px-4 py-2.5 border-b border-orange-100 flex items-center justify-between text-xs text-orange-950 font-bold">
+        <div className="bg-orange-50/90 px-4 py-2.5 border-b border-orange-100 flex items-center justify-between text-xs text-orange-950 font-bold flex-shrink-0">
           <div className="flex items-center gap-1.5">
             <Store className="w-4 h-4 text-orange-600" />
             <span>{language === 'th' ? 'สั่งอาหารสำหรับ:' : 'Ordering for:'}</span>
@@ -61,7 +85,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         </div>
 
         {/* Items List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 overscroll-contain touch-pan-y">
           {items.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-stone-400 text-center py-12">
               <div className="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 mb-3">
@@ -121,6 +145,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 {/* Controls */}
                 <div className="flex items-center justify-between pt-2 border-t border-stone-100">
                   <button
+                    type="button"
                     onClick={() => onRemoveItem(cartItem.cartItemId)}
                     className="text-stone-400 hover:text-red-500 text-xs flex items-center gap-1 transition cursor-pointer font-medium"
                   >
@@ -129,6 +154,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
                   <div className="flex items-center gap-2 bg-stone-100 rounded-xl p-0.5">
                     <button
+                      type="button"
                       onClick={() => onUpdateQuantity(cartItem.cartItemId, -1)}
                       className="w-6 h-6 rounded-lg flex items-center justify-center bg-white text-stone-700 hover:bg-stone-200 text-xs shadow-2xs font-bold cursor-pointer"
                     >
@@ -138,6 +164,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                       {cartItem.quantity}
                     </span>
                     <button
+                      type="button"
                       onClick={() => onUpdateQuantity(cartItem.cartItemId, 1)}
                       className="w-6 h-6 rounded-lg flex items-center justify-center bg-white text-stone-700 hover:bg-stone-200 text-xs shadow-2xs font-bold cursor-pointer"
                     >
@@ -152,7 +179,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
         {/* Checkout Footer */}
         {items.length > 0 && (
-          <div className="p-4 bg-stone-50 border-t border-stone-200 space-y-3">
+          <div className="p-4 bg-stone-50 border-t border-stone-200 space-y-3 flex-shrink-0">
             <div className="space-y-1">
               <div className="flex justify-between text-xs text-stone-500">
                 <span>{t('total', language)}</span>
@@ -171,6 +198,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             </p>
 
             <button
+              type="button"
               onClick={onCheckout}
               className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] text-white font-black text-sm shadow-lg shadow-orange-500/30 transition flex items-center justify-between cursor-pointer"
             >
@@ -188,4 +216,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(drawerContent, document.body) : null;
 };

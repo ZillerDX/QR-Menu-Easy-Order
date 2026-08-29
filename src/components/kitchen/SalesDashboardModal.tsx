@@ -30,6 +30,20 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
   });
   const [customEnd, setCustomEnd] = useState(() => new Date().toISOString().split('T')[0]);
 
+  React.useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    };
+  }, [isOpen]);
+
   // Filter orders by time preset
   const filteredOrders = useMemo(() => {
     const now = new Date();

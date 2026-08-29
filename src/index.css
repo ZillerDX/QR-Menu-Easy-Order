@@ -4,8 +4,8 @@
 
 @layer base {
   html {
-    overflow-y: scroll;
     scrollbar-gutter: stable;
+    overscroll-behavior: contain;
   }
 
   body {
