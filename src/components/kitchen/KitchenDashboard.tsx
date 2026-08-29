@@ -174,7 +174,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-3.5 sm:px-6 py-5 sm:py-6 space-y-5 sm:space-y-6 pb-28 relative">
+    <div className="w-full max-w-6xl mx-auto px-3.5 sm:px-6 pt-3.5 sm:pt-4 pb-28 space-y-4 sm:space-y-5 relative">
       
       {/* Premium Floating Notification Toast with Smooth Animated Glass Styling */}
       {toast && (

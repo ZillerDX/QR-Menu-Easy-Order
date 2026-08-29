@@ -10,10 +10,16 @@ class SoundService {
   private isUnlocked: boolean = false;
 
   constructor() {
-    // Read user preference from LocalStorage (defaults to true)
+    // Read user preference from LocalStorage (guarantee true by default)
     try {
       const saved = localStorage.getItem('pos_sound_enabled');
-      this.soundEnabled = saved !== 'false';
+      if (saved === 'false') {
+        // Clear previous false setting to ensure sound works out of the box
+        this.soundEnabled = true;
+        localStorage.setItem('pos_sound_enabled', 'true');
+      } else {
+        this.soundEnabled = true;
+      }
     } catch {
       this.soundEnabled = true;
     }

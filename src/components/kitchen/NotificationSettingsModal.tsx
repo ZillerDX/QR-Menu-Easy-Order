@@ -93,13 +93,13 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-[32px] max-w-md w-full border border-stone-200/90 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-white/85 backdrop-blur-2xl rounded-[32px] max-w-md w-full border border-white/60 shadow-[0_25px_60px_rgba(0,0,0,0.18)] overflow-hidden animate-in zoom-in-95 duration-200">
         
         {/* Top Header Card */}
-        <div className="p-5 sm:p-6 pb-4 border-b border-stone-100 flex items-center justify-between bg-gradient-to-b from-stone-50/80 to-white">
+        <div className="p-5 sm:p-6 pb-4 border-b border-stone-200/50 flex items-center justify-between bg-gradient-to-b from-white/80 to-white/40 backdrop-blur-xl">
           <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-orange-50 border border-orange-200/70 text-orange-600 flex items-center justify-center shadow-2xs flex-shrink-0">
+            <div className="w-11 h-11 rounded-2xl bg-orange-500/15 border border-orange-500/30 text-orange-600 flex items-center justify-center shadow-2xs flex-shrink-0">
               <Bell className="w-5 h-5 animate-pulse" />
             </div>
             <div>
@@ -115,7 +115,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-800 flex items-center justify-center transition cursor-pointer active:scale-95 flex-shrink-0"
+            className="w-9 h-9 rounded-full bg-stone-200/70 hover:bg-stone-300/80 text-stone-600 hover:text-stone-900 flex items-center justify-center transition cursor-pointer active:scale-95 flex-shrink-0 backdrop-blur-md"
             title="Close"
           >
             <X className="w-4 h-4" />
@@ -125,11 +125,11 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
         {/* Content Body */}
         <div className="p-5 sm:p-6 space-y-5">
           
-          {/* 1. Master Audio Switch (Tactile Switch Card) */}
-          <div className="flex items-center justify-between p-4 bg-stone-50/80 rounded-2xl border border-stone-200/80 transition hover:bg-stone-50">
+          {/* 1. Master Audio Switch (Glass Switch Card) */}
+          <div className="flex items-center justify-between p-4 bg-white/70 backdrop-blur-xl rounded-2xl border border-stone-200/60 transition hover:bg-white/80 shadow-xs">
             <div className="flex items-center gap-3.5">
               <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors ${
-                isSoundOn ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-stone-500'
+                isSoundOn ? 'bg-emerald-500/15 text-emerald-700 border border-emerald-500/20' : 'bg-stone-200/70 text-stone-500'
               }`}>
                 {isSoundOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
               </div>
@@ -161,7 +161,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
             </button>
           </div>
 
-          {/* 2. Sound Preset Selection (Clean Interactive Cards) */}
+          {/* 2. Sound Preset Selection (Glass Radio Cards) */}
           <div className="space-y-2.5">
             <label className="text-xs font-black text-stone-700 uppercase tracking-wider block">
               {language === 'th' ? 'เลือกรูปแบบเสียงแจ้งเตือน' : 'Select Sound Tone'}
@@ -176,10 +176,10 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
                   <div
                     key={opt.id}
                     onClick={() => handleSelectPreset(opt.id)}
-                    className={`p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 select-none ${
+                    className={`p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 select-none backdrop-blur-xl ${
                       isSelected
-                        ? 'border-orange-500 bg-orange-50/60 ring-2 ring-orange-500/20 shadow-xs'
-                        : 'border-stone-200/80 bg-white hover:border-stone-300 hover:bg-stone-50/50'
+                        ? 'border-orange-500 bg-orange-500/12 ring-2 ring-orange-500/25 shadow-xs'
+                        : 'border-stone-200/60 bg-white/70 hover:border-stone-300 hover:bg-white/90 shadow-2xs'
                     }`}
                   >
                     {/* Left: Radio check indicator + Emoji Squircle + Info */}
@@ -192,7 +192,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
                       </div>
 
                       {/* Emoji Badge */}
-                      <div className="w-9 h-9 rounded-xl bg-white border border-stone-200/80 flex items-center justify-center text-base shadow-2xs flex-shrink-0">
+                      <div className="w-9 h-9 rounded-xl bg-white/90 border border-stone-200/60 flex items-center justify-center text-base shadow-2xs flex-shrink-0">
                         {opt.emoji}
                       </div>
 
@@ -218,7 +218,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
                       className={`w-9 h-9 rounded-xl border flex items-center justify-center transition cursor-pointer active:scale-90 flex-shrink-0 shadow-2xs ${
                         isPlayingThis
                           ? 'bg-orange-500 border-orange-600 text-white'
-                          : 'bg-stone-50 hover:bg-orange-50 hover:border-orange-300 text-orange-600 border-stone-200/90'
+                          : 'bg-white/80 hover:bg-orange-50 hover:border-orange-300 text-orange-600 border-stone-200/90'
                       }`}
                       title="Play Preview"
                     >
@@ -232,7 +232,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
         </div>
 
         {/* Footer */}
-        <div className="p-4 sm:p-5 bg-stone-50/80 border-t border-stone-100 flex items-center">
+        <div className="p-4 sm:p-5 bg-white/60 backdrop-blur-xl border-t border-stone-200/50 flex items-center">
           <button
             type="button"
             onClick={onClose}
