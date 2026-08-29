@@ -453,14 +453,6 @@ export function App() {
           } catch {
             soundService.playNewOrderChime();
           }
-
-          const tableLabel = mappedOrder.tableNumber === 'TAKEAWAY' ? 'กลับบ้าน' : `โต๊ะ ${mappedOrder.tableNumber}`;
-          soundService.showDesktopNotification(
-            language === 'th' ? `🔔 มีออเดอร์ใหม่เข้า! (${tableLabel})` : `🔔 New Order (${tableLabel})`,
-            language === 'th' 
-              ? `${mappedOrder.items.length} รายการ • รวม ฿${mappedOrder.totalPrice.toLocaleString()}`
-              : `${mappedOrder.items.length} items • ฿${mappedOrder.totalPrice.toLocaleString()}`
-          );
         } else if (payload.eventType === 'UPDATE') {
           const updatedO: any = payload.new;
           setOrders((prev) =>

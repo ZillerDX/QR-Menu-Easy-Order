@@ -74,8 +74,28 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
     targetTab?: 'active' | 'ready' | 'completed'
   ) => {
     setToast({ id: Date.now(), title, message, type, targetTab });
-    setTimeout(() => setToast(null), 4000);
+    setTimeout(() => setToast(null), 4500);
   };
+
+  const prevOrdersCountRef = React.useRef(orders.length);
+  React.useEffect(() => {
+    if (orders.length > prevOrdersCountRef.current) {
+      const latestOrder = orders[0];
+      if (latestOrder && latestOrder.status === 'pending') {
+        const tableLabel = latestOrder.tableNumber === 'TAKEAWAY' ? 'กลับบ้าน' : `โต๊ะ ${latestOrder.tableNumber}`;
+        const itemsCount = latestOrder.items.reduce((sum, item) => sum + item.quantity, 0);
+        triggerToast(
+          language === 'th' ? `🔔 มีออเดอร์ใหม่เข้า! (${tableLabel})` : `🔔 New Order! (${tableLabel})`,
+          language === 'th'
+            ? `${itemsCount} รายการ • รวม ฿${latestOrder.totalPrice.toLocaleString()}`
+            : `${itemsCount} items • Total ฿${latestOrder.totalPrice.toLocaleString()}`,
+          'order',
+          'active'
+        );
+      }
+    }
+    prevOrdersCountRef.current = orders.length;
+  }, [orders, language]);
 
   // 1. In-Kitchen (Pending + Cooking ONLY)
   const inKitchenOrders = orders.filter((o) => o.status === 'pending' || o.status === 'cooking');

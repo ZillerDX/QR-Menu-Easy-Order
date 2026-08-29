@@ -7,8 +7,6 @@ import {
   Check, 
   X, 
   Play, 
-  Laptop, 
-  ShieldCheck, 
   Radio
 } from 'lucide-react';
 import { Language } from '../../types';
@@ -28,22 +26,16 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
   onTestChime,
 }) => {
   const [selectedPreset, setSelectedPreset] = useState<SoundPreset>('cheerful');
-  const [isMuted, setIsMuted] = useState(!soundService.isSoundEnabled());
-  const [browserPermission, setBrowserPermission] = useState<NotificationPermission | 'unsupported'>('default');
+  const [isSoundOn, setIsSoundOn] = useState<boolean>(soundService.isSoundEnabled());
   const [playingId, setPlayingId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
       const savedPreset = localStorage.getItem('pos_sound_preset') as SoundPreset;
       if (savedPreset) setSelectedPreset(savedPreset);
+      setIsSoundOn(soundService.isSoundEnabled());
     } catch {
       // ignore
-    }
-
-    if (!('Notification' in window)) {
-      setBrowserPermission('unsupported');
-    } else {
-      setBrowserPermission(Notification.permission);
     }
   }, [isOpen]);
 
@@ -57,30 +49,19 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
       // ignore
     }
     setPlayingId(preset);
+    soundService.initCtx();
     soundService.playNewOrderChime(preset);
     onTestChime?.(preset);
     setTimeout(() => setPlayingId(null), 800);
   };
 
-  const handleToggleMute = () => {
-    const nextMuted = !isMuted;
-    setIsMuted(nextMuted);
-    soundService.setSoundEnabled(!nextMuted);
-    if (!nextMuted) {
+  const handleToggleSound = () => {
+    const nextState = !isSoundOn;
+    setIsSoundOn(nextState);
+    soundService.setSoundEnabled(nextState);
+    if (nextState) {
+      soundService.initCtx();
       soundService.playNewOrderChime(selectedPreset);
-    }
-  };
-
-  const handleRequestPermission = async () => {
-    const granted = await soundService.requestNotificationPermission();
-    if ('Notification' in window) {
-      setBrowserPermission(Notification.permission);
-    }
-    if (granted) {
-      soundService.showDesktopNotification(
-        language === 'th' ? '🔔 เปิดการแจ้งเตือนสำเร็จ!' : '🔔 Notifications Enabled!',
-        language === 'th' ? 'คุณจะได้รับการแจ้งเตือนทันทีเมื่อมีออเดอร์ใหม่เข้า แม้พับหน้าจอ' : 'You will receive alerts for new orders even when minimized'
-      );
     }
   };
 
@@ -113,7 +94,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-[32px] max-w-lg w-full border border-stone-200/90 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-[32px] max-w-md w-full border border-stone-200/90 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         
         {/* Top Header Card */}
         <div className="p-5 sm:p-6 pb-4 border-b border-stone-100 flex items-center justify-between bg-gradient-to-b from-stone-50/80 to-white">
@@ -123,10 +104,10 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
             </div>
             <div>
               <h3 className="font-black text-stone-900 text-base sm:text-lg tracking-tight">
-                {language === 'th' ? 'การตั้งค่าเสียงและการแจ้งเตือน' : 'Notification & Sound Settings'}
+                {language === 'th' ? 'การตั้งค่าเสียงเตือนออเดอร์' : 'Order Notification Sounds'}
               </h3>
               <p className="text-xs text-stone-500 font-medium mt-0.5">
-                {language === 'th' ? 'ปรับแต่งเสียงเตือนออเดอร์ใหม่และป๊อปอัปแจ้งเตือน' : 'Customize sound chimes & desktop alerts'}
+                {language === 'th' ? 'ปรับแต่งเสียงเตือนเมื่อมีออเดอร์ใหม่เข้ามา' : 'Customize sound chimes for incoming orders'}
               </p>
             </div>
           </div>
@@ -142,22 +123,22 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
         </div>
 
         {/* Content Body */}
-        <div className="p-5 sm:p-6 space-y-5 max-h-[72vh] overflow-y-auto">
+        <div className="p-5 sm:p-6 space-y-5">
           
           {/* 1. Master Audio Switch (Tactile Switch Card) */}
           <div className="flex items-center justify-between p-4 bg-stone-50/80 rounded-2xl border border-stone-200/80 transition hover:bg-stone-50">
             <div className="flex items-center gap-3.5">
               <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors ${
-                !isMuted ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-stone-500'
+                isSoundOn ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-stone-500'
               }`}>
-                {!isMuted ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                {isSoundOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
               </div>
               <div>
                 <h4 className="text-sm font-black text-stone-900 leading-tight">
                   {language === 'th' ? 'เสียงแจ้งเตือนออเดอร์' : 'Order Sound Alerts'}
                 </h4>
                 <p className="text-xs text-stone-500 mt-0.5 font-medium">
-                  {!isMuted
+                  {isSoundOn
                     ? (language === 'th' ? 'เปิดเสียงอยู่ (มีเสียงเตือนเมื่อมีออเดอร์เข้า)' : 'Sound alert is active')
                     : (language === 'th' ? 'ปิดเสียงอยู่ (โหมดเงียบ)' : 'Sound is muted')}
                 </p>
@@ -167,14 +148,14 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
             {/* iOS Style Toggle Switch */}
             <button
               type="button"
-              onClick={handleToggleMute}
+              onClick={handleToggleSound}
               className={`w-13 h-7.5 rounded-full p-1 transition-colors duration-300 ease-in-out cursor-pointer flex-shrink-0 relative ${
-                !isMuted ? 'bg-emerald-500 shadow-xs shadow-emerald-500/30' : 'bg-stone-300'
+                isSoundOn ? 'bg-emerald-500 shadow-xs shadow-emerald-500/30' : 'bg-stone-300'
               }`}
             >
               <div
                 className={`w-5.5 h-5.5 rounded-full bg-white shadow-md transform transition-transform duration-300 ease-in-out ${
-                  !isMuted ? 'translate-x-5.5' : 'translate-x-0'
+                  isSoundOn ? 'translate-x-5.5' : 'translate-x-0'
                 }`}
               />
             </button>
@@ -247,52 +228,6 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
                 );
               })}
             </div>
-          </div>
-
-          {/* 3. Browser Desktop Push Notification Permission */}
-          <div className="p-4 bg-stone-50/80 rounded-2xl border border-stone-200/80 space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-stone-200/80 text-stone-700 flex items-center justify-center flex-shrink-0">
-                  <Laptop className="w-4.5 h-4.5" />
-                </div>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-black text-stone-900">
-                    {language === 'th' ? 'การแจ้งเตือนบนหน้าจอ (Desktop Alert)' : 'Desktop Push Notifications'}
-                  </h4>
-                  <p className="text-[11px] text-stone-500 font-medium mt-0.5">
-                    {language === 'th'
-                      ? 'ป๊อปอัปแจ้งเตือนแม้สลับไปใช้โปรแกรมอื่นหรือพับหน้าต่าง'
-                      : 'Receive OS popup alerts even when using other apps or minimized'}
-                  </p>
-                </div>
-              </div>
-
-              <span className={`text-[10px] font-black px-2.5 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${
-                browserPermission === 'granted'
-                  ? 'bg-emerald-100 text-emerald-800'
-                  : browserPermission === 'denied'
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-amber-100 text-amber-800'
-              }`}>
-                {browserPermission === 'granted'
-                  ? (language === 'th' ? '✓ เปิดใช้งานแล้ว' : 'Active')
-                  : browserPermission === 'denied'
-                  ? (language === 'th' ? '✕ ถูกบล็อก' : 'Blocked')
-                  : (language === 'th' ? '⏳ ยังไม่เปิด' : 'Not Enabled')}
-              </span>
-            </div>
-
-            {browserPermission !== 'granted' && browserPermission !== 'unsupported' && (
-              <button
-                type="button"
-                onClick={handleRequestPermission}
-                className="w-full py-2.5 px-4 rounded-xl bg-stone-900 hover:bg-black text-white text-xs font-black transition cursor-pointer flex items-center justify-center gap-2 active:scale-95 shadow-xs"
-              >
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>{language === 'th' ? 'เปิดใช้งานการแจ้งเตือนบนหน้าจอ' : 'Enable Desktop Notifications'}</span>
-              </button>
-            )}
           </div>
         </div>
 

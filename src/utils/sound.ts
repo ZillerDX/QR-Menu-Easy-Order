@@ -1,5 +1,5 @@
 /**
- * Audio synthesis & Browser Notification Service for POS & Kitchen Display System
+ * Audio synthesis Service for POS & Kitchen Display System (Web Audio API)
  */
 
 export type SoundPreset = 'cheerful' | 'service_bell' | 'kitchen_alert' | 'success';
@@ -7,16 +7,36 @@ export type SoundPreset = 'cheerful' | 'service_bell' | 'kitchen_alert' | 'succe
 class SoundService {
   private ctx: AudioContext | null = null;
   private soundEnabled: boolean = true;
+  private isUnlocked: boolean = false;
 
   constructor() {
-    // Read user preference from LocalStorage
+    // Read user preference from LocalStorage (defaults to true)
     try {
       const saved = localStorage.getItem('pos_sound_enabled');
-      if (saved !== null) {
-        this.soundEnabled = saved === 'true';
-      }
+      this.soundEnabled = saved !== 'false';
     } catch {
       this.soundEnabled = true;
+    }
+
+    // Auto-unlock AudioContext on first user interaction anywhere on the screen
+    if (typeof window !== 'undefined') {
+      const unlockAudio = () => {
+        this.initCtx();
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().then(() => {
+            this.isUnlocked = true;
+          }).catch(() => {});
+        } else if (this.ctx && this.ctx.state === 'running') {
+          this.isUnlocked = true;
+        }
+        window.removeEventListener('click', unlockAudio);
+        window.removeEventListener('touchstart', unlockAudio);
+        window.removeEventListener('keydown', unlockAudio);
+      };
+
+      window.addEventListener('click', unlockAudio, { passive: true });
+      window.addEventListener('touchstart', unlockAudio, { passive: true });
+      window.addEventListener('keydown', unlockAudio, { passive: true });
     }
   }
 
@@ -33,7 +53,7 @@ class SoundService {
     }
   }
 
-  private initCtx() {
+  public initCtx() {
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
@@ -41,7 +61,7 @@ class SoundService {
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      this.ctx.resume().catch(() => {});
     }
   }
 
@@ -68,12 +88,12 @@ class SoundService {
           osc.type = 'sine';
           osc.frequency.setValueAtTime(freq, now + i * 0.1);
           gain.gain.setValueAtTime(0, now + i * 0.1);
-          gain.gain.linearRampToValueAtTime(0.3, now + i * 0.1 + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.8);
+          gain.gain.linearRampToValueAtTime(0.35, now + i * 0.1 + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.85);
           osc.connect(gain);
           gain.connect(this.ctx.destination);
           osc.start(now + i * 0.1);
-          osc.stop(now + i * 0.1 + 0.8);
+          osc.stop(now + i * 0.1 + 0.85);
         });
       } else if (preset === 'kitchen_alert') {
         // High-clarity kitchen dual alert
@@ -84,12 +104,12 @@ class SoundService {
           osc.type = 'triangle';
           osc.frequency.setValueAtTime(freq, now + idx * 0.15);
           gain.gain.setValueAtTime(0, now + idx * 0.15);
-          gain.gain.linearRampToValueAtTime(0.28, now + idx * 0.15 + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.15 + 0.45);
+          gain.gain.linearRampToValueAtTime(0.32, now + idx * 0.15 + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.15 + 0.5);
           osc.connect(gain);
           gain.connect(this.ctx.destination);
           osc.start(now + idx * 0.15);
-          osc.stop(now + idx * 0.15 + 0.45);
+          osc.stop(now + idx * 0.15 + 0.5);
         });
       } else {
         // Cheerful 4-Note Harmonic Chord (D5, F#5, A5, D6)
@@ -101,16 +121,16 @@ class SoundService {
           osc.type = 'sine';
           osc.frequency.setValueAtTime(freq, now + idx * 0.1);
           gain.gain.setValueAtTime(0, now + idx * 0.1);
-          gain.gain.linearRampToValueAtTime(0.3, now + idx * 0.1 + 0.03);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.7);
+          gain.gain.linearRampToValueAtTime(0.35, now + idx * 0.1 + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.75);
           osc.connect(gain);
           gain.connect(this.ctx.destination);
           osc.start(now + idx * 0.1);
-          osc.stop(now + idx * 0.1 + 0.7);
+          osc.stop(now + idx * 0.1 + 0.75);
         });
       }
     } catch {
-      // Audio context may be restricted before user gesture
+      // Audio context might be restricted
     }
   }
 
@@ -134,12 +154,12 @@ class SoundService {
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, now + idx * 0.08);
         gain.gain.setValueAtTime(0, now + idx * 0.08);
-        gain.gain.linearRampToValueAtTime(0.2, now + idx * 0.08 + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.4);
+        gain.gain.linearRampToValueAtTime(0.25, now + idx * 0.08 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.45);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         osc.start(now + idx * 0.08);
-        osc.stop(now + idx * 0.08 + 0.4);
+        osc.stop(now + idx * 0.08 + 0.45);
       });
     } catch {
       // ignore
@@ -163,7 +183,7 @@ class SoundService {
       osc.frequency.setValueAtTime(440, now);
       osc.frequency.exponentialRampToValueAtTime(880, now + 0.08);
 
-      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.setValueAtTime(0.15, now);
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
 
       osc.connect(gain);
@@ -183,41 +203,6 @@ class SoundService {
     try {
       if ('vibrate' in navigator && typeof navigator.vibrate === 'function') {
         navigator.vibrate(pattern);
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  /**
-   * Request Desktop Web Notifications permission
-   */
-  async requestNotificationPermission(): Promise<boolean> {
-    try {
-      if (!('Notification' in window)) return false;
-      if (Notification.permission === 'granted') return true;
-      if (Notification.permission !== 'denied') {
-        const permission = await Notification.requestPermission();
-        return permission === 'granted';
-      }
-      return false;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Trigger Desktop Notification when order arrives in background
-   */
-  showDesktopNotification(title: string, body: string, iconUrl?: string) {
-    try {
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, {
-          body,
-          icon: iconUrl || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=128&auto=format&fit=crop&q=80',
-          badge: iconUrl,
-          silent: false,
-        });
       }
     } catch {
       // ignore
