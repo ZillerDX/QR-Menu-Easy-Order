@@ -80,17 +80,111 @@
   animation: shimmer 2.5s infinite;
 }
 
-/* POS Thermal Receipt & Printer Optimization */
+/* ========================================================================= */
+/* UNIVERSAL POS THERMAL RECEIPT & A4 PRINTING ENGINE (THAILAND STANDARD)    */
+/* ========================================================================= */
 @media print {
-  body {
+  /* 1. Global Reset: Remove all screen margins, paddings, and background elements */
+  *, *::before, *::after {
+    box-sizing: border-box !important;
+    text-shadow: none !important;
+  }
+
+  html, body {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
-  header, main, footer, nav, [role="navigation"], .no-print {
+
+  /* 2. Strictly HIDE all app chrome, navigation bars, docks, and screen UI */
+  .no-print,
+  .print\:hidden,
+  header,
+  nav,
+  aside,
+  footer,
+  [role="navigation"] {
     display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
   }
+
+  /* 3. Thai 80mm Standard POS Thermal Receipt Paper Rules */
+  .pos-receipt-print-container {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 76mm !important;
+    max-width: 76mm !important;
+    margin: 0 auto !important;
+    padding: 2mm 1mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    font-size: 11px !important;
+    line-height: 1.3 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* 4. Thai Full Legal Tax Invoice A4 Rules */
+  .a4-tax-invoice-container {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 200mm !important;
+    margin: 0 auto !important;
+    padding: 6mm 4mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11.5px !important;
+    line-height: 1.35 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* 5. Table QR Stand Print Rules */
+  .table-qr-print-container {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 130mm !important;
+    max-width: 100% !important;
+    margin: 15mm auto !important;
+    padding: 10mm !important;
+    border: 2px solid #000000 !important;
+    border-radius: 16px !important;
+    text-align: center !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* QR Codes & Images High Contrast */
+  canvas, img {
+    max-width: 100% !important;
+    height: auto !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    image-rendering: -webkit-optimize-contrast !important;
+    image-rendering: crisp-edges !important;
+  }
+
   @page {
-    margin: 4mm;
+    margin: 0mm;
     size: auto;
   }
 }

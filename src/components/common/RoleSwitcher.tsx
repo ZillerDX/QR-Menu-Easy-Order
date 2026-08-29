@@ -28,7 +28,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
   }
 
   return (
-    <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 w-auto max-w-[98vw] px-2 animate-in fade-in slide-in-from-bottom-3 duration-300">
+    <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 w-auto max-w-[98vw] px-2 animate-in fade-in slide-in-from-bottom-3 duration-300 print:hidden no-print">
       <div className="bg-stone-950/90 backdrop-blur-xl p-1.5 rounded-full shadow-2xl border border-stone-800/80 flex items-center gap-1 overflow-x-auto max-w-full no-scrollbar ring-1 ring-white/10">
         
         {/* Role 1: Customer Preview */}

@@ -47,10 +47,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     if (isOpen && order && qrCanvasRef.current && storeConfig.promptpayNumber) {
       const payload = generatePromptPayPayload(storeConfig.promptpayNumber, order.totalPrice);
       QRCode.toCanvas(qrCanvasRef.current, payload, {
-        width: 160,
+        width: 150,
         margin: 1,
         color: {
-          dark: '#002d62',
+          dark: '#000000',
           light: '#ffffff',
         },
       });
@@ -94,18 +94,18 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const vatAmount = totalAmount - taxBase;
 
   const modalContent = (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 print:p-0 print:static print:bg-white">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 print:static print:p-0 print:m-0 print:bg-white print:block">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-stone-950/80 backdrop-blur-md transition-opacity print:hidden"
+        className="fixed inset-0 bg-stone-950/80 backdrop-blur-md transition-opacity print:hidden no-print"
         onClick={onClose}
       />
 
       {/* Container */}
-      <div className="relative w-full max-w-lg bg-white rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 flex flex-col max-h-[94vh] print:max-h-none print:shadow-none print:border-none print:w-full print:max-w-none print:rounded-none">
+      <div className="relative w-full max-w-lg bg-white rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 flex flex-col max-h-[94vh] print:max-h-none print:shadow-none print:border-none print:w-full print:max-w-none print:rounded-none print:static print:p-0 print:m-0">
         
-        {/* Modal Top Bar (Single Clean Header, NO Duplicate Print Button) */}
-        <div className="px-5 py-3.5 bg-stone-900 text-white flex items-center justify-between flex-shrink-0 print:hidden">
+        {/* Modal Top Bar (Hidden on Print) */}
+        <div className="px-5 py-3.5 bg-stone-900 text-white flex items-center justify-between flex-shrink-0 print:hidden no-print">
           <div className="flex items-center gap-2">
             <Printer className="w-4 h-4 text-orange-400" />
             <span className="font-black text-xs sm:text-sm">
@@ -114,6 +114,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-stone-300 flex items-center justify-center transition cursor-pointer"
             title="Close"
@@ -123,7 +124,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         </div>
 
         {/* Document Type Selector Tabs (Hidden on Print) */}
-        <div className="p-3 bg-stone-100/90 border-b border-stone-200 flex-shrink-0 print:hidden space-y-2.5">
+        <div className="p-3 bg-stone-100/90 border-b border-stone-200 flex-shrink-0 print:hidden no-print space-y-2.5">
           <div className="grid grid-cols-2 gap-1.5 bg-stone-200/80 p-1 rounded-2xl text-xs font-black">
             <button
               type="button"
@@ -260,70 +261,70 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           )}
         </div>
 
-        {/* Document Body (Printable Area) */}
-        <div className="p-6 overflow-y-auto font-sans text-stone-800 bg-[#fffdfa] print:p-2 print:overflow-visible print:bg-white">
+        {/* ========================================================================= */}
+        {/* DOCUMENT BODY (PRINTABLE AREA)                                             */}
+        {/* ========================================================================= */}
+        <div className="p-6 overflow-y-auto font-sans text-stone-800 bg-[#fffdfa] print:p-0 print:m-0 print:overflow-visible print:bg-white">
           
-          {/* ======================================================== */}
-          {/* OPTION A: ABBREVIATED POS THERMAL RECEIPT SLIP           */}
-          {/* ======================================================== */}
+          {/* OPTION A: THAI STANDARD 80MM POS THERMAL RECEIPT SLIP */}
           {docType === 'abbreviated' && (
-            <div className="space-y-4 max-w-sm mx-auto">
+            <div className="pos-receipt-print-container space-y-3 max-w-sm mx-auto">
               {/* Store Logo & Header */}
-              <div className="text-center space-y-1.5 pb-3 border-b border-dashed border-stone-300">
-                <div className="w-14 h-14 mx-auto rounded-2xl overflow-hidden p-0.5 border border-stone-200 shadow-2xs">
-                  <img src={CAFE_ORDER_LOGO_DATA_URI} alt="Logo" className="w-full h-full object-cover rounded-xl" />
+              <div className="text-center space-y-1 pb-2 border-b border-dashed border-stone-300 print:border-black">
+                <div className="w-12 h-12 mx-auto rounded-xl overflow-hidden p-0.5 border border-stone-200 print:border-none">
+                  <img src={CAFE_ORDER_LOGO_DATA_URI} alt="Logo" className="w-full h-full object-cover rounded-lg" />
                 </div>
-                <h2 className="font-black text-lg tracking-tight text-stone-950">
+                <h2 className="font-black text-base tracking-tight text-stone-950 print:text-black">
                   {language === 'en' ? storeConfig.nameEn || storeConfig.name : storeConfig.name}
                 </h2>
-                <p className="text-[11px] font-black text-stone-600 uppercase tracking-wider">
+                <p className="text-[11px] font-black text-stone-700 print:text-black uppercase">
                   ใบเสร็จรับเงิน / ใบกำกับภาษีอย่างย่อ
                 </p>
-                <p className="text-[10px] text-stone-500">
+                <p className="text-[10px] text-stone-600 print:text-black">
                   เลขประจำตัวผู้เสียภาษี: {storeConfig.taxId || '0105566012345'}
                 </p>
-                <p className="text-[10px] text-stone-400">
+                <p className="text-[9.5px] text-stone-500 print:text-black leading-tight">
                   {storeConfig.address || '123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110'}
                 </p>
               </div>
 
               {/* Receipt Meta */}
-              <div className="text-xs space-y-1 py-1 border-b border-dashed border-stone-300">
+              <div className="text-[11px] space-y-0.5 py-1 border-b border-dashed border-stone-300 print:border-black">
                 <div className="flex justify-between font-bold">
-                  <span>เลขที่ออเดอร์ (Order #):</span>
-                  <span className="font-black text-stone-900">{order.orderNumber}</span>
+                  <span>เลขที่ (Order #):</span>
+                  <span className="font-black text-stone-900 print:text-black">{order.orderNumber}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>ตำแหน่ง (Table):</span>
-                  <span className="font-black bg-stone-100 px-2 py-0.5 rounded text-stone-900">
-                    {order.tableNumber === 'TAKEAWAY' ? (language === 'th' ? 'สั่งกลับบ้าน (Takeaway)' : 'Takeaway') : `โต๊ะ ${order.tableNumber}`}
+                  <span className="font-black text-stone-900 print:text-black">
+                    {order.tableNumber === 'TAKEAWAY' ? (language === 'th' ? 'สั่งกลับบ้าน' : 'Takeaway') : `โต๊ะ ${order.tableNumber}`}
                   </span>
                 </div>
-                <div className="flex justify-between text-stone-500 text-[11px]">
-                  <span>วันที่ & เวลา (Date):</span>
+                <div className="flex justify-between text-stone-600 print:text-black text-[10px]">
+                  <span>วันที่ (Date):</span>
                   <span>{formattedDate} {formattedTime}</span>
                 </div>
               </div>
 
               {/* Itemized List */}
-              <div className="space-y-2 py-2 border-b border-dashed border-stone-300 text-xs">
-                <div className="flex justify-between text-[11px] font-black text-stone-400 uppercase">
+              <div className="space-y-1.5 py-1.5 border-b border-dashed border-stone-300 print:border-black text-[11px]">
+                <div className="flex justify-between text-[10px] font-black text-stone-500 print:text-black uppercase">
                   <span>รายการ (Items)</span>
                   <span>จำนวนเงิน</span>
                 </div>
 
                 {order.items.map((item, idx) => (
                   <div key={idx} className="space-y-0.5">
-                    <div className="flex justify-between font-bold text-stone-900">
-                      <div className="flex items-start gap-1 max-w-[75%]">
-                        <span className="text-orange-600 font-black">{item.quantity}x</span>
+                    <div className="flex justify-between font-bold text-stone-900 print:text-black">
+                      <div className="flex items-start gap-1 max-w-[78%]">
+                        <span className="text-orange-600 print:text-black font-black">{item.quantity}x</span>
                         <span>{language === 'en' && item.menuItem.nameEn ? item.menuItem.nameEn : item.menuItem.name}</span>
                       </div>
                       <span>฿{item.totalItemPrice.toLocaleString()}</span>
                     </div>
 
                     {item.selectedOptions && item.selectedOptions.length > 0 && (
-                      <div className="pl-5 text-[10px] text-stone-500 space-y-0.5">
+                      <div className="pl-4 text-[9.5px] text-stone-500 print:text-black space-y-0.5">
                         {item.selectedOptions.map((opt, i) => (
                           <div key={i} className="flex justify-between">
                             <span>• {opt.choiceName}</span>
@@ -332,68 +333,59 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                         ))}
                       </div>
                     )}
-
-                    {item.specialNote && (
-                      <div className="pl-5 text-[10px] text-amber-800 italic">
-                        Note: {item.specialNote}
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
 
               {/* Totals & Net */}
-              <div className="space-y-1.5 py-2 border-b border-dashed border-stone-300 text-xs">
-                <div className="flex justify-between text-stone-600">
-                  <span>มูลค่าสินค้าก่อนภาษี (Tax Base):</span>
+              <div className="space-y-1 py-1.5 border-b border-dashed border-stone-300 print:border-black text-[11px]">
+                <div className="flex justify-between text-stone-600 print:text-black">
+                  <span>มูลค่าก่อนภาษี (Tax Base):</span>
                   <span>฿{taxBase.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-stone-600">
+                <div className="flex justify-between text-stone-600 print:text-black">
                   <span>ภาษีมูลค่าเพิ่ม 7% (VAT 7%):</span>
                   <span>฿{vatAmount.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-base font-black text-stone-950 pt-1 border-t border-stone-200">
+                <div className="flex justify-between text-sm font-black text-stone-950 print:text-black pt-1 border-t border-stone-200 print:border-black">
                   <span>ยอดสุทธิ (Total Due):</span>
-                  <span className="text-orange-600 text-lg">฿{totalAmount.toLocaleString()}</span>
+                  <span className="text-orange-600 print:text-black text-base">฿{totalAmount.toLocaleString()}</span>
                 </div>
               </div>
 
               {/* PROMPTPAY QR PAYMENT BOX */}
-              <div className="p-3.5 rounded-2xl bg-white border-2 border-blue-200 text-center space-y-2 shadow-xs">
-                <div className="flex items-center justify-center gap-1.5 text-blue-900 font-black text-xs">
-                  <QrCode className="w-4 h-4 text-blue-700" />
+              <div className="p-3 rounded-xl bg-white border border-stone-200 print:border-black text-center space-y-1.5 shadow-xs print:shadow-none">
+                <div className="flex items-center justify-center gap-1.5 text-stone-900 print:text-black font-black text-[11px]">
+                  <QrCode className="w-3.5 h-3.5 text-blue-700 print:text-black" />
                   <span>สแกนจ่ายผ่านพร้อมเพย์ (PromptPay QR)</span>
                 </div>
 
-                <div className="p-2 bg-white rounded-xl inline-block border border-blue-100 shadow-2xs">
-                  <canvas ref={qrCanvasRef} className="mx-auto rounded-lg" />
+                <div className="p-1.5 bg-white rounded-lg inline-block border border-stone-100 print:border-black">
+                  <canvas ref={qrCanvasRef} className="mx-auto rounded" />
                 </div>
 
-                <div className="space-y-0.5 text-xs text-stone-700">
-                  <p className="font-bold text-stone-900">{storeConfig.promptpayName}</p>
-                  <p className="text-[11px] text-stone-500 font-mono">PromptPay: {storeConfig.promptpayNumber}</p>
-                  <p className="text-[10px] text-blue-700 font-semibold pt-0.5">
-                    ยอดเงินระบุอัตโนมัติ ฿{order.totalPrice.toLocaleString()} • ปลอดภัยไร้เงินสด
+                <div className="space-y-0.5 text-[10px] text-stone-700 print:text-black">
+                  <p className="font-bold">{storeConfig.promptpayName}</p>
+                  <p className="text-stone-500 print:text-black font-mono">PromptPay: {storeConfig.promptpayNumber}</p>
+                  <p className="text-[9px] text-stone-500 print:text-black">
+                    ยอดเงินระบุอัตโนมัติ ฿{order.totalPrice.toLocaleString()}
                   </p>
                 </div>
               </div>
 
-              {/* Thank you note & footer */}
-              <div className="text-center pt-1 space-y-1 text-[11px] text-stone-400">
-                <p className="font-bold text-stone-600">*** ขอบคุณที่ใช้บริการ (Thank You) ***</p>
-                <p className="text-[10px]">ราคานี้รวมภาษีมูลค่าเพิ่ม 7% แล้ว (VAT Included)</p>
+              {/* Footer */}
+              <div className="text-center pt-1 space-y-0.5 text-[10px] text-stone-400 print:text-black">
+                <p className="font-bold text-stone-600 print:text-black">*** ขอบคุณที่ใช้บริการ (Thank You) ***</p>
+                <p className="text-[9px]">ราคานี้รวมภาษีมูลค่าเพิ่ม 7% แล้ว (VAT Included)</p>
               </div>
             </div>
           )}
 
-          {/* ======================================================== */}
-          {/* OPTION B: FULL LEGAL TAX INVOICE (มาตรา 86/4)             */}
-          {/* ======================================================== */}
+          {/* OPTION B: FULL LEGAL TAX INVOICE (มาตรา 86/4) */}
           {docType === 'fullTax' && (
-            <div className="space-y-5 text-xs">
-              
+            <div className="a4-tax-invoice-container space-y-4 text-xs">
               {/* Official Header */}
-              <div className="border-b-2 border-stone-800 pb-4">
+              <div className="border-b-2 border-stone-800 pb-3">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1">
                     <h2 className="text-lg font-black text-stone-950">
@@ -411,7 +403,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   </div>
 
                   <div className="text-right space-y-1 flex-shrink-0">
-                    <div className="bg-stone-900 text-white font-black px-3 py-1.5 rounded-lg text-xs tracking-wider inline-block">
+                    <div className="bg-stone-900 text-white font-black px-3 py-1 rounded-lg text-xs tracking-wider inline-block">
                       ใบเสร็จรับเงิน / ใบกำกับภาษี
                     </div>
                     <p className="text-[10px] font-bold text-stone-500 uppercase">
@@ -428,7 +420,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               </div>
 
               {/* Customer Legal Tax Details Box */}
-              <div className="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 space-y-1.5">
+              <div className="bg-stone-50 p-3 rounded-xl border border-stone-200 space-y-1">
                 <div className="font-black text-stone-900 text-xs flex items-center gap-1.5 border-b border-stone-200 pb-1">
                   <User className="w-3.5 h-3.5 text-stone-600" />
                   <span>ข้อมูลผู้ซื้อ / ผู้รับบริการ (Customer Information):</span>
@@ -472,8 +464,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 <tbody className="divide-y divide-stone-200">
                   {order.items.map((item, idx) => (
                     <tr key={idx} className="align-top">
-                      <td className="py-2 px-2 text-center text-stone-500 font-mono">{idx + 1}</td>
-                      <td className="py-2 px-2">
+                      <td className="py-1.5 px-2 text-center text-stone-500 font-mono">{idx + 1}</td>
+                      <td className="py-1.5 px-2">
                         <p className="font-bold text-stone-900">{item.menuItem.name}</p>
                         {item.selectedOptions && item.selectedOptions.length > 0 && (
                           <p className="text-[10px] text-stone-500">
@@ -481,23 +473,23 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                           </p>
                         )}
                       </td>
-                      <td className="py-2 px-2 text-center font-bold text-stone-900">{item.quantity}</td>
-                      <td className="py-2 px-2 text-right font-mono">฿{item.unitPriceWithDelta.toLocaleString()}</td>
-                      <td className="py-2 px-2 text-right font-mono font-bold text-stone-900">฿{item.totalItemPrice.toLocaleString()}</td>
+                      <td className="py-1.5 px-2 text-center font-bold text-stone-900">{item.quantity}</td>
+                      <td className="py-1.5 px-2 text-right font-mono">฿{item.unitPriceWithDelta.toLocaleString()}</td>
+                      <td className="py-1.5 px-2 text-right font-mono font-bold text-stone-900">฿{item.totalItemPrice.toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
 
               {/* Legal Tax Calculations Breakdown */}
-              <div className="border-t-2 border-stone-800 pt-3 flex flex-col sm:flex-row justify-between items-start gap-4">
-                <div className="text-[11px] text-stone-500 space-y-1">
+              <div className="border-t-2 border-stone-800 pt-2.5 flex flex-col sm:flex-row justify-between items-start gap-4">
+                <div className="text-[11px] text-stone-500 space-y-0.5">
                   <p className="font-bold text-stone-700">การชำระเงิน: {order.paymentMethod === 'promptpay' ? 'พร้อมเพย์ (PromptPay)' : 'เงินสด (Cash)'}</p>
                   <p>สถานะการชำระ: {order.paymentStatus === 'paid' ? 'ชำระเงินเรียบร้อยแล้ว' : 'รอรับชำระ'}</p>
-                  <p className="text-[10px] text-stone-400 pt-2">เอกสารนี้ออกโดยระบบอัตโนมัติ ถูกต้องตามมาตรา 86/4 แห่งประมวลรัษฎากร</p>
+                  <p className="text-[10px] text-stone-400 pt-1">เอกสารนี้ออกโดยระบบอัตโนมัติ ถูกต้องตามมาตรา 86/4 แห่งประมวลรัษฎากร</p>
                 </div>
 
-                <div className="w-full sm:w-64 space-y-1.5 text-xs">
+                <div className="w-full sm:w-64 space-y-1 text-xs">
                   <div className="flex justify-between text-stone-600">
                     <span>รวมมูลค่าสินค้า (Subtotal):</span>
                     <span className="font-mono font-bold">฿{totalAmount.toFixed(2)}</span>
@@ -510,20 +502,20 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                     <span>ภาษีมูลค่าเพิ่ม 7% (VAT 7%):</span>
                     <span className="font-mono">฿{vatAmount.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-sm font-black text-stone-950 pt-1.5 border-t border-stone-800">
+                  <div className="flex justify-between text-sm font-black text-stone-950 pt-1 border-t border-stone-800">
                     <span>จำนวนเงินรวมทั้งสิ้น:</span>
                     <span className="font-mono text-orange-600 text-base">฿{totalAmount.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Signature Section (For Printed Legal Invoices) */}
-              <div className="pt-6 grid grid-cols-2 gap-8 text-center text-[11px] text-stone-500">
-                <div className="space-y-8">
+              {/* Signature Section */}
+              <div className="pt-4 grid grid-cols-2 gap-8 text-center text-[11px] text-stone-500">
+                <div className="space-y-6">
                   <p>ผู้รับบริการ / ผู้จ่ายเงิน</p>
                   <p className="border-t border-dotted border-stone-400 pt-1 font-bold text-stone-700">ลงชื่อ ...................................................</p>
                 </div>
-                <div className="space-y-8">
+                <div className="space-y-6">
                   <p>ผู้รับเงิน / ผู้มีอำนาจลงนาม</p>
                   <p className="border-t border-dotted border-stone-400 pt-1 font-bold text-stone-700">ลงชื่อ ...................................................</p>
                 </div>
@@ -532,8 +524,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           )}
         </div>
 
-        {/* Modal Bottom Controls (Single Clean Print & Close Bar, Hidden on Print) */}
-        <div className="p-4 bg-stone-50 border-t border-stone-200 flex items-center justify-between flex-shrink-0 print:hidden">
+        {/* Modal Bottom Controls (Hidden on Print) */}
+        <div className="p-4 bg-stone-50 border-t border-stone-200 flex items-center justify-between flex-shrink-0 print:hidden no-print">
           <button
             type="button"
             onClick={handlePrint}
