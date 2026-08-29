@@ -1,7 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import QRCode from 'qrcode';
-import { X, Printer, QrCode, Store, Clock, Utensils, ShieldCheck } from 'lucide-react';
+import { X, Printer, QrCode, Store, Clock, Utensils, ShieldCheck, Building2, User, FileText, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Order, StoreConfig, Language } from '../../types';
 import { CAFE_ORDER_LOGO_DATA_URI } from '../../data/logoData';
 import { generatePromptPayPayload } from '../../utils/promptpay';
@@ -14,6 +14,15 @@ interface ReceiptModalProps {
   language: Language;
 }
 
+export interface CustomerTaxInfo {
+  customerType: 'individual' | 'corporate';
+  name: string;
+  taxId: string;
+  branch: string;
+  address: string;
+  phone?: string;
+}
+
 export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   isOpen,
   onClose,
@@ -21,6 +30,17 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   storeConfig,
   language,
 }) => {
+  const [docType, setDocType] = useState<'abbreviated' | 'fullTax'>('abbreviated');
+  const [showTaxForm, setShowTaxForm] = useState(false);
+  const [taxInfo, setTaxInfo] = useState<CustomerTaxInfo>({
+    customerType: 'individual',
+    name: '',
+    taxId: '',
+    branch: '00000 (สำนักงานใหญ่)',
+    address: '',
+    phone: '',
+  });
+
   const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -35,7 +55,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         },
       });
     }
-  }, [isOpen, order, storeConfig.promptpayNumber]);
+  }, [isOpen, order, storeConfig.promptpayNumber, docType]);
 
   if (!isOpen || !order) return null;
 
@@ -54,178 +74,469 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     minute: '2-digit',
   });
 
+  // Calculate VAT 7% breakdown (VAT inclusive)
+  const totalAmount = order.totalPrice;
+  const taxBase = totalAmount * (100 / 107);
+  const vatAmount = totalAmount - taxBase;
+
   const modalContent = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 print:p-0 print:static print:bg-white">
-      {/* Backdrop (Hidden during print) */}
+      {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-stone-950/80 backdrop-blur-md transition-opacity print:hidden"
         onClick={onClose}
       />
 
       {/* Container */}
-      <div className="relative w-full max-w-sm bg-white rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 flex flex-col max-h-[92vh] print:max-h-none print:shadow-none print:border-none print:w-full print:max-w-none print:rounded-none">
+      <div className="relative w-full max-w-lg bg-white rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 flex flex-col max-h-[94vh] print:max-h-none print:shadow-none print:border-none print:w-full print:max-w-none print:rounded-none">
         
-        {/* Modal Top Actions (Hidden on Print) */}
+        {/* Modal Top Bar (Single Clean Header, NO Duplicate Print Button) */}
         <div className="px-5 py-3.5 bg-stone-900 text-white flex items-center justify-between flex-shrink-0 print:hidden">
           <div className="flex items-center gap-2">
             <Printer className="w-4 h-4 text-orange-400" />
-            <span className="font-black text-xs">
-              {language === 'th' ? 'ใบแจ้งยอด / ใบเสร็จรับเงิน' : 'Order Bill & Receipt'}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrint}
-              className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-black text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>{language === 'th' ? 'พิมพ์ใบเสร็จ' : 'Print Slip'}</span>
-            </button>
-            <button
-              onClick={onClose}
-              className="w-7 h-7 rounded-xl bg-white/10 hover:bg-white/20 text-stone-300 flex items-center justify-center transition cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* 80mm POS Thermal Receipt Body */}
-        <div className="p-6 overflow-y-auto space-y-4 font-mono text-stone-800 bg-[#fffdfa] print:p-2 print:overflow-visible print:bg-white">
-          
-          {/* Store Logo & Header */}
-          <div className="text-center space-y-1.5 pb-3 border-b border-dashed border-stone-300">
-            <div className="w-14 h-14 mx-auto rounded-2xl overflow-hidden p-0.5 border border-stone-200">
-              <img src={CAFE_ORDER_LOGO_DATA_URI} alt="Logo" className="w-full h-full object-cover rounded-xl" />
-            </div>
-            <h2 className="font-black text-lg tracking-tight font-sans text-stone-950">
-              {language === 'en' ? storeConfig.nameEn || storeConfig.name : storeConfig.name}
-            </h2>
-            <p className="text-[11px] text-stone-500 font-sans">
-              {language === 'en' ? storeConfig.taglineEn || storeConfig.tagline : storeConfig.tagline}
-            </p>
-            <p className="text-[10px] text-stone-400 font-sans">
-              เวลาเปิด-ปิด: {storeConfig.openTime}
-            </p>
-          </div>
-
-          {/* Receipt Meta */}
-          <div className="text-xs space-y-1 py-1 border-b border-dashed border-stone-300 font-sans">
-            <div className="flex justify-between font-bold">
-              <span>เลขที่ออเดอร์ (Order #):</span>
-              <span className="font-black text-stone-900">{order.orderNumber}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>ตำแหน่ง (Table):</span>
-              <span className="font-black bg-stone-100 px-2 py-0.5 rounded text-stone-900">
-                {order.tableNumber === 'TAKEAWAY' ? (language === 'th' ? 'สั่งกลับบ้าน (Takeaway)' : 'Takeaway') : `โต๊ะ (Table) ${order.tableNumber}`}
-              </span>
-            </div>
-            <div className="flex justify-between text-stone-500 text-[11px]">
-              <span>วันที่ & เวลา (Date):</span>
-              <span>{formattedDate} {formattedTime}</span>
-            </div>
-          </div>
-
-          {/* Itemized List */}
-          <div className="space-y-2 py-2 border-b border-dashed border-stone-300 font-sans text-xs">
-            <div className="flex justify-between text-[11px] font-black text-stone-400 uppercase">
-              <span>รายการ (Items)</span>
-              <span>จำนวนเงิน</span>
-            </div>
-
-            {order.items.map((item, idx) => (
-              <div key={idx} className="space-y-0.5">
-                <div className="flex justify-between font-bold text-stone-900">
-                  <div className="flex items-start gap-1 max-w-[75%]">
-                    <span className="text-orange-600 font-black">{item.quantity}x</span>
-                    <span>{language === 'en' && item.menuItem.nameEn ? item.menuItem.nameEn : item.menuItem.name}</span>
-                  </div>
-                  <span>฿{item.totalItemPrice.toLocaleString()}</span>
-                </div>
-
-                {/* Option customizations */}
-                {item.selectedOptions && item.selectedOptions.length > 0 && (
-                  <div className="pl-5 text-[10px] text-stone-500 space-y-0.5">
-                    {item.selectedOptions.map((opt, i) => (
-                      <div key={i} className="flex justify-between">
-                        <span>• {opt.choiceName}</span>
-                        {opt.priceDelta > 0 && <span>+฿{opt.priceDelta * item.quantity}</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {item.specialNote && (
-                  <div className="pl-5 text-[10px] text-amber-800 italic">
-                    Note: {item.specialNote}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Totals & Net */}
-          <div className="space-y-1.5 py-2 border-b border-dashed border-stone-300 font-sans text-xs">
-            <div className="flex justify-between text-stone-600">
-              <span>ยอดรวม (Subtotal):</span>
-              <span>฿{order.subtotal.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-base font-black text-stone-950 pt-1 border-t border-stone-100">
-              <span>ยอดสุทธิที่ต้องชำระ (Total Due):</span>
-              <span className="text-orange-600 text-lg">฿{order.totalPrice.toLocaleString()}</span>
-            </div>
-          </div>
-
-          {/* DYNAMIC PROMPTPAY QR PAYMENT BOX FOR CUSTOMER SCAN */}
-          <div className="p-3.5 rounded-2xl bg-white border-2 border-blue-200 text-center space-y-2 font-sans shadow-xs">
-            <div className="flex items-center justify-center gap-1.5 text-blue-900 font-black text-xs">
-              <QrCode className="w-4 h-4 text-blue-700" />
-              <span>สแกนจ่ายผ่านพร้อมเพย์ (PromptPay QR)</span>
-            </div>
-
-            <div className="p-2 bg-white rounded-xl inline-block border border-blue-100 shadow-2xs">
-              <canvas ref={qrCanvasRef} className="mx-auto rounded-lg" />
-            </div>
-
-            <div className="space-y-0.5 text-xs text-stone-700">
-              <p className="font-bold text-stone-900">{storeConfig.promptpayName}</p>
-              <p className="text-[11px] text-stone-500 font-mono">PromptPay: {storeConfig.promptpayNumber}</p>
-              <p className="text-[10px] text-blue-700 font-semibold pt-0.5">
-                ยอดเงินระบุอัตโนมัติ ฿{order.totalPrice.toLocaleString()} • ปลอดภัยไร้เงินสด
-              </p>
-            </div>
-          </div>
-
-          {/* Payment Status Label */}
-          <div className="p-2 rounded-xl bg-stone-100/80 flex items-center justify-between font-sans text-xs">
-            <span className="text-stone-500">สถานะบิล (Status):</span>
-            <span className={`font-black px-2.5 py-0.5 rounded text-[10px] ${
-              order.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-            }`}>
-              {order.paymentStatus === 'paid' ? '✓ ชำระแล้ว (Paid)' : 'รอการชำระเงิน (Pending Payment)'}
+            <span className="font-black text-xs sm:text-sm">
+              {language === 'th' ? 'พิมพ์ใบเสร็จรับเงิน / ใบกำกับภาษี' : 'Print Receipt & Tax Invoice'}
             </span>
           </div>
 
-          {/* Thank you note & footer */}
-          <div className="text-center pt-1 space-y-1 font-sans text-[11px] text-stone-400">
-            <p className="font-bold text-stone-600">*** ขอบคุณที่ใช้บริการ (Thank You) ***</p>
-            <p className="text-[10px]">Please come again • Order Easy Enjoy More</p>
-          </div>
-        </div>
-
-        {/* Footer (Hidden on print) */}
-        <div className="p-4 bg-stone-50 border-t border-stone-200 flex items-center justify-between flex-shrink-0 print:hidden">
-          <button
-            onClick={handlePrint}
-            className="flex-1 py-3 bg-stone-900 hover:bg-black active:scale-98 text-white font-black text-xs rounded-2xl flex items-center justify-center gap-2 transition cursor-pointer mr-2 shadow-xs"
-          >
-            <Printer className="w-4 h-4" />
-            <span>{language === 'th' ? 'สั่งพิมพ์ใบเสร็จ (Print Slip)' : 'Print Receipt'}</span>
-          </button>
           <button
             onClick={onClose}
-            className="px-5 py-3 bg-stone-200 hover:bg-stone-300 text-stone-700 font-bold text-xs rounded-2xl transition cursor-pointer active:scale-95"
+            className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-stone-300 flex items-center justify-center transition cursor-pointer"
+            title="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Document Type Selector Tabs (Hidden on Print) */}
+        <div className="p-3 bg-stone-100/90 border-b border-stone-200 flex-shrink-0 print:hidden space-y-2.5">
+          <div className="grid grid-cols-2 gap-1.5 bg-stone-200/80 p-1 rounded-2xl text-xs font-black">
+            <button
+              type="button"
+              onClick={() => {
+                setDocType('abbreviated');
+                setShowTaxForm(false);
+              }}
+              className={`py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                docType === 'abbreviated' ? 'bg-white text-stone-900 shadow-2xs' : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5 text-orange-500" />
+              <span>{language === 'th' ? 'ใบเสร็จอย่างย่อ (สลิป POS)' : 'Abbreviated Slip'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setDocType('fullTax');
+                setShowTaxForm(true);
+              }}
+              className={`py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                docType === 'fullTax' ? 'bg-white text-stone-900 shadow-2xs' : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{language === 'th' ? 'ใบกำกับภาษีเต็มรูป (มาตรา 86/4)' : 'Full Tax Invoice'}</span>
+            </button>
+          </div>
+
+          {/* Customer Tax Info Toggle Form (Visible ONLY in Full Tax Mode) */}
+          {docType === 'fullTax' && (
+            <div className="bg-white rounded-2xl p-3.5 border border-stone-200 shadow-2xs space-y-3">
+              <div 
+                onClick={() => setShowTaxForm(!showTaxForm)}
+                className="flex items-center justify-between cursor-pointer select-none"
+              >
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span className="text-xs font-black text-stone-900">
+                    {language === 'th' ? 'ข้อมูลผู้ขอใบกำกับภาษี (Customer Tax Details)' : 'Customer Tax Info'}
+                  </span>
+                  {taxInfo.name && (
+                    <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-md">
+                      ระบุแล้ว
+                    </span>
+                  )}
+                </div>
+                {showTaxForm ? <ChevronUp className="w-4 h-4 text-stone-400" /> : <ChevronDown className="w-4 h-4 text-stone-400" />}
+              </div>
+
+              {showTaxForm && (
+                <div className="space-y-2.5 pt-1 text-xs animate-in fade-in">
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-1.5 font-bold text-stone-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="custType"
+                        checked={taxInfo.customerType === 'individual'}
+                        onChange={() => setTaxInfo({ ...taxInfo, customerType: 'individual' })}
+                      />
+                      <span>บุคคลธรรมดา</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 font-bold text-stone-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="custType"
+                        checked={taxInfo.customerType === 'corporate'}
+                        onChange={() => setTaxInfo({ ...taxInfo, customerType: 'corporate' })}
+                      />
+                      <span>นิติบุคคล / บริษัท</span>
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-stone-600 mb-0.5">
+                        {taxInfo.customerType === 'corporate' ? 'ชื่อบริษัท / นิติบุคคล *' : 'ชื่อ-นามสกุล ผู้ซื้อ *'}
+                      </label>
+                      <input
+                        type="text"
+                        value={taxInfo.name}
+                        onChange={(e) => setTaxInfo({ ...taxInfo, name: e.target.value })}
+                        placeholder={taxInfo.customerType === 'corporate' ? 'บริษัท ตัวอย่าง จำกัด' : 'นายสมชาย ใจดี'}
+                        className="w-full px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:border-orange-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-stone-600 mb-0.5">
+                        เลขประจำตัวผู้เสียภาษี 13 หลัก *
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={13}
+                        value={taxInfo.taxId}
+                        onChange={(e) => setTaxInfo({ ...taxInfo, taxId: e.target.value.replace(/[^0-9]/g, '') })}
+                        placeholder="1234567890123"
+                        className="w-full px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono font-bold focus:bg-white focus:outline-none focus:border-orange-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-stone-600 mb-0.5">
+                        สาขา (Branch)
+                      </label>
+                      <input
+                        type="text"
+                        value={taxInfo.branch}
+                        onChange={(e) => setTaxInfo({ ...taxInfo, branch: e.target.value })}
+                        placeholder="00000 (สำนักงานใหญ่)"
+                        className="w-full px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:border-orange-500"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-bold text-stone-600 mb-0.5">
+                        ที่อยู่ตามทะเบียนภาษี *
+                      </label>
+                      <input
+                        type="text"
+                        value={taxInfo.address}
+                        onChange={(e) => setTaxInfo({ ...taxInfo, address: e.target.value })}
+                        placeholder="เลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์"
+                        className="w-full px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:border-orange-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Document Body (Printable Area) */}
+        <div className="p-6 overflow-y-auto font-sans text-stone-800 bg-[#fffdfa] print:p-2 print:overflow-visible print:bg-white">
+          
+          {/* ======================================================== */}
+          {/* OPTION A: ABBREVIATED POS THERMAL RECEIPT SLIP           */}
+          {/* ======================================================== */}
+          {docType === 'abbreviated' && (
+            <div className="space-y-4 max-w-sm mx-auto">
+              {/* Store Logo & Header */}
+              <div className="text-center space-y-1.5 pb-3 border-b border-dashed border-stone-300">
+                <div className="w-14 h-14 mx-auto rounded-2xl overflow-hidden p-0.5 border border-stone-200 shadow-2xs">
+                  <img src={CAFE_ORDER_LOGO_DATA_URI} alt="Logo" className="w-full h-full object-cover rounded-xl" />
+                </div>
+                <h2 className="font-black text-lg tracking-tight text-stone-950">
+                  {language === 'en' ? storeConfig.nameEn || storeConfig.name : storeConfig.name}
+                </h2>
+                <p className="text-[11px] font-black text-stone-600 uppercase tracking-wider">
+                  ใบเสร็จรับเงิน / ใบกำกับภาษีอย่างย่อ
+                </p>
+                <p className="text-[10px] text-stone-500">
+                  เลขประจำตัวผู้เสียภาษี: {storeConfig.taxId || '0105566012345'}
+                </p>
+                <p className="text-[10px] text-stone-400">
+                  {storeConfig.address || '123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110'}
+                </p>
+              </div>
+
+              {/* Receipt Meta */}
+              <div className="text-xs space-y-1 py-1 border-b border-dashed border-stone-300">
+                <div className="flex justify-between font-bold">
+                  <span>เลขที่ออเดอร์ (Order #):</span>
+                  <span className="font-black text-stone-900">{order.orderNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>ตำแหน่ง (Table):</span>
+                  <span className="font-black bg-stone-100 px-2 py-0.5 rounded text-stone-900">
+                    {order.tableNumber === 'TAKEAWAY' ? (language === 'th' ? 'สั่งกลับบ้าน (Takeaway)' : 'Takeaway') : `โต๊ะ ${order.tableNumber}`}
+                  </span>
+                </div>
+                <div className="flex justify-between text-stone-500 text-[11px]">
+                  <span>วันที่ & เวลา (Date):</span>
+                  <span>{formattedDate} {formattedTime}</span>
+                </div>
+              </div>
+
+              {/* Itemized List */}
+              <div className="space-y-2 py-2 border-b border-dashed border-stone-300 text-xs">
+                <div className="flex justify-between text-[11px] font-black text-stone-400 uppercase">
+                  <span>รายการ (Items)</span>
+                  <span>จำนวนเงิน</span>
+                </div>
+
+                {order.items.map((item, idx) => (
+                  <div key={idx} className="space-y-0.5">
+                    <div className="flex justify-between font-bold text-stone-900">
+                      <div className="flex items-start gap-1 max-w-[75%]">
+                        <span className="text-orange-600 font-black">{item.quantity}x</span>
+                        <span>{language === 'en' && item.menuItem.nameEn ? item.menuItem.nameEn : item.menuItem.name}</span>
+                      </div>
+                      <span>฿{item.totalItemPrice.toLocaleString()}</span>
+                    </div>
+
+                    {item.selectedOptions && item.selectedOptions.length > 0 && (
+                      <div className="pl-5 text-[10px] text-stone-500 space-y-0.5">
+                        {item.selectedOptions.map((opt, i) => (
+                          <div key={i} className="flex justify-between">
+                            <span>• {opt.choiceName}</span>
+                            {opt.priceDelta > 0 && <span>+฿{opt.priceDelta * item.quantity}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {item.specialNote && (
+                      <div className="pl-5 text-[10px] text-amber-800 italic">
+                        Note: {item.specialNote}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Totals & Net */}
+              <div className="space-y-1.5 py-2 border-b border-dashed border-stone-300 text-xs">
+                <div className="flex justify-between text-stone-600">
+                  <span>มูลค่าสินค้าก่อนภาษี (Tax Base):</span>
+                  <span>฿{taxBase.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-stone-600">
+                  <span>ภาษีมูลค่าเพิ่ม 7% (VAT 7%):</span>
+                  <span>฿{vatAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-base font-black text-stone-950 pt-1 border-t border-stone-200">
+                  <span>ยอดสุทธิ (Total Due):</span>
+                  <span className="text-orange-600 text-lg">฿{totalAmount.toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* PROMPTPAY QR PAYMENT BOX */}
+              <div className="p-3.5 rounded-2xl bg-white border-2 border-blue-200 text-center space-y-2 shadow-xs">
+                <div className="flex items-center justify-center gap-1.5 text-blue-900 font-black text-xs">
+                  <QrCode className="w-4 h-4 text-blue-700" />
+                  <span>สแกนจ่ายผ่านพร้อมเพย์ (PromptPay QR)</span>
+                </div>
+
+                <div className="p-2 bg-white rounded-xl inline-block border border-blue-100 shadow-2xs">
+                  <canvas ref={qrCanvasRef} className="mx-auto rounded-lg" />
+                </div>
+
+                <div className="space-y-0.5 text-xs text-stone-700">
+                  <p className="font-bold text-stone-900">{storeConfig.promptpayName}</p>
+                  <p className="text-[11px] text-stone-500 font-mono">PromptPay: {storeConfig.promptpayNumber}</p>
+                  <p className="text-[10px] text-blue-700 font-semibold pt-0.5">
+                    ยอดเงินระบุอัตโนมัติ ฿{order.totalPrice.toLocaleString()} • ปลอดภัยไร้เงินสด
+                  </p>
+                </div>
+              </div>
+
+              {/* Thank you note & footer */}
+              <div className="text-center pt-1 space-y-1 text-[11px] text-stone-400">
+                <p className="font-bold text-stone-600">*** ขอบคุณที่ใช้บริการ (Thank You) ***</p>
+                <p className="text-[10px]">ราคานี้รวมภาษีมูลค่าเพิ่ม 7% แล้ว (VAT Included)</p>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* OPTION B: FULL LEGAL TAX INVOICE (มาตรา 86/4)             */}
+          {/* ======================================================== */}
+          {docType === 'fullTax' && (
+            <div className="space-y-5 text-xs">
+              
+              {/* Official Header */}
+              <div className="border-b-2 border-stone-800 pb-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <h2 className="text-lg font-black text-stone-950">
+                      {storeConfig.name}
+                    </h2>
+                    <p className="text-xs font-bold text-stone-700">
+                      {storeConfig.nameEn || 'Cafe Order Enterprise'}
+                    </p>
+                    <p className="text-[11px] text-stone-600 max-w-sm">
+                      {storeConfig.address || '123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110'}
+                    </p>
+                    <p className="text-[11px] font-bold text-stone-900">
+                      เลขประจำตัวผู้เสียภาษีอากร: <span className="font-mono">{storeConfig.taxId || '0105566012345'}</span> ({storeConfig.branchNumber || 'สำนักงานใหญ่'})
+                    </p>
+                  </div>
+
+                  <div className="text-right space-y-1 flex-shrink-0">
+                    <div className="bg-stone-900 text-white font-black px-3 py-1.5 rounded-lg text-xs tracking-wider inline-block">
+                      ใบเสร็จรับเงิน / ใบกำกับภาษี
+                    </div>
+                    <p className="text-[10px] font-bold text-stone-500 uppercase">
+                      TAX INVOICE / RECEIPT (ต้นฉบับ)
+                    </p>
+                    <p className="text-xs font-mono font-bold text-stone-900 pt-1">
+                      เลขที่ (INV #): {order.orderNumber}
+                    </p>
+                    <p className="text-[11px] text-stone-600">
+                      วันที่ (Date): {formattedDate} {formattedTime}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer Legal Tax Details Box */}
+              <div className="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 space-y-1.5">
+                <div className="font-black text-stone-900 text-xs flex items-center gap-1.5 border-b border-stone-200 pb-1">
+                  <User className="w-3.5 h-3.5 text-stone-600" />
+                  <span>ข้อมูลผู้ซื้อ / ผู้รับบริการ (Customer Information):</span>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 pt-1 text-[11px]">
+                  <p>
+                    <span className="font-bold text-stone-600">ชื่อผู้ซื้อ: </span>
+                    <span className="font-bold text-stone-900">{taxInfo.name || '(ลูกค้าทั่วไป / ไม่ประสงค์ออกนาม)'}</span>
+                  </p>
+                  <p>
+                    <span className="font-bold text-stone-600">เลขประจำตัวผู้เสียภาษี: </span>
+                    <span className="font-mono font-bold text-stone-900">{taxInfo.taxId || '-'}</span>
+                  </p>
+                  <p>
+                    <span className="font-bold text-stone-600">สาขา: </span>
+                    <span className="font-medium text-stone-800">{taxInfo.branch || 'สำนักงานใหญ่'}</span>
+                  </p>
+                  <p>
+                    <span className="font-bold text-stone-600">ตำแหน่ง/โต๊ะ: </span>
+                    <span className="font-medium text-stone-800">โต๊ะ {order.tableNumber}</span>
+                  </p>
+                  <p className="sm:col-span-2">
+                    <span className="font-bold text-stone-600">ที่อยู่: </span>
+                    <span className="font-medium text-stone-800">{taxInfo.address || '-'}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Full Legal Items Table */}
+              <table className="w-full border-collapse text-xs">
+                <thead>
+                  <tr className="border-y-2 border-stone-800 bg-stone-100 font-black text-stone-900 text-[11px]">
+                    <th className="py-2 px-2 text-center w-10">ลำดับ</th>
+                    <th className="py-2 px-2 text-left">รายการสินค้า / บริการ</th>
+                    <th className="py-2 px-2 text-center w-16">จำนวน</th>
+                    <th className="py-2 px-2 text-right w-24">ราคา/หน่วย</th>
+                    <th className="py-2 px-2 text-right w-24">จำนวนเงิน</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-200">
+                  {order.items.map((item, idx) => (
+                    <tr key={idx} className="align-top">
+                      <td className="py-2 px-2 text-center text-stone-500 font-mono">{idx + 1}</td>
+                      <td className="py-2 px-2">
+                        <p className="font-bold text-stone-900">{item.menuItem.name}</p>
+                        {item.selectedOptions && item.selectedOptions.length > 0 && (
+                          <p className="text-[10px] text-stone-500">
+                            {item.selectedOptions.map((o) => o.choiceName).join(', ')}
+                          </p>
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-center font-bold text-stone-900">{item.quantity}</td>
+                      <td className="py-2 px-2 text-right font-mono">฿{item.unitPriceWithDelta.toLocaleString()}</td>
+                      <td className="py-2 px-2 text-right font-mono font-bold text-stone-900">฿{item.totalItemPrice.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Legal Tax Calculations Breakdown */}
+              <div className="border-t-2 border-stone-800 pt-3 flex flex-col sm:flex-row justify-between items-start gap-4">
+                <div className="text-[11px] text-stone-500 space-y-1">
+                  <p className="font-bold text-stone-700">การชำระเงิน: {order.paymentMethod === 'promptpay' ? 'พร้อมเพย์ (PromptPay)' : 'เงินสด (Cash)'}</p>
+                  <p>สถานะการชำระ: {order.paymentStatus === 'paid' ? 'ชำระเงินเรียบร้อยแล้ว' : 'รอรับชำระ'}</p>
+                  <p className="text-[10px] text-stone-400 pt-2">เอกสารนี้ออกโดยระบบอัตโนมัติ ถูกต้องตามมาตรา 86/4 แห่งประมวลรัษฎากร</p>
+                </div>
+
+                <div className="w-full sm:w-64 space-y-1.5 text-xs">
+                  <div className="flex justify-between text-stone-600">
+                    <span>รวมมูลค่าสินค้า (Subtotal):</span>
+                    <span className="font-mono font-bold">฿{totalAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-stone-600">
+                    <span>มูลค่าก่อนภาษี (Tax Base):</span>
+                    <span className="font-mono">฿{taxBase.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-stone-600">
+                    <span>ภาษีมูลค่าเพิ่ม 7% (VAT 7%):</span>
+                    <span className="font-mono">฿{vatAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-black text-stone-950 pt-1.5 border-t border-stone-800">
+                    <span>จำนวนเงินรวมทั้งสิ้น:</span>
+                    <span className="font-mono text-orange-600 text-base">฿{totalAmount.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Signature Section (For Printed Legal Invoices) */}
+              <div className="pt-6 grid grid-cols-2 gap-8 text-center text-[11px] text-stone-500">
+                <div className="space-y-8">
+                  <p>ผู้รับบริการ / ผู้จ่ายเงิน</p>
+                  <p className="border-t border-dotted border-stone-400 pt-1 font-bold text-stone-700">ลงชื่อ ...................................................</p>
+                </div>
+                <div className="space-y-8">
+                  <p>ผู้รับเงิน / ผู้มีอำนาจลงนาม</p>
+                  <p className="border-t border-dotted border-stone-400 pt-1 font-bold text-stone-700">ลงชื่อ ...................................................</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Bottom Controls (Single Clean Print & Close Bar, Hidden on Print) */}
+        <div className="p-4 bg-stone-50 border-t border-stone-200 flex items-center justify-between flex-shrink-0 print:hidden">
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="flex-1 py-3 bg-stone-900 hover:bg-black active:scale-98 text-white font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 transition cursor-pointer mr-2 shadow-md shadow-stone-900/10"
+          >
+            <Printer className="w-4 h-4 text-orange-400" />
+            <span>
+              {docType === 'abbreviated'
+                ? (language === 'th' ? 'สั่งพิมพ์สลิปใบเสร็จ (Print POS Slip)' : 'Print POS Slip')
+                : (language === 'th' ? 'สั่งพิมพ์ใบกำกับภาษีเต็มรูป (Print Full Tax Invoice)' : 'Print Full Tax Invoice')}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-6 py-3 bg-stone-200 hover:bg-stone-300 text-stone-700 font-bold text-xs sm:text-sm rounded-2xl transition cursor-pointer active:scale-95"
           >
             {language === 'th' ? 'ปิด' : 'Close'}
           </button>

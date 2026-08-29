@@ -12,6 +12,9 @@ export const initialStoreConfig: StoreConfig = {
   promptpayName: "คาเฟ่ ออเดอร์ (Cafe Order)",
   openTime: "08:00 - 22:00 น.",
   tableCount: 15,
+  taxId: "0105566012345",
+  address: "123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110",
+  branchNumber: "00000 (สำนักงานใหญ่)",
 };
 
 export const initialCategories: MenuCategory[] = [

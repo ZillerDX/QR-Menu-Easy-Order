@@ -245,6 +245,58 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
           </div>
         </div>
 
+        {/* Store Tax & Legal Info (For Official Tax Invoices) */}
+        <div className="pt-4 border-t border-stone-100 space-y-4">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-emerald-600" />
+            <h3 className="font-black text-sm text-stone-900">
+              {language === 'th' ? 'ข้อมูลภาษีและที่อยู่ร้านค้า (สำหรับออกใบกำกับภาษีเต็มรูป)' : 'Store Tax & Legal Invoice Information'}
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block font-black text-stone-800 text-xs sm:text-sm mb-1.5">
+                {language === 'th' ? 'เลขประจำตัวผู้เสียภาษีอากร 13 หลัก (Tax ID)' : 'Store Tax ID (13 digits)'}
+              </label>
+              <input
+                type="text"
+                maxLength={13}
+                value={formData.taxId || ''}
+                onChange={(e) => setFormData({ ...formData, taxId: e.target.value.replace(/[^0-9]/g, '') })}
+                className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-mono font-bold text-sm"
+                placeholder="0105566012345"
+              />
+            </div>
+
+            <div>
+              <label className="block font-black text-stone-800 text-xs sm:text-sm mb-1.5">
+                {language === 'th' ? 'สาขาที่ (Branch)' : 'Branch Info'}
+              </label>
+              <input
+                type="text"
+                value={formData.branchNumber || ''}
+                onChange={(e) => setFormData({ ...formData, branchNumber: e.target.value })}
+                className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm"
+                placeholder="00000 (สำนักงานใหญ่)"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-black text-stone-800 text-xs sm:text-sm mb-1.5">
+              {language === 'th' ? 'ที่อยู่ร้านค้าตามทะเบียนภาษี (Store Address)' : 'Official Registered Address'}
+            </label>
+            <textarea
+              rows={2}
+              value={formData.address || ''}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 text-sm font-medium"
+              placeholder="123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110"
+            />
+          </div>
+        </div>
+
         {/* Submit */}
         <div className="pt-4 border-t border-stone-100 flex items-center justify-end">
           <button

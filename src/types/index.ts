@@ -90,4 +90,7 @@ export interface StoreConfig {
   promptpayName: string;
   openTime: string;
   tableCount: number;
+  taxId?: string;
+  address?: string;
+  branchNumber?: string;
 }
