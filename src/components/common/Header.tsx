@@ -150,18 +150,6 @@ export const Header: React.FC<HeaderProps> = ({
             </>
           )}
 
-          {/* PORTAL VIEW WITHOUT USER: Professional Sign In Button */}
-          {!isCustomerView && !user && (
-            <button
-              type="button"
-              onClick={onOpenAuth}
-              className="h-9 px-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-black shadow-md shadow-orange-500/25 active:scale-95 transition cursor-pointer flex items-center gap-1.5"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>{language === 'th' ? 'เข้าสู่ระบบร้านค้า' : 'Staff Sign In'}</span>
-            </button>
-          )}
-
           {/* STAFF LOGGED IN ROLE BADGES & LOGOUT */}
           {user && (
             <>

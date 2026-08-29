@@ -555,6 +555,9 @@ export function App() {
             storeConfig={storeConfig}
             language={language}
             onOpenAuth={() => setIsAuthModalOpen(true)}
+            onLoginSuccess={() => {
+              setActiveRole('kitchen');
+            }}
             onEnterSimulator={(tbl) => {
               if (tbl) setTableNumber(tbl);
               setIsSimulatorMode(true);
