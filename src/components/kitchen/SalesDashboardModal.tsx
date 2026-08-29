@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { 
-  X, Calendar, TrendingUp, DollarSign, Receipt, CreditCard, Banknote, 
-  Sparkles, Award, Clock, ArrowUpRight, Printer, Download, Filter, BarChart3, 
-  ChevronRight, ArrowRight, CheckCircle2, Flame, PieChart, ShoppingBag, Eye
+  X, Calendar, TrendingUp, Receipt, CreditCard, 
+  Award, Clock, Printer, Download, BarChart3, 
+  ArrowRight, CheckCircle2, Flame, ShoppingBag,
+  CalendarRange, Sparkles, Check
 } from 'lucide-react';
 import { Order, Language } from '../../types';
 import { t } from '../../utils/i18n';
@@ -170,7 +171,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     const rows = filteredOrders.map((o) => [
       o.orderNumber,
       o.tableNumber,
-      new Date(o.createdAt).toLocaleString('th-TH'),
+      new Date(o.createdAt).toLocaleString(language === 'th' ? 'th-TH' : 'en-US'),
       o.items.reduce((s, i) => s + i.quantity, 0),
       o.paymentMethod,
       o.paymentStatus,
@@ -195,125 +196,255 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
       case '7days': return language === 'th' ? '7 วันล่าสุด' : '7 Days';
       case '30days': return language === 'th' ? '30 วันล่าสุด' : '30 Days';
       case 'all': return language === 'th' ? 'ทั้งหมด' : 'All Time';
-      case 'custom': return language === 'th' ? 'กำหนดเอง' : 'Custom';
+      case 'custom': return language === 'th' ? 'กำหนดช่วงเวลา' : 'Custom Range';
+    }
+  };
+
+  const formatDisplayDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr + 'T00:00:00');
+      return d.toLocaleDateString(language === 'th' ? 'th-TH' : 'en-US', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const daysSelectedCount = useMemo(() => {
+    if (!customStart || !customEnd) return 1;
+    try {
+      const s = new Date(customStart + 'T00:00:00').getTime();
+      const e = new Date(customEnd + 'T00:00:00').getTime();
+      const diff = Math.round(Math.abs(e - s) / (1000 * 60 * 60 * 24)) + 1;
+      return diff;
+    } catch {
+      return 1;
+    }
+  }, [customStart, customEnd]);
+
+  const setShortcutRange = (type: 'thisWeek' | 'thisMonth' | 'lastMonth' | 'last7' | 'last30') => {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+
+    if (type === 'thisWeek') {
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(now.setDate(diff));
+      setCustomStart(monday.toISOString().split('T')[0]);
+      setCustomEnd(todayStr);
+    } else if (type === 'thisMonth') {
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      setCustomStart(firstDay.toISOString().split('T')[0]);
+      setCustomEnd(todayStr);
+    } else if (type === 'lastMonth') {
+      const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+      setCustomStart(firstDayLastMonth.toISOString().split('T')[0]);
+      setCustomEnd(lastDayLastMonth.toISOString().split('T')[0]);
+    } else if (type === 'last7') {
+      const d = new Date();
+      d.setDate(d.getDate() - 6);
+      setCustomStart(d.toISOString().split('T')[0]);
+      setCustomEnd(todayStr);
+    } else if (type === 'last30') {
+      const d = new Date();
+      d.setDate(d.getDate() - 29);
+      setCustomStart(d.toISOString().split('T')[0]);
+      setCustomEnd(todayStr);
     }
   };
 
   const modalContent = (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-stone-950/85 backdrop-blur-md transition-opacity"
-        onClick={onClose}
-      />
-
-      {/* Modal Card Container */}
-      <div className="relative w-full max-w-5xl bg-[#fbfbfa] rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+      
+      {/* Modal Dialog Card */}
+      <div className="relative w-full max-w-5xl bg-[#fffdfa] rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 flex flex-col max-h-[92vh]">
         
-        {/* 1. Header with Modern Slate Styling & Glow Tag */}
-        <div className="px-5 sm:px-7 py-4 sm:py-5 border-b border-stone-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-gradient-to-r from-stone-950 via-stone-900 to-stone-950 text-white flex-shrink-0 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-80 h-full bg-radial from-emerald-500/10 to-transparent pointer-events-none" />
-          
-          <div className="flex items-center gap-3.5 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-400 to-emerald-300 text-stone-950 flex items-center justify-center shadow-lg shadow-emerald-500/20 flex-shrink-0 font-black ring-2 ring-emerald-400/30">
-              <BarChart3 className="w-6 h-6 stroke-[2.5]" />
+        {/* 1. Header (Consistent Warm Minimalist Design) */}
+        <div className="px-6 py-4 sm:py-5 border-b border-stone-100 flex items-center justify-between bg-[#fffdfa] flex-shrink-0">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 border border-emerald-200 text-emerald-600 flex items-center justify-center shadow-2xs flex-shrink-0">
+              <BarChart3 className="w-5 h-5 text-emerald-600 stroke-[2.5]" />
             </div>
             <div>
-              <div className="flex items-center gap-2.5">
-                <h3 className="font-black text-lg sm:text-xl tracking-tight text-white">
-                  {language === 'th' ? 'แดชบอร์ดสรุปยอดขาย' : 'Sales Analytics'}
-                </h3>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Live Sync
-                </span>
-              </div>
-              <p className="text-xs text-stone-400 font-medium mt-0.5">
-                {language === 'th' ? 'รายงานผลการขาย สินค้าขายดี และช่วงเวลาพีคแบบเรียลไทม์' : 'Real-time revenue, top selling dishes, and peak business hours'}
+              <h3 className="font-black text-stone-900 text-base sm:text-lg tracking-tight">
+                {language === 'th' ? 'แดชบอร์ดสรุปยอดขาย' : 'Sales Analytics'}
+              </h3>
+              <p className="text-xs text-stone-500 font-medium mt-0.5">
+                {language === 'th' ? 'รายงานผลการขาย สินค้าขายดี และช่วงเวลาพีคของร้าน' : 'Real-time revenue, top selling dishes, and peak business hours'}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-end sm:self-auto relative z-10">
+          {/* Header Action Tools */}
+          <div className="flex items-center gap-2">
             <button
               onClick={handleExportCSV}
-              className="px-3.5 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-stone-200 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-white/10 hover:text-white"
+              className="px-3.5 py-2 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-stone-200/80"
               title="Export CSV Data"
             >
-              <Download className="w-4 h-4 text-emerald-400" />
-              <span className="font-bold">CSV</span>
+              <Download className="w-3.5 h-3.5 text-emerald-600" />
+              <span>CSV</span>
             </button>
             <button
               onClick={handlePrint}
-              className="px-3.5 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-stone-200 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-white/10 hover:text-white"
+              className="px-3.5 py-2 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-stone-200/80"
               title="Print Summary Report"
             >
-              <Printer className="w-4 h-4 text-amber-400" />
-              <span className="font-bold">{language === 'th' ? 'พิมพ์รายงาน' : 'Print'}</span>
+              <Printer className="w-3.5 h-3.5 text-amber-600" />
+              <span>{language === 'th' ? 'พิมพ์รายงาน' : 'Print'}</span>
             </button>
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-2xl bg-white/10 hover:bg-white/20 text-stone-300 hover:text-white flex items-center justify-center transition cursor-pointer active:scale-95 ml-1"
+              className="w-9 h-9 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-800 flex items-center justify-center transition cursor-pointer active:scale-95 ml-1"
+              title={t('close', language)}
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         {/* 2. Scrollable Body Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 min-h-0">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 min-h-0 bg-[#fafaf9]">
           
-          {/* Time Range Filter Floating Pill Bar */}
-          <div className="bg-white rounded-3xl p-3 sm:p-3.5 border border-stone-200/80 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-            <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 no-scrollbar">
-              {(['today', 'yesterday', '7days', '30days', 'all', 'custom'] as TimePreset[]).map((p) => {
-                const isActive = preset === p;
-                return (
-                  <button
-                    key={p}
-                    onClick={() => setPreset(p)}
-                    className={`px-3.5 sm:px-4 py-2 rounded-2xl text-xs font-black transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-95 ${
-                      isActive
-                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/25 ring-2 ring-emerald-500/20'
-                        : 'bg-stone-100/90 hover:bg-stone-200/80 text-stone-700 hover:text-stone-900 border border-stone-200/60'
-                    }`}
-                  >
-                    {getPresetLabel(p)}
-                  </button>
-                );
-              })}
+          {/* Time Range Filter Bar */}
+          <div className="bg-white rounded-3xl p-3 sm:p-4 border border-stone-200/80 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 no-scrollbar">
+                {(['today', 'yesterday', '7days', '30days', 'all', 'custom'] as TimePreset[]).map((p) => {
+                  const isActive = preset === p;
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => setPreset(p)}
+                      className={`px-3.5 sm:px-4 py-2 rounded-2xl text-xs font-black transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-95 ${
+                        isActive
+                          ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/25 ring-2 ring-emerald-500/20'
+                          : 'bg-stone-50 hover:bg-stone-100 text-stone-600 hover:text-stone-900 border border-stone-200/70'
+                      }`}
+                    >
+                      {getPresetLabel(p)}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {preset === 'custom' && (
+                <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-3 py-1 rounded-full flex items-center gap-1.5">
+                  <CalendarRange className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>{daysSelectedCount} {language === 'th' ? 'วันที่เลือก' : 'days selected'}</span>
+                </span>
+              )}
             </div>
 
-            {/* Custom Date Pickers */}
+            {/* Redesigned Premium Custom Date Picker Drawer */}
             {preset === 'custom' && (
-              <div className="flex items-center gap-2 w-full md:w-auto animate-in fade-in bg-stone-50 p-1.5 rounded-2xl border border-stone-200">
-                <input
-                  type="date"
-                  value={customStart}
-                  onChange={(e) => setCustomStart(e.target.value)}
-                  className="px-2.5 py-1 rounded-xl border border-stone-200 text-xs font-bold bg-white text-stone-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
-                <span className="text-xs text-stone-400 font-black">{language === 'th' ? 'ถึง' : 'to'}</span>
-                <input
-                  type="date"
-                  value={customEnd}
-                  onChange={(e) => setCustomEnd(e.target.value)}
-                  className="px-2.5 py-1 rounded-xl border border-stone-200 text-xs font-bold bg-white text-stone-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
+              <div className="p-4 bg-stone-50/80 rounded-2xl border border-stone-200/80 space-y-3.5 animate-in fade-in slide-in-from-top-2 duration-200">
+                {/* Date Inputs Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-center">
+                  
+                  {/* Start Date Card */}
+                  <div className="lg:col-span-2 bg-white rounded-2xl p-3 border border-stone-200/90 shadow-2xs hover:border-emerald-400 transition group">
+                    <label className="block text-[11px] font-black text-stone-500 uppercase tracking-wider mb-1 flex items-center justify-between">
+                      <span>{language === 'th' ? 'วันที่เริ่มต้น (Start Date)' : 'Start Date'}</span>
+                      <span className="text-emerald-700 font-black text-xs">{formatDisplayDate(customStart)}</span>
+                    </label>
+                    <div className="relative flex items-center mt-1">
+                      <Calendar className="w-4 h-4 text-stone-400 absolute left-3 pointer-events-none group-hover:text-emerald-600 transition" />
+                      <input
+                        type="date"
+                        value={customStart}
+                        onChange={(e) => setCustomStart(e.target.value)}
+                        className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-stone-200/80 bg-stone-50/50 text-xs font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Middle Arrow Indicator */}
+                  <div className="hidden lg:flex items-center justify-center text-stone-400">
+                    <div className="w-8 h-8 rounded-full bg-white border border-stone-200 flex items-center justify-center text-stone-400 shadow-2xs">
+                      <ArrowRight className="w-4 h-4 text-emerald-600" />
+                    </div>
+                  </div>
+
+                  {/* End Date Card */}
+                  <div className="lg:col-span-2 bg-white rounded-2xl p-3 border border-stone-200/90 shadow-2xs hover:border-emerald-400 transition group">
+                    <label className="block text-[11px] font-black text-stone-500 uppercase tracking-wider mb-1 flex items-center justify-between">
+                      <span>{language === 'th' ? 'วันที่สิ้นสุด (End Date)' : 'End Date'}</span>
+                      <span className="text-emerald-700 font-black text-xs">{formatDisplayDate(customEnd)}</span>
+                    </label>
+                    <div className="relative flex items-center mt-1">
+                      <Calendar className="w-4 h-4 text-stone-400 absolute left-3 pointer-events-none group-hover:text-emerald-600 transition" />
+                      <input
+                        type="date"
+                        value={customEnd}
+                        onChange={(e) => setCustomEnd(e.target.value)}
+                        className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-stone-200/80 bg-stone-50/50 text-xs font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Date Range Shortcut Chips */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pt-1 no-scrollbar text-xs">
+                  <span className="text-[11px] font-black text-stone-400 uppercase tracking-wider mr-1 whitespace-nowrap">
+                    {language === 'th' ? 'ทางลัด:' : 'Shortcuts:'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShortcutRange('last7')}
+                    className="px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs"
+                  >
+                    {language === 'th' ? '7 วันที่แล้ว' : 'Last 7 Days'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShortcutRange('thisWeek')}
+                    className="px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs"
+                  >
+                    {language === 'th' ? 'สัปดาห์นี้' : 'This Week'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShortcutRange('thisMonth')}
+                    className="px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs"
+                  >
+                    {language === 'th' ? 'เดือนนี้' : 'This Month'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShortcutRange('lastMonth')}
+                    className="px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs"
+                  >
+                    {language === 'th' ? 'เดือนที่แล้ว' : 'Last Month'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShortcutRange('last30')}
+                    className="px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs"
+                  >
+                    {language === 'th' ? '30 วันที่แล้ว' : 'Last 30 Days'}
+                  </button>
+                </div>
               </div>
             )}
           </div>
 
           {/* 4 Premium KPI Stat Cards Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            
             {/* KPI 1: Total Sales */}
-            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-emerald-100 shadow-xs relative overflow-hidden flex flex-col justify-between group hover:shadow-md transition">
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/80 shadow-2xs relative overflow-hidden flex flex-col justify-between group hover:border-emerald-300 hover:shadow-md transition duration-200">
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-400" />
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black uppercase tracking-wider text-stone-400">
                   {language === 'th' ? 'ยอดขายรวม' : 'Total Revenue'}
                 </span>
-                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black shadow-xs">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black shadow-xs border border-emerald-100">
                   ฿
                 </div>
               </div>
@@ -321,7 +452,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                 <div className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
                   ฿{metrics.totalSales.toLocaleString()}
                 </div>
-                <div className="text-[11px] text-emerald-700 font-black flex items-center gap-1.5 mt-1 bg-emerald-50/80 px-2 py-0.5 rounded-lg w-fit">
+                <div className="text-[11px] text-emerald-700 font-bold flex items-center gap-1.5 mt-1 bg-emerald-50 px-2 py-0.5 rounded-lg w-fit border border-emerald-200/60">
                   <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                   <span>{metrics.totalBills} {language === 'th' ? 'บิลเสร็จสมบูรณ์' : 'completed bills'}</span>
                 </div>
@@ -329,13 +460,13 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
             </div>
 
             {/* KPI 2: Total Orders */}
-            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-orange-100 shadow-xs relative overflow-hidden flex flex-col justify-between group hover:shadow-md transition">
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/80 shadow-2xs relative overflow-hidden flex flex-col justify-between group hover:border-orange-300 hover:shadow-md transition duration-200">
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-amber-400" />
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black uppercase tracking-wider text-stone-400">
                   {language === 'th' ? 'จำนวนออเดอร์' : 'Total Orders'}
                 </span>
-                <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center font-black shadow-xs">
+                <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center font-black shadow-xs border border-orange-100">
                   <Receipt className="w-4 h-4" />
                 </div>
               </div>
@@ -343,20 +474,20 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                 <div className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
                   {metrics.totalBills} <span className="text-xs font-bold text-stone-400">{language === 'th' ? 'บิล' : 'bills'}</span>
                 </div>
-                <div className="text-[11px] text-orange-800 font-bold flex items-center gap-1.5 mt-1 bg-orange-50/80 px-2 py-0.5 rounded-lg w-fit">
+                <div className="text-[11px] text-orange-800 font-bold flex items-center gap-1.5 mt-1 bg-orange-50 px-2 py-0.5 rounded-lg w-fit border border-orange-200/60">
                   <span>{language === 'th' ? 'ในรอบเวลาที่เลือก' : 'in timeframe'}</span>
                 </div>
               </div>
             </div>
 
             {/* KPI 3: Average Ticket Size */}
-            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-blue-100 shadow-xs relative overflow-hidden flex flex-col justify-between group hover:shadow-md transition">
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/80 shadow-2xs relative overflow-hidden flex flex-col justify-between group hover:border-blue-300 hover:shadow-md transition duration-200">
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-400" />
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black uppercase tracking-wider text-stone-400">
                   {language === 'th' ? 'ยอดเฉลี่ย / บิล' : 'Avg. Ticket Size'}
                 </span>
-                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black shadow-xs">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black shadow-xs border border-blue-100">
                   <TrendingUp className="w-4 h-4" />
                 </div>
               </div>
@@ -364,20 +495,20 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                 <div className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
                   ฿{metrics.avgTicket.toLocaleString()}
                 </div>
-                <div className="text-[11px] text-blue-700 font-bold flex items-center gap-1.5 mt-1 bg-blue-50/80 px-2 py-0.5 rounded-lg w-fit">
+                <div className="text-[11px] text-blue-700 font-bold flex items-center gap-1.5 mt-1 bg-blue-50 px-2 py-0.5 rounded-lg w-fit border border-blue-200/60">
                   <span>{language === 'th' ? 'ค่าเฉลี่ยต่อใบเสร็จ' : 'per receipt'}</span>
                 </div>
               </div>
             </div>
 
             {/* KPI 4: Payment Split with Progress Visualizer */}
-            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-purple-100 shadow-xs relative overflow-hidden flex flex-col justify-between group hover:shadow-md transition">
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/80 shadow-2xs relative overflow-hidden flex flex-col justify-between group hover:border-purple-300 hover:shadow-md transition duration-200">
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-pink-400" />
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black uppercase tracking-wider text-stone-400">
                   {language === 'th' ? 'ช่องทางชำระเงิน' : 'Payment Split'}
                 </span>
-                <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-black shadow-xs">
+                <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-black shadow-xs border border-purple-100">
                   <CreditCard className="w-4 h-4" />
                 </div>
               </div>
@@ -421,13 +552,13 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             
             {/* Left Column: Top 5 Best Sellers with Ranking Badges & Progress */}
-            <div className="bg-white rounded-3xl p-5 border border-stone-200/90 shadow-xs space-y-3.5">
+            <div className="bg-white rounded-3xl p-5 border border-stone-200/90 shadow-2xs space-y-3.5">
               <div className="flex items-center justify-between border-b border-stone-100 pb-3">
                 <h4 className="font-black text-stone-900 text-sm sm:text-base flex items-center gap-2">
                   <Award className="w-5 h-5 text-amber-500" />
                   <span>{language === 'th' ? '5 อันดับเมนูขายดีที่สุด' : 'Top 5 Best Selling Dishes'}</span>
                 </h4>
-                <span className="text-[11px] font-black text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full">
+                <span className="text-[11px] font-black text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200/60">
                   {language === 'th' ? 'ยอดนิยม' : 'Popularity'}
                 </span>
               </div>
@@ -512,14 +643,14 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
             </div>
 
             {/* Right Column: Peak Hours 24-Hour Graph with Visualizer */}
-            <div className="bg-white rounded-3xl p-5 border border-stone-200/90 shadow-xs space-y-3.5 flex flex-col justify-between">
+            <div className="bg-white rounded-3xl p-5 border border-stone-200/90 shadow-2xs space-y-3.5 flex flex-col justify-between">
               <div className="flex items-center justify-between border-b border-stone-100 pb-3">
                 <h4 className="font-black text-stone-900 text-sm sm:text-base flex items-center gap-2">
                   <Clock className="w-5 h-5 text-blue-500" />
                   <span>{language === 'th' ? 'ช่วงเวลาที่มียอดขายสูงสุด' : 'Peak Hours & Traffic'}</span>
                 </h4>
                 {metrics.peakHourSales > 0 && (
-                  <span className="text-[11px] font-black text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                  <span className="text-[11px] font-black text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-orange-200/60">
                     <Flame className="w-3 h-3 text-orange-500" />
                     {language === 'th' ? `พีคสุด: ${metrics.peakHourIndex}:00 น.` : `Peak: ${metrics.peakHourIndex}:00`}
                   </span>
@@ -583,7 +714,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
           </div>
 
           {/* Section: Recent Orders Log in this period */}
-          <div className="bg-white rounded-3xl p-5 border border-stone-200/90 shadow-xs space-y-3.5">
+          <div className="bg-white rounded-3xl p-5 border border-stone-200/90 shadow-2xs space-y-3.5">
             <div className="flex items-center justify-between border-b border-stone-100 pb-3">
               <h4 className="font-black text-stone-900 text-sm sm:text-base flex items-center gap-2">
                 <Receipt className="w-5 h-5 text-stone-700" />
