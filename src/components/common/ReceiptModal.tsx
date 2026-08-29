@@ -59,13 +59,16 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      document.body.classList.add('is-printing-receipt');
       document.body.style.overflow = 'hidden';
       document.body.style.touchAction = 'none';
     } else {
+      document.body.classList.remove('is-printing-receipt');
       document.body.style.overflow = '';
       document.body.style.touchAction = '';
     }
     return () => {
+      document.body.classList.remove('is-printing-receipt');
       document.body.style.overflow = '';
       document.body.style.touchAction = '';
     };
@@ -94,7 +97,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const vatAmount = totalAmount - taxBase;
 
   const modalContent = (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 print:static print:p-0 print:m-0 print:bg-white print:block">
+    <div 
+      id="print-receipt-portal"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 print:static print:p-0 print:m-0 print:bg-white print:block"
+    >
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-stone-950/80 backdrop-blur-md transition-opacity print:hidden no-print"

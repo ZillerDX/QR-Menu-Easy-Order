@@ -544,7 +544,10 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fafaf9] text-stone-900 flex flex-col selection:bg-orange-500 selection:text-white">
+    <div 
+      id="app-root-container" 
+      className={`min-h-screen bg-[#fafaf9] text-stone-900 flex flex-col selection:bg-orange-500 selection:text-white ${receiptOrder ? 'print:hidden' : ''}`}
+    >
       {/* Top Header with Context-Aware Controls */}
       <Header
         storeConfig={storeConfig}

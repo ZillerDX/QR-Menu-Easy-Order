@@ -103,17 +103,21 @@
     print-color-adjust: exact !important;
   }
 
-  /* 2. Strictly HIDE all app chrome, navigation bars, docks, and screen UI */
+  /* 2. When Receipt Modal is Open/Printing: HIDE the ENTIRE #root, KDS, and App UI */
+  body:has(#print-receipt-portal) #root,
+  body.is-printing-receipt #root,
+  body:has(#print-receipt-portal) main,
+  body.is-printing-receipt main,
+  body:has(#print-receipt-portal) header,
+  body.is-printing-receipt header,
+  body:has(#print-receipt-portal) [role="navigation"],
+  body.is-printing-receipt [role="navigation"],
   .no-print,
-  .print\:hidden,
-  header,
-  nav,
-  aside,
-  footer,
-  [role="navigation"] {
+  .print\:hidden {
     display: none !important;
     visibility: hidden !important;
     height: 0 !important;
+    max-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: hidden !important;
@@ -154,7 +158,16 @@
     break-inside: avoid !important;
   }
 
-  /* 5. Table QR Stand Print Rules */
+  /* 5. Table QR Stand Print Rules (When printing Table QR only) */
+  body.is-printing-qr header,
+  body.is-printing-qr nav,
+  body.is-printing-qr .print\:hidden,
+  body:has(.table-qr-print-container) header,
+  body:has(.table-qr-print-container) nav,
+  body:has(.table-qr-print-container) .print\:hidden {
+    display: none !important;
+  }
+
   .table-qr-print-container {
     display: flex !important;
     flex-direction: column !important;
