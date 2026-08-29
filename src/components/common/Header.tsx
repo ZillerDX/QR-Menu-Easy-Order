@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Store, LogIn, LogOut } from 'lucide-react';
+import { ShoppingBag, Store, LogIn, LogOut, ShieldCheck } from 'lucide-react';
 import { StoreConfig, Language } from '../../types';
 import { t } from '../../utils/i18n';
 import { AppRole } from './RoleSwitcher';
@@ -16,6 +16,7 @@ interface HeaderProps {
   user: User | null;
   onOpenAuth: () => void;
   onLogout: () => void;
+  isCustomerView?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -29,6 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
   user,
   onOpenAuth,
   onLogout,
+  isCustomerView = true,
 }) => {
   const [logoClickCount, setLogoClickCount] = useState(0);
 
@@ -70,9 +72,16 @@ export const Header: React.FC<HeaderProps> = ({
             />
           </div>
           <div>
-            <h1 className="font-black text-stone-900 text-sm sm:text-base leading-tight tracking-tight group-hover:text-orange-600 transition-colors">
-              {language === 'en' ? (storeConfig.nameEn || storeConfig.name) : storeConfig.name}
-            </h1>
+            <div className="flex items-center gap-1.5">
+              <h1 className="font-black text-stone-900 text-sm sm:text-base leading-tight tracking-tight group-hover:text-orange-600 transition-colors">
+                {language === 'en' ? (storeConfig.nameEn || storeConfig.name) : storeConfig.name}
+              </h1>
+              {!isCustomerView && (
+                <span className="text-[10px] font-black bg-stone-900 text-white px-2 py-0.5 rounded-md uppercase tracking-wider hidden sm:inline">
+                  POS Portal
+                </span>
+              )}
+            </div>
             <p className="text-[10px] sm:text-xs text-stone-500 font-medium leading-none mt-0.5 hidden sm:block">
               {language === 'en' ? (storeConfig.taglineEn || storeConfig.tagline) : storeConfig.tagline}
             </p>
@@ -111,7 +120,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* CUSTOMER SPECIFIC VIEW: ONLY Table Badge and Cart (NO LOGIN / LOGOUT BUTTONS) */}
-          {activeRole === 'customer' && (
+          {isCustomerView && (
             <>
               {/* Fixed Table Badge (Customer Dining Location) */}
               <div 
@@ -141,8 +150,20 @@ export const Header: React.FC<HeaderProps> = ({
             </>
           )}
 
-          {/* STAFF MODE ONLY ROLE BADGES & LOGOUT (HIDDEN FROM CUSTOMERS) */}
-          {activeRole !== 'customer' && user && (
+          {/* PORTAL VIEW WITHOUT USER: Professional Sign In Button */}
+          {!isCustomerView && !user && (
+            <button
+              type="button"
+              onClick={onOpenAuth}
+              className="h-9 px-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-black shadow-md shadow-orange-500/25 active:scale-95 transition cursor-pointer flex items-center gap-1.5"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>{language === 'th' ? 'เข้าสู่ระบบร้านค้า' : 'Staff Sign In'}</span>
+            </button>
+          )}
+
+          {/* STAFF LOGGED IN ROLE BADGES & LOGOUT */}
+          {user && (
             <>
               {activeRole === 'kitchen' && (
                 <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-black shadow-2xs whitespace-nowrap h-9">

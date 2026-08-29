@@ -54,7 +54,6 @@ export function App() {
     return '01';
   });
 
-  // Default role: if tableParam exists, role is 'customer'; otherwise, if staff is logged in, 'kitchen'
   const [activeRole, setActiveRole] = useState<AppRole>('customer');
   const [isSimulatorMode, setIsSimulatorMode] = useState(false);
 
@@ -135,7 +134,6 @@ export function App() {
 
   // Initialize Auth & Routing
   useEffect(() => {
-    // Check existing Supabase session
     authService.getSession().then((session) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
@@ -153,7 +151,6 @@ export function App() {
       }
     });
 
-    // Listen to Auth State Changes
     const { data: authListener } = authService.onAuthStateChange((newUser) => {
       setUser(newUser);
       if (newUser && !hasTableParam) {
@@ -161,16 +158,13 @@ export function App() {
       }
     });
 
-    // Initial Local Data
     setStoreConfig(syncManager.getStoreConfig());
     setCategories(syncManager.getCategories());
     setMenuItems(syncManager.getMenuItems());
     setOrders(syncManager.getOrders());
 
-    // Fetch live remote orders from Supabase on mount
     fetchRemoteOrders();
 
-    // Re-fetch on Window Focus / Screen Wakeup on Mobile
     const handleFocus = () => fetchRemoteOrders();
     const handleVisibilityChange = () => {
       if (!document.hidden) fetchRemoteOrders();
@@ -178,10 +172,8 @@ export function App() {
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Heartbeat Polling every 3.5 seconds
     const pollInterval = setInterval(fetchRemoteOrders, 3500);
 
-    // Local Sync Manager Listener
     const unsubscribe = syncManager.subscribe((event) => {
       if (event.type === 'ORDER_CREATED') {
         const updated = syncManager.getOrders();
@@ -212,13 +204,12 @@ export function App() {
       }
     });
 
-    // Supabase Realtime Subscription for Orders
     const orderSubscription = supabase
       .channel('public:orders:realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newO: any = payload.new;
-          if (newO.store_id && newO.store_id !== shopId) return; // Strict store isolation
+          if (newO.store_id && newO.store_id !== shopId) return;
 
           const mappedOrder: Order = {
             id: newO.id,
@@ -385,17 +376,14 @@ export function App() {
       createdAt: new Date().toISOString(),
     };
 
-    // 1. Save locally for instant reactivity
     syncManager.saveOrder(newOrder);
     setCart([]);
     setIsCountdownOpen(false);
 
-    // 2. Track this order strictly in this customer's active session
     sessionStorage.setItem('my_active_order_id', newOrder.id);
     setTrackedOrder(newOrder);
     setIsOrderTrackerOpen(true);
 
-    // 3. Sync to Supabase Database with store_id isolation
     try {
       await supabase.from('orders').insert([{
         id: newOrder.id,
@@ -414,7 +402,6 @@ export function App() {
     }
   };
 
-  // Kitchen Status Update
   const handleUpdateOrderStatus = async (
     orderId: string,
     status: OrderStatus,
@@ -442,7 +429,6 @@ export function App() {
     }
   };
 
-  // Anti-Prank / Cancel Order Handler by Kitchen
   const handleCancelOrder = async (orderId: string, reason: string) => {
     const updated = syncManager.updateOrderStatus(orderId, 'cancelled');
     setOrders((prev) =>
@@ -539,12 +525,14 @@ export function App() {
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const cartSubtotal = cart.reduce((sum, item) => sum + item.totalItemPrice, 0);
 
-  // If entering via direct link without table param AND user is not authenticated: Show Store Portal Landing
-  const shouldShowStorePortal = !hasTableParam && !user && !isSimulatorMode;
+  // Determine view mode:
+  const isDirectNonTableAccess = !hasTableParam;
+  const shouldShowStorePortal = isDirectNonTableAccess && !user && !isSimulatorMode;
+  const isCustomerDining = hasTableParam || isSimulatorMode;
 
   return (
     <div className="min-h-screen bg-[#fafaf9] text-stone-900 flex flex-col selection:bg-orange-500 selection:text-white">
-      {/* Top Header */}
+      {/* Top Header with Context-Aware Controls */}
       <Header
         storeConfig={storeConfig}
         tableNumber={tableNumber}
@@ -556,6 +544,7 @@ export function App() {
         user={user}
         onOpenAuth={() => setIsAuthModalOpen(true)}
         onLogout={handleLogout}
+        isCustomerView={isCustomerDining && !user}
       />
 
       {/* Main Content Area */}
@@ -566,7 +555,8 @@ export function App() {
             storeConfig={storeConfig}
             language={language}
             onOpenAuth={() => setIsAuthModalOpen(true)}
-            onEnterSimulator={() => {
+            onEnterSimulator={(tbl) => {
+              if (tbl) setTableNumber(tbl);
               setIsSimulatorMode(true);
               setActiveRole('customer');
             }}
@@ -576,6 +566,27 @@ export function App() {
         {/* VIEW 1: CUSTOMER VIEW (OR TEST SIMULATOR) */}
         {(!shouldShowStorePortal && activeRole === 'customer') && (
           <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
+            
+            {/* Simulator Mode Exit Pill (Shown ONLY if shop owner is in testing mode) */}
+            {isSimulatorMode && !hasTableParam && (
+              <div className="bg-stone-900 text-white rounded-2xl p-3 px-4 flex items-center justify-between shadow-md animate-in slide-in-from-top-3">
+                <div className="flex items-center gap-2 text-xs font-black">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                  <span>{language === 'th' ? 'โหมดทดสอบสั่งอาหารจำลองสำหรับเจ้าของร้าน (โต๊ะ ' + tableNumber + ')' : `Store Simulator Mode (Table ${tableNumber})`}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSimulatorMode(false);
+                    if (!user) setActiveRole('customer');
+                  }}
+                  className="text-xs bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-xl font-bold cursor-pointer transition"
+                >
+                  {language === 'th' ? 'กลับหน้าพอร์ทัลร้าน' : 'Exit Simulator'}
+                </button>
+              </div>
+            )}
+
             {/* Active Tracked Order Banner */}
             {trackedOrder && (
               <div
