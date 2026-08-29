@@ -11,7 +11,8 @@ import {
   CheckCircle2, 
   Layers,
   ChefHat,
-  Bell
+  Bell,
+  ArrowRight
 } from 'lucide-react';
 import { Order, MenuItem, Language, OrderStatus } from '../../types';
 import { t } from '../../utils/i18n';
@@ -46,20 +47,24 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
   const [showStock, setShowStock] = useState(false);
   const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
   const [rejectTargetOrder, setRejectTargetOrder] = useState<Order | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; targetTab?: 'active' | 'ready' | 'completed' } | null>(null);
 
-  const triggerToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+  const triggerToast = (message: string, targetTab?: 'active' | 'ready' | 'completed') => {
+    setToast({ message, targetTab });
+    setTimeout(() => setToast(null), 4000);
   };
 
-  const inProgressOrders = orders.filter((o) => o.status === 'pending' || o.status === 'cooking' || o.status === 'ready');
+  // 1. In-Kitchen (Pending + Cooking ONLY)
+  const inKitchenOrders = orders.filter((o) => o.status === 'pending' || o.status === 'cooking');
+  // 2. Ready to Serve (Ready ONLY)
   const readyOrders = orders.filter((o) => o.status === 'ready');
+  // 3. Completed (Completed + Cancelled)
   const completedOrders = orders.filter((o) => o.status === 'completed');
   const cancelledOrders = orders.filter((o) => o.status === 'cancelled');
 
+  // Strict Filter Mapping
   const filteredOrders = orders.filter((o) => {
-    if (filter === 'active') return o.status === 'pending' || o.status === 'cooking' || o.status === 'ready';
+    if (filter === 'active') return o.status === 'pending' || o.status === 'cooking';
     if (filter === 'ready') return o.status === 'ready';
     if (filter === 'completed') return o.status === 'completed' || o.status === 'cancelled';
     return true;
@@ -77,32 +82,50 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
   const handleUpdateStatusWrapped = async (orderId: string, status: OrderStatus, paymentStatus?: Order['paymentStatus']) => {
     await onUpdateStatus(orderId, status, paymentStatus);
     const target = orders.find((o) => o.id === orderId);
-    const tableLabel = target ? `โต๊ะ ${target.tableNumber}` : '';
+    const tableLabel = target ? (target.tableNumber === 'TAKEAWAY' ? 'กลับบ้าน' : `โต๊ะ ${target.tableNumber}`) : '';
     
     if (status === 'cooking') {
       triggerToast(language === 'th' ? `🍳 เริ่มปรุงอาหาร ${tableLabel}` : `Started cooking for ${tableLabel}`);
     } else if (status === 'ready') {
-      triggerToast(language === 'th' ? `✨ ออเดอร์ ${tableLabel} ปรุงเสร็จพร้อมเสิร์ฟแล้ว` : `Order for ${tableLabel} is ready to serve`);
+      triggerToast(
+        language === 'th'
+          ? `✨ ออเดอร์ ${tableLabel} ปรุงเสร็จแล้ว! ย้ายไปที่แท็บ "พร้อมเสิร์ฟ"`
+          : `Order for ${tableLabel} is ready! Moved to "Ready to Serve" tab`,
+        'ready'
+      );
     } else if (status === 'completed') {
-      triggerToast(language === 'th' ? `✓ ปิดบิล ${tableLabel} เรียบร้อยแล้ว` : `Bill closed for ${tableLabel}`);
+      triggerToast(language === 'th' ? `✓ ปิดบิล ${tableLabel} เรียบร้อยแล้ว` : `Bill closed for ${tableLabel}`, 'completed');
     } else if (status === 'pending') {
-      triggerToast(language === 'th' ? `↩️ ย้อนสถานะ ${tableLabel} กลับไปรอทำ` : `Reverted ${tableLabel} to pending`);
+      triggerToast(language === 'th' ? `↩️ ย้อนสถานะ ${tableLabel} กลับไปรอทำ` : `Reverted ${tableLabel} to pending`, 'active');
     }
   };
 
   const handleCancelOrderWrapped = async (orderId: string, reason: string) => {
     await onCancelOrder?.(orderId, reason);
-    triggerToast(language === 'th' ? `🚫 ปฏิเสธออเดอร์เรียบร้อยแล้ว (${reason})` : `Order rejected (${reason})`);
+    triggerToast(language === 'th' ? `🚫 ปฏิเสธออเดอร์เรียบร้อยแล้ว (${reason})` : `Order rejected (${reason})`, 'completed');
   };
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28 relative">
       
-      {/* Action Toast Feedback Popup */}
-      {toastMessage && (
-        <div className="fixed top-20 right-5 sm:right-8 z-50 bg-stone-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-black animate-in slide-in-from-top-4 duration-200 border border-stone-700">
-          <Bell className="w-4 h-4 text-amber-400 animate-pulse" />
-          <span>{toastMessage}</span>
+      {/* Action Toast Feedback Popup with Instant Tab Navigation */}
+      {toast && (
+        <div className="fixed top-20 right-5 sm:right-8 z-50 bg-stone-900 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-black animate-in slide-in-from-top-4 duration-200 border border-stone-700">
+          <Bell className="w-4 h-4 text-amber-400 animate-pulse flex-shrink-0" />
+          <span>{toast.message}</span>
+          {toast.targetTab && filter !== toast.targetTab && (
+            <button
+              type="button"
+              onClick={() => {
+                if (toast.targetTab) setFilter(toast.targetTab);
+                setToast(null);
+              }}
+              className="ml-1 bg-orange-500 hover:bg-orange-600 text-white px-2.5 py-1 rounded-xl text-[11px] font-black transition cursor-pointer flex items-center gap-1 active:scale-95 flex-shrink-0"
+            >
+              <span>{language === 'th' ? 'ดูแท็บนี้' : 'View'}</span>
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          )}
         </div>
       )}
 
@@ -129,7 +152,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
               {language === 'th' ? 'ออเดอร์กำลังทำ' : 'In Kitchen'}
             </span>
             <span className="text-xl font-black text-orange-600">
-              {inProgressOrders.length}
+              {inKitchenOrders.length}
             </span>
           </div>
 
@@ -203,6 +226,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
 
       {/* Clean Filter Tabs without Emojis */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        {/* Tab 1: Pending & Cooking */}
         <button
           onClick={() => setFilter('active')}
           className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition flex items-center gap-2 flex-shrink-0 cursor-pointer ${
@@ -216,10 +240,11 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
           <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-black ${
             filter === 'active' ? 'bg-white/25 text-white' : 'bg-stone-100 text-stone-700'
           }`}>
-            {inProgressOrders.length}
+            {inKitchenOrders.length}
           </span>
         </button>
 
+        {/* Tab 2: Ready to Serve */}
         <button
           onClick={() => setFilter('ready')}
           className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition flex items-center gap-2 flex-shrink-0 cursor-pointer ${
@@ -237,6 +262,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
           </span>
         </button>
 
+        {/* Tab 3: Completed & Closed Bills */}
         <button
           onClick={() => setFilter('completed')}
           className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition flex items-center gap-2 flex-shrink-0 cursor-pointer ${
@@ -254,6 +280,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
           </span>
         </button>
 
+        {/* Tab 4: All Orders */}
         <button
           onClick={() => setFilter('all')}
           className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition flex items-center gap-2 flex-shrink-0 cursor-pointer ${

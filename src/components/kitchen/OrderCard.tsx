@@ -92,24 +92,29 @@ export const OrderCard: React.FC<OrderCardProps> = ({
     if (isUpdating) return;
     setIsUpdating(true);
     setUpdatingLabel(label);
+    
+    // Smooth guaranteed visual feedback with minimum spinner duration
+    await new Promise((resolve) => setTimeout(resolve, 450));
     try {
       await onUpdateStatus(order.id, nextStatus, nextPaymentStatus);
     } finally {
       setTimeout(() => {
         setIsUpdating(false);
         setUpdatingLabel('');
-      }, 350);
+      }, 150);
     }
   };
 
   return (
     <div className={`bg-white rounded-3xl p-4 sm:p-5 border flex flex-col justify-between transition-all duration-300 hover:shadow-lg relative overflow-hidden ${theme.border}`}>
       
-      {/* Loading Overlay */}
+      {/* Visual Loading Overlay with Spinner */}
       {isUpdating && (
-        <div className="absolute inset-0 bg-white/85 backdrop-blur-xs z-20 flex flex-col items-center justify-center gap-2 animate-in fade-in duration-150">
-          <Loader2 className="w-7 h-7 text-orange-500 animate-spin" />
-          <span className="text-xs font-black text-stone-800 tracking-tight">
+        <div className="absolute inset-0 bg-white/90 backdrop-blur-xs z-30 flex flex-col items-center justify-center gap-2.5 animate-in fade-in duration-200">
+          <div className="w-10 h-10 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center shadow-xs">
+            <Loader2 className="w-6 h-6 animate-spin" />
+          </div>
+          <span className="text-xs font-black text-stone-800 tracking-tight animate-pulse">
             {updatingLabel || (language === 'th' ? 'กำลังอัปเดตสถานะ...' : 'Updating status...')}
           </span>
         </div>
@@ -233,64 +238,56 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           </div>
         </div>
 
-        {/* Step-by-Step Explicit Action Buttons with Click Protection */}
+        {/* Step-by-Step Explicit Action Buttons with Click Protection (NO UNDO ON COOKING) */}
         <div className="pt-1">
           {order.status === 'pending' && (
             <button
               type="button"
               disabled={isUpdating}
               onClick={() => handleStepUpdate('cooking', undefined, language === 'th' ? 'กำลังเริ่มปรุงอาหาร...' : 'Starting cooking...')}
-              className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-orange-500/25 active:scale-95 transition cursor-pointer disabled:opacity-50"
+              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-orange-500/25 active:scale-95 transition cursor-pointer disabled:opacity-50"
             >
-              <ChefHat className="w-4 h-4 text-white" />
-              <span>{language === 'th' ? 'เริ่มปรุงอาหาร' : 'Start Cooking'}</span>
+              {isUpdating ? (
+                <Loader2 className="w-4 h-4 text-white animate-spin" />
+              ) : (
+                <ChefHat className="w-4 h-4 text-white" />
+              )}
+              <span>{isUpdating ? updatingLabel : (language === 'th' ? 'เริ่มปรุงอาหาร' : 'Start Cooking')}</span>
             </button>
           )}
 
+          {/* Cooking Step: Full-width Clean Action (NO UNDO BUTTON) */}
           {order.status === 'cooking' && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={isUpdating}
-                onClick={() => handleStepUpdate('pending', undefined, language === 'th' ? 'ย้อนกลับไปรอทำ...' : 'Reverting to pending...')}
-                className="p-3 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold text-xs transition cursor-pointer active:scale-95 flex items-center justify-center"
-                title={language === 'th' ? 'ย้อนกลับไปรอทำ' : 'Back to Pending'}
-              >
-                <Undo2 className="w-4 h-4 text-stone-600" />
-              </button>
-              <button
-                type="button"
-                disabled={isUpdating}
-                onClick={() => handleStepUpdate('ready', undefined, language === 'th' ? 'อัปเดตเป็นพร้อมเสิร์ฟ...' : 'Marking ready...')}
-                className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-600/25 active:scale-95 transition cursor-pointer disabled:opacity-50"
-              >
+            <button
+              type="button"
+              disabled={isUpdating}
+              onClick={() => handleStepUpdate('ready', undefined, language === 'th' ? 'กำลังนำส่งพร้อมเสิร์ฟ...' : 'Marking ready to serve...')}
+              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-600/25 active:scale-95 transition cursor-pointer disabled:opacity-50"
+            >
+              {isUpdating ? (
+                <Loader2 className="w-4 h-4 text-white animate-spin" />
+              ) : (
                 <Sparkles className="w-4 h-4 text-white" />
-                <span>{language === 'th' ? 'ปรุงเสร็จแล้ว (พร้อมเสิร์ฟ)' : 'Ready to Serve'}</span>
-              </button>
-            </div>
+              )}
+              <span>{isUpdating ? updatingLabel : (language === 'th' ? 'ปรุงเสร็จแล้ว (พร้อมเสิร์ฟ)' : 'Ready to Serve')}</span>
+            </button>
           )}
 
+          {/* Ready Step: Full-width Close Bill Action */}
           {order.status === 'ready' && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={isUpdating}
-                onClick={() => handleStepUpdate('cooking', undefined, language === 'th' ? 'ย้อนกลับไปกำลังปรุง...' : 'Reverting to cooking...')}
-                className="p-3 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold text-xs transition cursor-pointer active:scale-95 flex items-center justify-center"
-                title={language === 'th' ? 'ย้อนกลับไปกำลังปรุง' : 'Back to Cooking'}
-              >
-                <Undo2 className="w-4 h-4 text-stone-600" />
-              </button>
-              <button
-                type="button"
-                disabled={isUpdating}
-                onClick={() => handleStepUpdate('completed', 'paid', language === 'th' ? 'กำลังปิดบิลชำระเงิน...' : 'Closing bill...')}
-                className="flex-1 py-3 px-4 rounded-2xl bg-stone-900 hover:bg-black text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md active:scale-95 transition cursor-pointer disabled:opacity-50"
-              >
+            <button
+              type="button"
+              disabled={isUpdating}
+              onClick={() => handleStepUpdate('completed', 'paid', language === 'th' ? 'กำลังปิดบิลชำระเงิน...' : 'Closing bill...')}
+              className="w-full py-3.5 px-4 rounded-2xl bg-stone-900 hover:bg-black text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md active:scale-95 transition cursor-pointer disabled:opacity-50"
+            >
+              {isUpdating ? (
+                <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
+              ) : (
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>{language === 'th' ? 'ปิดบิล (ชำระเงินแล้ว)' : 'Close Bill (Paid)'}</span>
-              </button>
-            </div>
+              )}
+              <span>{isUpdating ? updatingLabel : (language === 'th' ? 'ปิดบิล (ชำระเงินแล้ว)' : 'Close Bill (Paid)')}</span>
+            </button>
           )}
 
           {order.status === 'completed' && (
