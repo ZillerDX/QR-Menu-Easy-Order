@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { UtensilsCrossed, Volume2, PackageOpen, RotateCcw, Sparkles, TrendingUp, BarChart3, Clock, ChefHat } from 'lucide-react';
+import { UtensilsCrossed, Volume2, PackageOpen, RotateCcw, Sparkles, TrendingUp, BarChart3, Clock, ChefHat, Ban } from 'lucide-react';
 import { Order, MenuItem, Language, OrderStatus } from '../../types';
 import { t } from '../../utils/i18n';
 import { OrderCard } from './OrderCard';
 import { StockManager } from './StockManager';
 import { SalesDashboardModal } from './SalesDashboardModal';
+import { CancelOrderModal } from './CancelOrderModal';
 import { soundService } from '../../utils/sound';
 
 interface KitchenDashboardProps {
@@ -15,6 +16,7 @@ interface KitchenDashboardProps {
   onToggleStock: (itemId: string) => void;
   onResetData: () => void;
   onPrintReceipt?: (order: Order) => void;
+  onCancelOrder?: (orderId: string, reason: string) => void;
 }
 
 export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
@@ -25,26 +27,27 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
   onToggleStock,
   onResetData,
   onPrintReceipt,
+  onCancelOrder,
 }) => {
   const [filter, setFilter] = useState<'active' | 'ready' | 'completed' | 'all'>('active');
   const [showStock, setShowStock] = useState(false);
   const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
+  const [rejectTargetOrder, setRejectTargetOrder] = useState<Order | null>(null);
 
   const inProgressOrders = orders.filter((o) => o.status === 'pending' || o.status === 'cooking' || o.status === 'ready');
-  const pendingOrders = orders.filter((o) => o.status === 'pending');
-  const cookingOrders = orders.filter((o) => o.status === 'cooking');
   const readyOrders = orders.filter((o) => o.status === 'ready');
   const completedOrders = orders.filter((o) => o.status === 'completed');
+  const cancelledOrders = orders.filter((o) => o.status === 'cancelled');
 
   const filteredOrders = orders.filter((o) => {
     if (filter === 'active') return o.status === 'pending' || o.status === 'cooking' || o.status === 'ready';
     if (filter === 'ready') return o.status === 'ready';
-    if (filter === 'completed') return o.status === 'completed';
+    if (filter === 'completed') return o.status === 'completed' || o.status === 'cancelled';
     return true;
   });
 
   const totalRevenue = orders
-    .filter((o) => o.status !== 'cancelled')
+    .filter((o) => o.status === 'completed')
     .reduce((sum, o) => sum + o.totalPrice, 0);
 
   const handleTestSound = () => {
@@ -190,7 +193,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
         >
           <span>{t('kdsFilterCompleted', language)}</span>
           <span className="ml-1 bg-stone-100 text-stone-700 px-1.5 py-0.2 rounded-full text-[10px]">
-            {completedOrders.length}
+            {completedOrders.length + cancelledOrders.length}
           </span>
         </button>
 
@@ -229,6 +232,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
               language={language}
               onUpdateStatus={onUpdateStatus}
               onPrintReceipt={onPrintReceipt}
+              onRejectOrder={(ord) => setRejectTargetOrder(ord)}
             />
           ))}
         </div>
@@ -240,6 +244,17 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
         onClose={() => setIsSalesModalOpen(false)}
         orders={orders}
         language={language}
+      />
+
+      {/* Cancel / Reject Order Modal */}
+      <CancelOrderModal
+        isOpen={!!rejectTargetOrder}
+        onClose={() => setRejectTargetOrder(null)}
+        order={rejectTargetOrder}
+        language={language}
+        onConfirmCancel={(orderId, reason) => {
+          onCancelOrder?.(orderId, reason);
+        }}
       />
     </div>
   );

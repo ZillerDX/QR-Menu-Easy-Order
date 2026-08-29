@@ -67,6 +67,7 @@ export interface Order {
   id: string;
   orderNumber: string;
   tableNumber: string;
+  storeId?: string;
   items: CartItem[];
   subtotal: number;
   totalPrice: number;
@@ -75,9 +76,11 @@ export interface Order {
   status: OrderStatus;
   createdAt: string;
   customerNote?: string;
+  cancelReason?: string;
 }
 
 export interface StoreConfig {
+  id?: string;
   name: string;
   nameEn: string;
   tagline: string;

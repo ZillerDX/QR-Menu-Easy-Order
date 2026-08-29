@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Utensils, Sparkles, CheckCheck, Banknote, QrCode, Flame, Hourglass, Printer } from 'lucide-react';
+import { Clock, Utensils, Sparkles, CheckCheck, Banknote, QrCode, Flame, Hourglass, Printer, Ban } from 'lucide-react';
 import { Order, OrderStatus, Language } from '../../types';
 import { t } from '../../utils/i18n';
 
@@ -8,6 +8,7 @@ interface OrderCardProps {
   language: Language;
   onUpdateStatus: (orderId: string, status: OrderStatus, paymentStatus?: Order['paymentStatus']) => void;
   onPrintReceipt?: (order: Order) => void;
+  onRejectOrder?: (order: Order) => void;
 }
 
 export const OrderCard: React.FC<OrderCardProps> = ({ 
@@ -15,6 +16,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   language, 
   onUpdateStatus,
   onPrintReceipt,
+  onRejectOrder,
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -53,6 +55,13 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           label: t('kdsCompletedBadge', language),
           icon: <CheckCheck className="w-3.5 h-3.5 text-white" />,
         };
+      case 'cancelled':
+        return {
+          border: 'border-red-200 opacity-70 bg-red-50/20',
+          badge: 'bg-red-600 text-white',
+          label: 'ยกเลิก / ปฏิเสธ',
+          icon: <Ban className="w-3.5 h-3.5 text-white" />,
+        };
       default:
         return {
           border: 'border-stone-200',
@@ -78,7 +87,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   return (
     <div className={`bg-white rounded-3xl p-4 sm:p-5 border flex flex-col justify-between transition-all duration-300 hover:shadow-lg ${theme.border}`}>
       <div>
-        {/* Header: Table & Time */}
+        {/* Header: Table, Reject & Time */}
         <div className="flex items-center justify-between pb-3 border-b border-stone-100">
           <div className="flex items-center gap-2">
             <span className="text-sm font-black px-3 py-1 rounded-xl bg-stone-900 text-white shadow-xs">
@@ -89,9 +98,23 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-stone-400 font-bold">
-            <Clock className="w-3.5 h-3.5" />
-            <span>{timeFormatted}</span>
+          <div className="flex items-center gap-2">
+            {order.status !== 'completed' && order.status !== 'cancelled' && (
+              <button
+                type="button"
+                onClick={() => onRejectOrder?.(order)}
+                className="text-stone-400 hover:text-red-600 bg-stone-100 hover:bg-red-50 px-2 py-1 rounded-xl transition cursor-pointer text-xs font-bold flex items-center gap-1"
+                title={language === 'th' ? 'ปฏิเสธ / ยกเลิกออเดอร์นี้' : 'Reject Order'}
+              >
+                <Ban className="w-3 h-3 text-red-500" />
+                <span className="hidden sm:inline text-[11px] text-red-600 font-black">ปฏิเสธ</span>
+              </button>
+            )}
+
+            <div className="flex items-center gap-1 text-xs text-stone-400 font-bold">
+              <Clock className="w-3.5 h-3.5" />
+              <span>{timeFormatted}</span>
+            </div>
           </div>
         </div>
 
@@ -250,6 +273,27 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               >
                 {language === 'th' ? 'เปิดบิลใหม่' : 'Reopen'}
               </button>
+            </div>
+          )}
+
+          {order.status === 'cancelled' && (
+            <div className="p-2.5 rounded-2xl bg-red-50 border border-red-100 text-xs text-red-800 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="font-black flex items-center gap-1 text-red-600">
+                  <Ban className="w-3.5 h-3.5" /> ยกเลิกโดยทางร้าน
+                </span>
+                <button
+                  type="button"
+                  disabled={isUpdating}
+                  onClick={() => handleStepUpdate('pending')}
+                  className="text-[11px] font-bold text-stone-500 hover:text-stone-800 underline cursor-pointer"
+                >
+                  กู้คืนออเดอร์
+                </button>
+              </div>
+              {order.cancelReason && (
+                <p className="text-[11px] text-stone-600 font-medium">เหตุผล: {order.cancelReason}</p>
+              )}
             </div>
           )}
         </div>

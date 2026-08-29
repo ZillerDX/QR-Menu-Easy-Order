@@ -17,16 +17,34 @@ import { QRGenerator } from './components/table-qr/QRGenerator';
 import { ConfirmModal } from './components/common/ConfirmModal';
 import { AuthModal } from './components/auth/AuthModal';
 import { ReceiptModal } from './components/common/ReceiptModal';
+import { StorePortalLanding } from './components/portal/StorePortalLanding';
 import { supabase, authService } from './utils/supabaseClient';
 import { User } from '@supabase/supabase-js';
-import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight, Hourglass, Flame, CheckCircle2, ShoppingBag } from 'lucide-react';
+import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight, Hourglass, Flame, CheckCircle2, ShoppingBag, Ban } from 'lucide-react';
 
 export function App() {
   const [storeConfig, setStoreConfig] = useState<StoreConfig>(() => syncManager.getStoreConfig());
   const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
-  const [activeRole, setActiveRole] = useState<AppRole>('customer');
-  
-  // 1. Synchronously resolve Table Number from URL query parameter
+
+  // 1. Resolve Store / Shop ID from URL query or default
+  const [shopId, setShopId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const shop = params.get('shop');
+      if (shop) return shop;
+    }
+    return syncManager.getStoreConfig().id || 'cafe-order';
+  });
+
+  // 2. Synchronously resolve Table Number and Customer mode from URL query parameter
+  const [hasTableParam, setHasTableParam] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.has('table');
+    }
+    return false;
+  });
+
   const [tableNumber, setTableNumber] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -35,6 +53,10 @@ export function App() {
     }
     return '01';
   });
+
+  // Default role: if tableParam exists, role is 'customer'; otherwise, if staff is logged in, 'kitchen'
+  const [activeRole, setActiveRole] = useState<AppRole>('customer');
+  const [isSimulatorMode, setIsSimulatorMode] = useState(false);
 
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -53,7 +75,7 @@ export function App() {
   const [isCountdownOpen, setIsCountdownOpen] = useState(false);
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
   
-  // 2. Tracked order strictly scoped to THIS CUSTOMER'S ACTIVE BROWSER SESSION ONLY!
+  // 3. Tracked order strictly scoped to THIS CUSTOMER'S ACTIVE BROWSER SESSION ONLY!
   const [trackedOrder, setTrackedOrder] = useState<Order | null>(() => {
     if (typeof window !== 'undefined') {
       const sessionOrderId = sessionStorage.getItem('my_active_order_id');
@@ -68,12 +90,13 @@ export function App() {
   const [isOrderTrackerOpen, setIsOrderTrackerOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
-  // Fetch Latest Orders from Supabase (Full Database Sync)
+  // Fetch Latest Orders strictly scoped to current shopId from Supabase
   const fetchRemoteOrders = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('orders')
         .select('*')
+        .eq('store_id', shopId)
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -82,6 +105,7 @@ export function App() {
           id: row.id,
           orderNumber: row.order_number,
           tableNumber: row.table_number,
+          storeId: row.store_id || shopId,
           status: row.status,
           paymentMethod: row.payment_method,
           paymentStatus: row.payment_status,
@@ -89,6 +113,7 @@ export function App() {
           totalPrice: Number(row.total_price),
           items: row.items || [],
           customerNote: row.notes,
+          cancelReason: row.cancel_reason,
           createdAt: row.created_at,
         }));
 
@@ -106,9 +131,9 @@ export function App() {
     } catch (err) {
       console.warn("Supabase fetch orders error:", err);
     }
-  }, []);
+  }, [shopId]);
 
-  // Initialize Auth & Data
+  // Initialize Auth & Routing
   useEffect(() => {
     // Check existing Supabase session
     authService.getSession().then((session) => {
@@ -117,24 +142,22 @@ export function App() {
       
       const params = new URLSearchParams(window.location.search);
       const tableParam = params.get('table');
+      const roleParam = params.get('role');
+
       if (tableParam) {
         setTableNumber(tableParam);
-      }
-      const roleParam = params.get('role');
-      if (roleParam === 'kitchen' || roleParam === 'admin' || roleParam === 'settings' || roleParam === 'qr') {
-        if (currentUser) {
-          setActiveRole(roleParam as AppRole);
-        } else {
-          setIsAuthModalOpen(true);
-        }
+        setHasTableParam(true);
+        setActiveRole('customer');
+      } else if (currentUser) {
+        setActiveRole((roleParam as AppRole) || 'kitchen');
       }
     });
 
     // Listen to Auth State Changes
     const { data: authListener } = authService.onAuthStateChange((newUser) => {
       setUser(newUser);
-      if (!newUser) {
-        setActiveRole('customer');
+      if (newUser && !hasTableParam) {
+        setActiveRole('kitchen');
       }
     });
 
@@ -155,8 +178,8 @@ export function App() {
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Heartbeat Polling every 4 seconds for reliable real-time mobile sync
-    const pollInterval = setInterval(fetchRemoteOrders, 4000);
+    // Heartbeat Polling every 3.5 seconds
+    const pollInterval = setInterval(fetchRemoteOrders, 3500);
 
     // Local Sync Manager Listener
     const unsubscribe = syncManager.subscribe((event) => {
@@ -195,10 +218,13 @@ export function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newO: any = payload.new;
+          if (newO.store_id && newO.store_id !== shopId) return; // Strict store isolation
+
           const mappedOrder: Order = {
             id: newO.id,
             orderNumber: newO.order_number,
             tableNumber: newO.table_number,
+            storeId: newO.store_id || shopId,
             status: newO.status,
             paymentMethod: newO.payment_method,
             paymentStatus: newO.payment_status,
@@ -206,6 +232,7 @@ export function App() {
             totalPrice: Number(newO.total_price),
             items: newO.items || [],
             customerNote: newO.notes,
+            cancelReason: newO.cancel_reason,
             createdAt: newO.created_at,
           };
           setOrders((prev) => {
@@ -222,6 +249,7 @@ export function App() {
                     ...o,
                     status: updatedO.status,
                     paymentStatus: updatedO.payment_status,
+                    cancelReason: updatedO.cancel_reason,
                   }
                 : o
             )
@@ -229,7 +257,7 @@ export function App() {
           const myOrderId = sessionStorage.getItem('my_active_order_id');
           if (myOrderId && updatedO.id === myOrderId) {
             setTrackedOrder((prev) => 
-              prev ? { ...prev, status: updatedO.status, paymentStatus: updatedO.payment_status } : null
+              prev ? { ...prev, status: updatedO.status, paymentStatus: updatedO.payment_status, cancelReason: updatedO.cancel_reason } : null
             );
           }
         }
@@ -244,7 +272,7 @@ export function App() {
       clearInterval(pollInterval);
       supabase.removeChannel(orderSubscription);
     };
-  }, [fetchRemoteOrders]);
+  }, [fetchRemoteOrders, hasTableParam, shopId]);
 
   const handleToggleLanguage = () => {
     const nextLang: Language = language === 'en' ? 'th' : 'en';
@@ -267,10 +295,12 @@ export function App() {
     try {
       await authService.signOut();
       setUser(null);
+      setIsSimulatorMode(false);
       setActiveRole('customer');
     } catch (e) {
       console.error("Logout error:", e);
       setUser(null);
+      setIsSimulatorMode(false);
       setActiveRole('customer');
     }
   };
@@ -278,6 +308,9 @@ export function App() {
   const handleSaveStoreConfig = (config: StoreConfig) => {
     syncManager.saveStoreConfig(config);
     setStoreConfig(config);
+    if (config.id) {
+      setShopId(config.id);
+    }
   };
 
   const handleAddToCart = (
@@ -342,6 +375,7 @@ export function App() {
       id: `ord-${Date.now()}`,
       orderNumber,
       tableNumber,
+      storeId: shopId,
       items: [...cart],
       subtotal,
       totalPrice: subtotal,
@@ -361,12 +395,13 @@ export function App() {
     setTrackedOrder(newOrder);
     setIsOrderTrackerOpen(true);
 
-    // 3. Sync to Supabase Database
+    // 3. Sync to Supabase Database with store_id isolation
     try {
       await supabase.from('orders').insert([{
         id: newOrder.id,
         order_number: newOrder.orderNumber,
         table_number: newOrder.tableNumber,
+        store_id: newOrder.storeId,
         status: newOrder.status,
         payment_method: newOrder.paymentMethod,
         payment_status: newOrder.paymentStatus,
@@ -379,13 +414,12 @@ export function App() {
     }
   };
 
-  // Immediate reactive state update for kitchen status
+  // Kitchen Status Update
   const handleUpdateOrderStatus = async (
     orderId: string,
     status: OrderStatus,
     paymentStatus?: Order['paymentStatus']
   ) => {
-    // 1. Update local storage & broadcast
     const updated = syncManager.updateOrderStatus(orderId, status, paymentStatus);
     setOrders(updated);
 
@@ -394,7 +428,6 @@ export function App() {
       setTrackedOrder((prev) => (prev ? { ...prev, status, ...(paymentStatus ? { paymentStatus } : {}) } : null));
     }
 
-    // 2. Update Supabase
     try {
       await supabase
         .from('orders')
@@ -406,6 +439,32 @@ export function App() {
         .eq('id', orderId);
     } catch (e) {
       console.error("Supabase update status error:", e);
+    }
+  };
+
+  // Anti-Prank / Cancel Order Handler by Kitchen
+  const handleCancelOrder = async (orderId: string, reason: string) => {
+    const updated = syncManager.updateOrderStatus(orderId, 'cancelled');
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status: 'cancelled', cancelReason: reason } : o))
+    );
+
+    const myOrderId = sessionStorage.getItem('my_active_order_id');
+    if (myOrderId && orderId === myOrderId) {
+      setTrackedOrder((prev) => (prev ? { ...prev, status: 'cancelled', cancelReason: reason } : null));
+    }
+
+    try {
+      await supabase
+        .from('orders')
+        .update({
+          status: 'cancelled',
+          cancel_reason: reason,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', orderId);
+    } catch (e) {
+      console.error("Supabase cancel order error:", e);
     }
   };
 
@@ -480,15 +539,18 @@ export function App() {
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const cartSubtotal = cart.reduce((sum, item) => sum + item.totalItemPrice, 0);
 
+  // If entering via direct link without table param AND user is not authenticated: Show Store Portal Landing
+  const shouldShowStorePortal = !hasTableParam && !user && !isSimulatorMode;
+
   return (
     <div className="min-h-screen bg-[#fafaf9] text-stone-900 flex flex-col selection:bg-orange-500 selection:text-white">
-      {/* Top Header with Dual Language Toggle & Fixed Non-Changeable Table Badge for Customers */}
+      {/* Top Header */}
       <Header
         storeConfig={storeConfig}
         tableNumber={tableNumber}
         cartCount={totalCartCount}
         onOpenCart={() => setIsCartOpen(true)}
-        activeRole={activeRole}
+        activeRole={shouldShowStorePortal ? 'customer' : activeRole}
         language={language}
         onToggleLanguage={handleToggleLanguage}
         user={user}
@@ -498,14 +560,31 @@ export function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 w-full">
-        {/* VIEW 1: CUSTOMER VIEW */}
-        {activeRole === 'customer' && (
+        {/* VIEW 0: STORE PORTAL LANDING (FOR DIRECT STORE ACCESS / NON-CUSTOMER) */}
+        {shouldShowStorePortal && (
+          <StorePortalLanding
+            storeConfig={storeConfig}
+            language={language}
+            onOpenAuth={() => setIsAuthModalOpen(true)}
+            onEnterSimulator={() => {
+              setIsSimulatorMode(true);
+              setActiveRole('customer');
+            }}
+          />
+        )}
+
+        {/* VIEW 1: CUSTOMER VIEW (OR TEST SIMULATOR) */}
+        {(!shouldShowStorePortal && activeRole === 'customer') && (
           <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
-            {/* Active Tracked Order Banner (Shown if customer has an active order) */}
+            {/* Active Tracked Order Banner */}
             {trackedOrder && (
               <div
                 onClick={() => setIsOrderTrackerOpen(true)}
-                className="relative overflow-hidden bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 rounded-3xl p-4 sm:p-5 text-white shadow-xl shadow-orange-500/25 flex items-center justify-between animate-pulse-subtle cursor-pointer hover:shadow-2xl hover:shadow-orange-500/35 transition-all duration-300 group hover:-translate-y-0.5"
+                className={`relative overflow-hidden rounded-3xl p-4 sm:p-5 text-white shadow-xl flex items-center justify-between animate-pulse-subtle cursor-pointer hover:shadow-2xl transition-all duration-300 group hover:-translate-y-0.5 ${
+                  trackedOrder.status === 'cancelled'
+                    ? 'bg-gradient-to-r from-red-600 to-rose-600 shadow-red-500/25'
+                    : 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 shadow-orange-500/25'
+                }`}
               >
                 <div className="absolute inset-0 shimmer-gradient pointer-events-none opacity-30" />
                 <div className="flex items-center gap-3.5 relative z-10">
@@ -514,6 +593,7 @@ export function App() {
                     {trackedOrder.status === 'cooking' && <Flame className="w-6 h-6 animate-bounce" />}
                     {trackedOrder.status === 'ready' && <Sparkles className="w-6 h-6 animate-pulse" />}
                     {trackedOrder.status === 'completed' && <CheckCircle2 className="w-6 h-6" />}
+                    {trackedOrder.status === 'cancelled' && <Ban className="w-6 h-6" />}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -529,6 +609,7 @@ export function App() {
                       {trackedOrder.status === 'cooking' && (language === 'th' ? 'ห้องครัวกำลังปรุงเมนูของคุณอย่างพิถีพิถัน 🔥' : 'Kitchen is preparing your meal 🔥')}
                       {trackedOrder.status === 'ready' && (language === 'th' ? 'อาหารพร้อมเสิร์ฟแล้ว! กำลังนำไปส่งที่โต๊ะ ✨' : 'Food is ready to be served! ✨')}
                       {trackedOrder.status === 'completed' && (language === 'th' ? 'ออเดอร์เสร็จสมบูรณ์ ทานให้อร่อยนะคะ' : 'Order completed. Enjoy your meal!')}
+                      {trackedOrder.status === 'cancelled' && (language === 'th' ? `❌ ออเดอร์ถูกยกเลิก (${trackedOrder.cancelReason || 'กรุณาติดต่อพนักงาน'})` : 'Order was cancelled by store')}
                     </p>
                   </div>
                 </div>
@@ -633,6 +714,7 @@ export function App() {
             onToggleStock={handleToggleStock}
             onResetData={handleResetData}
             onPrintReceipt={(order) => setReceiptOrder(order)}
+            onCancelOrder={handleCancelOrder}
           />
         )}
 
@@ -667,14 +749,16 @@ export function App() {
         )}
       </main>
 
-      {/* Role Switcher Floating Bar (Strictly visible ONLY to authenticated staff - without logout button) */}
-      <RoleSwitcher
-        activeRole={activeRole}
-        onSelectRole={handleSelectRole}
-        language={language}
-        pendingOrdersCount={pendingCount}
-        isAuthenticated={!!user}
-      />
+      {/* Role Switcher Floating Bar (Strictly visible ONLY to authenticated staff or simulator) */}
+      {(user || isSimulatorMode) && (
+        <RoleSwitcher
+          activeRole={activeRole}
+          onSelectRole={handleSelectRole}
+          language={language}
+          pendingOrdersCount={pendingCount}
+          isAuthenticated={!!user}
+        />
+      )}
 
       {/* Auth Modal for Store Staff & Google Login */}
       <AuthModal
@@ -683,6 +767,7 @@ export function App() {
         language={language}
         onSuccess={() => {
           setIsAuthModalOpen(false);
+          setActiveRole('kitchen');
         }}
       />
 

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import confetti from 'canvas-confetti';
-import { CheckCircle2, Clock, ChefHat, Sparkles, Plus, X, Utensils, Receipt } from 'lucide-react';
+import { CheckCircle2, Clock, ChefHat, Sparkles, Plus, X, Utensils, Receipt, Ban, AlertCircle } from 'lucide-react';
 import { Order, OrderStatus, Language } from '../../types';
 import { t } from '../../utils/i18n';
 
@@ -105,10 +105,14 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
       <div className="relative w-full max-w-lg bg-white rounded-[28px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col border border-stone-200/80 z-10">
         
         {/* Header */}
-        <div className="px-6 py-4 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 text-white flex items-center justify-between flex-shrink-0">
+        <div className={`px-6 py-4 text-white flex items-center justify-between flex-shrink-0 ${
+          order.status === 'cancelled'
+            ? 'bg-gradient-to-r from-red-600 to-rose-600'
+            : 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500'
+        }`}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white">
-              <Receipt className="w-5 h-5" />
+              {order.status === 'cancelled' ? <Ban className="w-5 h-5" /> : <Receipt className="w-5 h-5" />}
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -134,69 +138,86 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
         {/* Scrollable Body */}
         <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1 min-h-0 text-xs sm:text-sm">
           
-          {/* Status Progression Card */}
-          <div className="bg-stone-50/90 rounded-3xl p-4 sm:p-5 border border-stone-200/80 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-black uppercase tracking-wider text-stone-400">
-                {language === 'th' ? 'ความคืบหน้าออเดอร์' : 'Live Order Progress'}
-              </span>
-              <span className="text-xs font-black text-orange-600 bg-orange-100/70 px-2.5 py-0.5 rounded-full animate-pulse">
-                {order.status === 'pending' && `⏳ ${t('trackerStep1', language)}`}
-                {order.status === 'cooking' && `🍳 ${t('trackerStep2', language)}`}
-                {order.status === 'ready' && `✨ ${t('trackerStep3', language)}`}
-                {order.status === 'completed' && `✅ ${t('trackerStep4', language)}`}
-              </span>
+          {/* Cancelled Banner if cancelled */}
+          {order.status === 'cancelled' ? (
+            <div className="bg-red-50 rounded-3xl p-5 border border-red-200 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-base font-black text-red-950">
+                  {language === 'th' ? 'ออเดอร์นี้ถูกยกเลิกโดยทางร้าน' : 'Order Cancelled by Store'}
+                </h4>
+                <p className="text-xs text-red-700 font-bold bg-white/80 py-1.5 px-3 rounded-xl border border-red-100 inline-block">
+                  {order.cancelReason ? `${language === 'th' ? 'เหตุผล' : 'Reason'}: ${order.cancelReason}` : (language === 'th' ? 'กรุณาติดต่อพนักงานประจำร้าน' : 'Please contact staff')}
+                </p>
+              </div>
             </div>
+          ) : (
+            /* Status Progression Card */
+            <div className="bg-stone-50/90 rounded-3xl p-4 sm:p-5 border border-stone-200/80 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black uppercase tracking-wider text-stone-400">
+                  {language === 'th' ? 'ความคืบหน้าออเดอร์' : 'Live Order Progress'}
+                </span>
+                <span className="text-xs font-black text-orange-600 bg-orange-100/70 px-2.5 py-0.5 rounded-full animate-pulse">
+                  {order.status === 'pending' && `⏳ ${t('trackerStep1', language)}`}
+                  {order.status === 'cooking' && `🍳 ${t('trackerStep2', language)}`}
+                  {order.status === 'ready' && `✨ ${t('trackerStep3', language)}`}
+                  {order.status === 'completed' && `✅ ${t('trackerStep4', language)}`}
+                </span>
+              </div>
 
-            {/* Timeline */}
-            <div className="space-y-4 pt-1">
-              {steps.map((step, idx) => {
-                const isPassed = idx < currentIndex;
-                const isCurrent = idx === currentIndex;
+              {/* Timeline */}
+              <div className="space-y-4 pt-1">
+                {steps.map((step, idx) => {
+                  const isPassed = idx < currentIndex;
+                  const isCurrent = idx === currentIndex;
 
-                return (
-                  <div key={step.key} className="flex items-start gap-3.5 relative">
-                    {idx < steps.length - 1 && (
+                  return (
+                    <div key={step.key} className="flex items-start gap-3.5 relative">
+                      {idx < steps.length - 1 && (
+                        <div
+                          className={`absolute left-[15px] top-8 w-0.5 h-8 ${
+                            idx < currentIndex ? 'bg-orange-500' : 'bg-stone-200'
+                          }`}
+                        />
+                      )}
+
                       <div
-                        className={`absolute left-[15px] top-8 w-0.5 h-8 ${
-                          idx < currentIndex ? 'bg-orange-500' : 'bg-stone-200'
-                        }`}
-                      />
-                    )}
-
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 transition-all ${
-                        isCurrent
-                          ? 'bg-orange-500 text-white ring-4 ring-orange-200 scale-110 shadow-md'
-                          : isPassed
-                          ? 'bg-orange-500 text-white'
-                          : 'bg-stone-200 text-stone-400'
-                      }`}
-                    >
-                      {isPassed ? <CheckCircle2 className="w-4 h-4 stroke-[3]" /> : step.icon}
-                    </div>
-
-                    <div className="flex-1 pt-0.5">
-                      <h4
-                        className={`text-sm font-black ${
+                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 transition-all ${
                           isCurrent
-                            ? 'text-orange-600'
+                            ? 'bg-orange-500 text-white ring-4 ring-orange-200 scale-110 shadow-md'
                             : isPassed
-                            ? 'text-stone-900'
-                            : 'text-stone-400'
+                            ? 'bg-orange-500 text-white'
+                            : 'bg-stone-200 text-stone-400'
                         }`}
                       >
-                        {step.label}
-                      </h4>
-                      <p className="text-xs text-stone-500 leading-snug font-medium mt-0.5">
-                        {step.desc}
-                      </p>
+                        {isPassed ? <CheckCircle2 className="w-4 h-4 stroke-[3]" /> : step.icon}
+                      </div>
+
+                      <div className="flex-1 pt-0.5">
+                        <h4
+                          className={`text-sm font-black ${
+                            isCurrent
+                              ? 'text-orange-600'
+                              : isPassed
+                              ? 'text-stone-900'
+                              : 'text-stone-400'
+                          }`}
+                        >
+                          {step.label}
+                        </h4>
+                        <p className="text-xs text-stone-500 leading-snug font-medium mt-0.5">
+                          {step.desc}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Ordered Items Breakdown */}
           <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/80 shadow-xs space-y-3">
@@ -247,17 +268,19 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
                 <span className="text-orange-600 text-lg font-black">฿{order.totalPrice?.toLocaleString()}</span>
               </div>
 
-              <div className="p-3 rounded-2xl bg-orange-50/80 border border-orange-100 text-xs text-orange-950 space-y-1">
-                <p className="font-bold flex items-center gap-1.5">
-                  <span>ℹ️</span>
-                  <span>{language === 'th' ? 'การชำระเงิน' : 'Payment Information'}</span>
-                </p>
-                <p className="text-[11px] text-stone-600 leading-relaxed font-medium">
-                  {language === 'th' 
-                    ? 'พนักงานจะนำใบเสร็จพร้อม PromptPay QR มาให้ท่านสแกนจ่ายหรือชำระด้วยเงินสดเมื่ออาหารพร้อมเสิร์ฟ' 
-                    : 'Staff will deliver the bill slip with PromptPay QR directly to your table when food is served.'}
-                </p>
-              </div>
+              {order.status !== 'cancelled' && (
+                <div className="p-3 rounded-2xl bg-orange-50/80 border border-orange-100 text-xs text-orange-950 space-y-1">
+                  <p className="font-bold flex items-center gap-1.5">
+                    <span>ℹ️</span>
+                    <span>{language === 'th' ? 'การชำระเงิน' : 'Payment Information'}</span>
+                  </p>
+                  <p className="text-[11px] text-stone-600 leading-relaxed font-medium">
+                    {language === 'th' 
+                      ? 'พนักงานจะนำใบเสร็จพร้อม PromptPay QR มาให้ท่านสแกนจ่ายหรือชำระด้วยเงินสดเมื่ออาหารพร้อมเสิร์ฟ' 
+                      : 'Staff will deliver the bill slip with PromptPay QR directly to your table when food is served.'}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

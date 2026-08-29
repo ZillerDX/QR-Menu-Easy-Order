@@ -2,6 +2,7 @@ import { MenuCategory, MenuItem, StoreConfig } from '../types';
 import { CAFE_ORDER_LOGO_DATA_URI } from './logoData';
 
 export const initialStoreConfig: StoreConfig = {
+  id: "cafe-order",
   name: "Cafe Order",
   nameEn: "Cafe Order",
   tagline: "Order Easy • Enjoy More",

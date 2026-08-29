@@ -23,7 +23,8 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
     if (!pathname.endsWith('/')) {
       pathname += '/';
     }
-    return `${origin}${pathname}?table=${table}&lang=${language}`;
+    const shopSlug = storeConfig.id || 'cafe-order';
+    return `${origin}${pathname}?shop=${shopSlug}&table=${table}&lang=${language}`;
   };
 
   const currentUrl = getTableUrl(selectedTable);
