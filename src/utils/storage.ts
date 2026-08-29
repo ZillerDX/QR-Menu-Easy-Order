@@ -17,6 +17,44 @@ export type SyncEventType =
 
 type EventListener = (event: SyncEventType) => void;
 
+// Safe In-Memory Storage Fallback for SSR / Node Testing
+const memoryStorage = new Map<string, string>();
+
+const safeStorage = {
+  getItem: (key: string): string | null => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        return window.localStorage.getItem(key);
+      } catch {
+        return memoryStorage.get(key) ?? null;
+      }
+    }
+    return memoryStorage.get(key) ?? null;
+  },
+  setItem: (key: string, value: string): void => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.setItem(key, value);
+      } catch {
+        memoryStorage.set(key, value);
+      }
+    } else {
+      memoryStorage.set(key, value);
+    }
+  },
+  removeItem: (key: string): void => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.removeItem(key);
+      } catch {
+        memoryStorage.delete(key);
+      }
+    } else {
+      memoryStorage.delete(key);
+    }
+  },
+};
+
 class RealtimeSyncManager {
   private channel: BroadcastChannel | null = null;
   private listeners: Set<EventListener> = new Set();
@@ -69,7 +107,7 @@ class RealtimeSyncManager {
   // --- Orders ---
   getOrders(): Order[] {
     try {
-      const data = localStorage.getItem(ORDERS_KEY);
+      const data = safeStorage.getItem(ORDERS_KEY);
       return data ? JSON.parse(data) : [];
     } catch {
       return [];
@@ -79,7 +117,7 @@ class RealtimeSyncManager {
   saveOrder(order: Order): Order[] {
     const orders = this.getOrders();
     const updated = [order, ...orders];
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(updated));
+    safeStorage.setItem(ORDERS_KEY, JSON.stringify(updated));
     this.broadcast({ type: 'ORDER_CREATED', payload: order });
     return updated;
   }
@@ -98,7 +136,7 @@ class RealtimeSyncManager {
       }
       return o;
     });
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(updated));
+    safeStorage.setItem(ORDERS_KEY, JSON.stringify(updated));
     if (targetOrder) {
       this.broadcast({ type: 'ORDER_STATUS_UPDATED', payload: targetOrder });
     }
@@ -108,7 +146,7 @@ class RealtimeSyncManager {
   // --- Menu Categories ---
   getCategories(): MenuCategory[] {
     try {
-      const data = localStorage.getItem(CATEGORIES_KEY);
+      const data = safeStorage.getItem(CATEGORIES_KEY);
       if (!data) return initialCategories;
       const parsed: MenuCategory[] = JSON.parse(data);
       return parsed.map((cat) => {
@@ -136,7 +174,7 @@ class RealtimeSyncManager {
     } else {
       updated = [...categories, category];
     }
-    localStorage.setItem(CATEGORIES_KEY, JSON.stringify(updated));
+    safeStorage.setItem(CATEGORIES_KEY, JSON.stringify(updated));
     this.broadcast({ type: 'CATEGORIES_UPDATED', payload: updated });
     return updated;
   }
@@ -144,7 +182,7 @@ class RealtimeSyncManager {
   deleteCategory(categoryId: string): MenuCategory[] {
     const categories = this.getCategories();
     const updated = categories.filter((c) => c.id !== categoryId);
-    localStorage.setItem(CATEGORIES_KEY, JSON.stringify(updated));
+    safeStorage.setItem(CATEGORIES_KEY, JSON.stringify(updated));
     this.broadcast({ type: 'CATEGORIES_UPDATED', payload: updated });
     return updated;
   }
@@ -152,7 +190,7 @@ class RealtimeSyncManager {
   // --- Menu Items ---
   getMenuItems(): MenuItem[] {
     try {
-      const data = localStorage.getItem(MENU_KEY);
+      const data = safeStorage.getItem(MENU_KEY);
       return data ? JSON.parse(data) : initialMenuItems;
     } catch {
       return initialMenuItems;
@@ -169,7 +207,7 @@ class RealtimeSyncManager {
     } else {
       updated = [item, ...items];
     }
-    localStorage.setItem(MENU_KEY, JSON.stringify(updated));
+    safeStorage.setItem(MENU_KEY, JSON.stringify(updated));
     this.broadcast({ type: 'MENU_UPDATED', payload: updated });
     return updated;
   }
@@ -177,7 +215,7 @@ class RealtimeSyncManager {
   deleteMenuItem(itemId: string): MenuItem[] {
     const items = this.getMenuItems();
     const updated = items.filter((i) => i.id !== itemId);
-    localStorage.setItem(MENU_KEY, JSON.stringify(updated));
+    safeStorage.setItem(MENU_KEY, JSON.stringify(updated));
     this.broadcast({ type: 'MENU_UPDATED', payload: updated });
     return updated;
   }
@@ -187,7 +225,7 @@ class RealtimeSyncManager {
     const updated = items.map((item) =>
       item.id === itemId ? { ...item, isAvailable: !item.isAvailable } : item
     );
-    localStorage.setItem(MENU_KEY, JSON.stringify(updated));
+    safeStorage.setItem(MENU_KEY, JSON.stringify(updated));
     this.broadcast({ type: 'MENU_UPDATED', payload: updated });
     return updated;
   }
@@ -195,7 +233,7 @@ class RealtimeSyncManager {
   // --- Store Config ---
   getStoreConfig(): StoreConfig {
     try {
-      const data = localStorage.getItem(STORE_KEY);
+      const data = safeStorage.getItem(STORE_KEY);
       if (!data) return initialStoreConfig;
       const parsed: StoreConfig = JSON.parse(data);
       if (
@@ -215,7 +253,7 @@ class RealtimeSyncManager {
           logoUrl: initialStoreConfig.logoUrl,
           promptpayName: parsed.promptpayName === 'อีซี่ เมนู (Easy Menu)' ? initialStoreConfig.promptpayName : parsed.promptpayName,
         };
-        localStorage.setItem(STORE_KEY, JSON.stringify(migrated));
+        safeStorage.setItem(STORE_KEY, JSON.stringify(migrated));
         return migrated;
       }
       return parsed;
@@ -225,17 +263,17 @@ class RealtimeSyncManager {
   }
 
   saveStoreConfig(config: StoreConfig): StoreConfig {
-    localStorage.setItem(STORE_KEY, JSON.stringify(config));
+    safeStorage.setItem(STORE_KEY, JSON.stringify(config));
     this.broadcast({ type: 'STORE_CONFIG_UPDATED', payload: config });
     return config;
   }
 
   // --- Reset All Data ---
   resetAll(): void {
-    localStorage.removeItem(ORDERS_KEY);
-    localStorage.removeItem(MENU_KEY);
-    localStorage.removeItem(CATEGORIES_KEY);
-    localStorage.removeItem(STORE_KEY);
+    safeStorage.removeItem(ORDERS_KEY);
+    safeStorage.removeItem(MENU_KEY);
+    safeStorage.removeItem(CATEGORIES_KEY);
+    safeStorage.removeItem(STORE_KEY);
     this.broadcast({ type: 'SYSTEM_RESET' });
   }
 }

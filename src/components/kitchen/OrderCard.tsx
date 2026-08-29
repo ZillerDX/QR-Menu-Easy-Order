@@ -1,12 +1,25 @@
 import React, { useState } from 'react';
-import { Clock, Utensils, Sparkles, CheckCheck, Banknote, QrCode, Flame, Hourglass, Printer, Ban } from 'lucide-react';
+import { 
+  Clock, 
+  Sparkles, 
+  CheckCircle2, 
+  Banknote, 
+  QrCode, 
+  Flame, 
+  Hourglass, 
+  Printer, 
+  XCircle, 
+  ChefHat, 
+  Undo2, 
+  Loader2 
+} from 'lucide-react';
 import { Order, OrderStatus, Language } from '../../types';
 import { t } from '../../utils/i18n';
 
 interface OrderCardProps {
   order: Order;
   language: Language;
-  onUpdateStatus: (orderId: string, status: OrderStatus, paymentStatus?: Order['paymentStatus']) => void;
+  onUpdateStatus: (orderId: string, status: OrderStatus, paymentStatus?: Order['paymentStatus']) => Promise<void> | void;
   onPrintReceipt?: (order: Order) => void;
   onRejectOrder?: (order: Order) => void;
 }
@@ -19,6 +32,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   onRejectOrder,
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [updatingLabel, setUpdatingLabel] = useState('');
 
   const timeFormatted = new Date(order.createdAt).toLocaleTimeString(language === 'th' ? 'th-TH' : 'en-US', {
     hour: '2-digit',
@@ -29,43 +43,43 @@ export const OrderCard: React.FC<OrderCardProps> = ({
     switch (order.status) {
       case 'pending':
         return {
-          border: 'border-red-400/90 ring-2 ring-red-100 shadow-md shadow-red-500/10',
-          badge: 'bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-xs',
+          border: 'border-red-300 ring-2 ring-red-100 shadow-md shadow-red-500/10',
+          badge: 'bg-red-500 text-white shadow-xs',
           label: t('kdsPendingBadge', language),
           icon: <Hourglass className="w-3.5 h-3.5 animate-spin text-white" />,
         };
       case 'cooking':
         return {
-          border: 'border-amber-400/90 ring-2 ring-amber-100 shadow-md shadow-amber-500/10',
-          badge: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs',
+          border: 'border-amber-300 ring-2 ring-amber-100 shadow-md shadow-amber-500/10',
+          badge: 'bg-amber-500 text-white shadow-xs',
           label: t('kdsCookingBadge', language),
           icon: <Flame className="w-3.5 h-3.5 animate-pulse text-white" />,
         };
       case 'ready':
         return {
-          border: 'border-emerald-400/90 ring-2 ring-emerald-100 shadow-md shadow-emerald-500/10',
-          badge: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-xs',
+          border: 'border-emerald-300 ring-2 ring-emerald-100 shadow-md shadow-emerald-500/10',
+          badge: 'bg-emerald-600 text-white shadow-xs',
           label: t('kdsReadyBadge', language),
           icon: <Sparkles className="w-3.5 h-3.5 animate-bounce text-white" />,
         };
       case 'completed':
         return {
-          border: 'border-stone-200 opacity-70 bg-stone-50/50',
+          border: 'border-stone-200 opacity-75 bg-stone-50/50',
           badge: 'bg-stone-600 text-white',
           label: t('kdsCompletedBadge', language),
-          icon: <CheckCheck className="w-3.5 h-3.5 text-white" />,
+          icon: <CheckCircle2 className="w-3.5 h-3.5 text-white" />,
         };
       case 'cancelled':
         return {
-          border: 'border-red-200 opacity-70 bg-red-50/20',
+          border: 'border-red-200 opacity-75 bg-red-50/20',
           badge: 'bg-red-600 text-white',
-          label: 'ยกเลิก / ปฏิเสธ',
-          icon: <Ban className="w-3.5 h-3.5 text-white" />,
+          label: language === 'th' ? 'ยกเลิกแล้ว' : 'Cancelled',
+          icon: <XCircle className="w-3.5 h-3.5 text-white" />,
         };
       default:
         return {
           border: 'border-stone-200',
-          badge: 'bg-stone-400 text-white',
+          badge: 'bg-stone-500 text-white',
           label: order.status,
           icon: <Clock className="w-3.5 h-3.5 text-white" />,
         };
@@ -74,18 +88,33 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
   const theme = getCardTheme();
 
-  const handleStepUpdate = async (nextStatus: OrderStatus, nextPaymentStatus?: Order['paymentStatus']) => {
+  const handleStepUpdate = async (nextStatus: OrderStatus, nextPaymentStatus?: Order['paymentStatus'], label = '') => {
     if (isUpdating) return;
     setIsUpdating(true);
+    setUpdatingLabel(label);
     try {
       await onUpdateStatus(order.id, nextStatus, nextPaymentStatus);
     } finally {
-      setTimeout(() => setIsUpdating(false), 400);
+      setTimeout(() => {
+        setIsUpdating(false);
+        setUpdatingLabel('');
+      }, 350);
     }
   };
 
   return (
-    <div className={`bg-white rounded-3xl p-4 sm:p-5 border flex flex-col justify-between transition-all duration-300 hover:shadow-lg ${theme.border}`}>
+    <div className={`bg-white rounded-3xl p-4 sm:p-5 border flex flex-col justify-between transition-all duration-300 hover:shadow-lg relative overflow-hidden ${theme.border}`}>
+      
+      {/* Loading Overlay */}
+      {isUpdating && (
+        <div className="absolute inset-0 bg-white/85 backdrop-blur-xs z-20 flex flex-col items-center justify-center gap-2 animate-in fade-in duration-150">
+          <Loader2 className="w-7 h-7 text-orange-500 animate-spin" />
+          <span className="text-xs font-black text-stone-800 tracking-tight">
+            {updatingLabel || (language === 'th' ? 'กำลังอัปเดตสถานะ...' : 'Updating status...')}
+          </span>
+        </div>
+      )}
+
       <div>
         {/* Header: Table, Reject & Time */}
         <div className="flex items-center justify-between pb-3 border-b border-stone-100">
@@ -103,11 +132,13 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               <button
                 type="button"
                 onClick={() => onRejectOrder?.(order)}
-                className="text-stone-400 hover:text-red-600 bg-stone-100 hover:bg-red-50 px-2 py-1 rounded-xl transition cursor-pointer text-xs font-bold flex items-center gap-1"
+                className="text-stone-400 hover:text-red-600 bg-stone-100 hover:bg-red-50 px-2.5 py-1 rounded-xl transition cursor-pointer text-xs font-bold flex items-center gap-1.5 active:scale-95"
                 title={language === 'th' ? 'ปฏิเสธ / ยกเลิกออเดอร์นี้' : 'Reject Order'}
               >
-                <Ban className="w-3 h-3 text-red-500" />
-                <span className="hidden sm:inline text-[11px] text-red-600 font-black">ปฏิเสธ</span>
+                <XCircle className="w-3.5 h-3.5 text-red-500" />
+                <span className="text-[11px] text-red-600 font-black">
+                  {language === 'th' ? 'ปฏิเสธ' : 'Reject'}
+                </span>
               </button>
             )}
 
@@ -124,14 +155,17 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             {theme.icon}
             <span>{theme.label}</span>
           </span>
+          
           <div className="flex items-center gap-1 text-xs">
             {order.paymentMethod === 'promptpay' ? (
-              <span className="flex items-center gap-1 text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg font-bold">
-                <QrCode className="w-3 h-3" /> {t('promptpayQR', language)}
+              <span className="flex items-center gap-1 text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-lg font-bold">
+                <QrCode className="w-3 h-3 text-blue-600" />
+                <span>{t('promptpayQR', language)}</span>
               </span>
             ) : (
-              <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg font-bold">
-                <Banknote className="w-3 h-3" /> {t('cashAtCounter', language)}
+              <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg font-bold">
+                <Banknote className="w-3 h-3 text-emerald-600" />
+                <span>{t('cashAtCounter', language)}</span>
               </span>
             )}
             <span className={`text-[10px] px-2 py-0.5 rounded-md font-black ${
@@ -172,7 +206,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
               {item.specialNote && (
                 <div className="ml-6 mt-1 text-[11px] text-red-600 bg-red-50 px-2 py-0.5 rounded-md font-bold inline-block">
-                  ⚠️ {item.specialNote}
+                  หมายเหตุ: {item.specialNote}
                 </div>
               )}
             </div>
@@ -186,11 +220,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           <button
             type="button"
             onClick={() => onPrintReceipt?.(order)}
-            className="flex items-center gap-1 text-[11px] text-stone-700 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 px-3 py-1.5 rounded-xl transition cursor-pointer font-black active:scale-95 shadow-2xs"
+            className="flex items-center gap-1.5 text-[11px] text-stone-700 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 px-3 py-1.5 rounded-xl transition cursor-pointer font-black active:scale-95 shadow-2xs"
             title="Print Receipt Slip"
           >
-            <Printer className="w-3.5 h-3.5 text-orange-500" />
-            <span>{language === 'th' ? '🖨️ พิมพ์ใบเสร็จ' : 'Print Slip'}</span>
+            <Printer className="w-3.5 h-3.5 text-orange-600" />
+            <span>{language === 'th' ? 'พิมพ์ใบเสร็จ' : 'Print Slip'}</span>
           </button>
           
           <div className="text-right">
@@ -205,11 +239,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             <button
               type="button"
               disabled={isUpdating}
-              onClick={() => handleStepUpdate('cooking')}
+              onClick={() => handleStepUpdate('cooking', undefined, language === 'th' ? 'กำลังเริ่มปรุงอาหาร...' : 'Starting cooking...')}
               className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-orange-500/25 active:scale-95 transition cursor-pointer disabled:opacity-50"
             >
-              <Utensils className="w-4 h-4" />
-              <span>{language === 'th' ? '🍳 เริ่มปรุงอาหาร (Start Cooking)' : 'Start Cooking'}</span>
+              <ChefHat className="w-4 h-4 text-white" />
+              <span>{language === 'th' ? 'เริ่มปรุงอาหาร' : 'Start Cooking'}</span>
             </button>
           )}
 
@@ -218,20 +252,20 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               <button
                 type="button"
                 disabled={isUpdating}
-                onClick={() => handleStepUpdate('pending')}
-                className="px-3 py-3 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold text-xs transition cursor-pointer active:scale-95"
+                onClick={() => handleStepUpdate('pending', undefined, language === 'th' ? 'ย้อนกลับไปรอทำ...' : 'Reverting to pending...')}
+                className="p-3 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold text-xs transition cursor-pointer active:scale-95 flex items-center justify-center"
                 title={language === 'th' ? 'ย้อนกลับไปรอทำ' : 'Back to Pending'}
               >
-                ↩️
+                <Undo2 className="w-4 h-4 text-stone-600" />
               </button>
               <button
                 type="button"
                 disabled={isUpdating}
-                onClick={() => handleStepUpdate('ready')}
+                onClick={() => handleStepUpdate('ready', undefined, language === 'th' ? 'อัปเดตเป็นพร้อมเสิร์ฟ...' : 'Marking ready...')}
                 className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-600/25 active:scale-95 transition cursor-pointer disabled:opacity-50"
               >
-                <Sparkles className="w-4 h-4" />
-                <span>{language === 'th' ? '✨ ปรุงเสร็จแล้ว (พร้อมเสิร์ฟ)' : 'Ready to Serve'}</span>
+                <Sparkles className="w-4 h-4 text-white" />
+                <span>{language === 'th' ? 'ปรุงเสร็จแล้ว (พร้อมเสิร์ฟ)' : 'Ready to Serve'}</span>
               </button>
             </div>
           )}
@@ -241,59 +275,49 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               <button
                 type="button"
                 disabled={isUpdating}
-                onClick={() => handleStepUpdate('cooking')}
-                className="px-3 py-3 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold text-xs transition cursor-pointer active:scale-95"
+                onClick={() => handleStepUpdate('cooking', undefined, language === 'th' ? 'ย้อนกลับไปกำลังปรุง...' : 'Reverting to cooking...')}
+                className="p-3 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold text-xs transition cursor-pointer active:scale-95 flex items-center justify-center"
                 title={language === 'th' ? 'ย้อนกลับไปกำลังปรุง' : 'Back to Cooking'}
               >
-                ↩️
+                <Undo2 className="w-4 h-4 text-stone-600" />
               </button>
               <button
                 type="button"
                 disabled={isUpdating}
-                onClick={() => handleStepUpdate('completed', 'paid')}
+                onClick={() => handleStepUpdate('completed', 'paid', language === 'th' ? 'กำลังปิดบิลชำระเงิน...' : 'Closing bill...')}
                 className="flex-1 py-3 px-4 rounded-2xl bg-stone-900 hover:bg-black text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md active:scale-95 transition cursor-pointer disabled:opacity-50"
               >
-                <CheckCheck className="w-4 h-4 text-emerald-400" />
-                <span>{language === 'th' ? '✓ ปิดบิล (ชำระเงินแล้ว)' : 'Complete & Close Bill'}</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>{language === 'th' ? 'ปิดบิล (ชำระเงินแล้ว)' : 'Close Bill (Paid)'}</span>
               </button>
             </div>
           )}
 
           {order.status === 'completed' && (
-            <div className="flex items-center justify-between bg-stone-100/90 py-2.5 px-3.5 rounded-2xl">
-              <span className="text-xs font-black text-emerald-700 flex items-center gap-1.5">
-                <CheckCheck className="w-4 h-4" />
-                <span>{language === 'th' ? 'ปิดบิลเสร็จสิ้นเรียบร้อย' : 'Order Completed & Paid'}</span>
-              </span>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 py-2.5 px-3 rounded-2xl bg-stone-100 text-stone-500 font-bold text-xs flex items-center justify-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{language === 'th' ? 'ปิดบิลเรียบร้อยแล้ว' : 'Bill Closed'}</span>
+              </div>
               <button
                 type="button"
                 disabled={isUpdating}
-                onClick={() => handleStepUpdate('ready')}
-                className="text-[11px] font-bold text-stone-500 hover:text-stone-800 underline cursor-pointer"
+                onClick={() => handleStepUpdate('ready', 'paid', language === 'th' ? 'เปิดบิลใหม่...' : 'Reopening bill...')}
+                className="px-3 py-2.5 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold text-xs transition cursor-pointer flex items-center gap-1 active:scale-95"
+                title={language === 'th' ? 'ย้อนกลับไปพร้อมเสิร์ฟ' : 'Reopen Bill'}
               >
-                {language === 'th' ? 'เปิดบิลใหม่' : 'Reopen'}
+                <Undo2 className="w-3.5 h-3.5 text-stone-500" />
+                <span className="text-[11px]">{language === 'th' ? 'เปิดบิลใหม่' : 'Reopen'}</span>
               </button>
             </div>
           )}
 
           {order.status === 'cancelled' && (
-            <div className="p-2.5 rounded-2xl bg-red-50 border border-red-100 text-xs text-red-800 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="font-black flex items-center gap-1 text-red-600">
-                  <Ban className="w-3.5 h-3.5" /> ยกเลิกโดยทางร้าน
-                </span>
-                <button
-                  type="button"
-                  disabled={isUpdating}
-                  onClick={() => handleStepUpdate('pending')}
-                  className="text-[11px] font-bold text-stone-500 hover:text-stone-800 underline cursor-pointer"
-                >
-                  กู้คืนออเดอร์
-                </button>
+            <div className="py-2.5 px-3 rounded-2xl bg-red-50 text-red-700 font-bold text-xs flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <XCircle className="w-3.5 h-3.5 text-red-500" />
+                <span>{language === 'th' ? `ปฏิเสธ: ${order.cancelReason || 'ไม่ระบุ'}` : `Rejected: ${order.cancelReason || 'N/A'}`}</span>
               </div>
-              {order.cancelReason && (
-                <p className="text-[11px] text-stone-600 font-medium">เหตุผล: {order.cancelReason}</p>
-              )}
             </div>
           )}
         </div>

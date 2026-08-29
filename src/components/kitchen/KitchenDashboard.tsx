@@ -1,5 +1,18 @@
 import React, { useState } from 'react';
-import { UtensilsCrossed, Volume2, PackageOpen, RotateCcw, Sparkles, TrendingUp, BarChart3, Clock, ChefHat, Ban } from 'lucide-react';
+import { 
+  UtensilsCrossed, 
+  Volume2, 
+  PackageOpen, 
+  RotateCcw, 
+  Sparkles, 
+  TrendingUp, 
+  BarChart3, 
+  Clock, 
+  CheckCircle2, 
+  Layers,
+  ChefHat,
+  Bell
+} from 'lucide-react';
 import { Order, MenuItem, Language, OrderStatus } from '../../types';
 import { t } from '../../utils/i18n';
 import { OrderCard } from './OrderCard';
@@ -12,11 +25,11 @@ interface KitchenDashboardProps {
   orders: Order[];
   menuItems: MenuItem[];
   language: Language;
-  onUpdateStatus: (orderId: string, status: OrderStatus, paymentStatus?: Order['paymentStatus']) => void;
+  onUpdateStatus: (orderId: string, status: OrderStatus, paymentStatus?: Order['paymentStatus']) => Promise<void> | void;
   onToggleStock: (itemId: string) => void;
   onResetData: () => void;
   onPrintReceipt?: (order: Order) => void;
-  onCancelOrder?: (orderId: string, reason: string) => void;
+  onCancelOrder?: (orderId: string, reason: string) => Promise<void> | void;
 }
 
 export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
@@ -33,6 +46,12 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
   const [showStock, setShowStock] = useState(false);
   const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
   const [rejectTargetOrder, setRejectTargetOrder] = useState<Order | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const triggerToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   const inProgressOrders = orders.filter((o) => o.status === 'pending' || o.status === 'cooking' || o.status === 'ready');
   const readyOrders = orders.filter((o) => o.status === 'ready');
@@ -52,10 +71,41 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
 
   const handleTestSound = () => {
     soundService.playNewOrderChime();
+    triggerToast(language === 'th' ? '🔔 ทดสอบเสียงแจ้งเตือนออเดอร์ใหม่' : 'Tested notification sound');
+  };
+
+  const handleUpdateStatusWrapped = async (orderId: string, status: OrderStatus, paymentStatus?: Order['paymentStatus']) => {
+    await onUpdateStatus(orderId, status, paymentStatus);
+    const target = orders.find((o) => o.id === orderId);
+    const tableLabel = target ? `โต๊ะ ${target.tableNumber}` : '';
+    
+    if (status === 'cooking') {
+      triggerToast(language === 'th' ? `🍳 เริ่มปรุงอาหาร ${tableLabel}` : `Started cooking for ${tableLabel}`);
+    } else if (status === 'ready') {
+      triggerToast(language === 'th' ? `✨ ออเดอร์ ${tableLabel} ปรุงเสร็จพร้อมเสิร์ฟแล้ว` : `Order for ${tableLabel} is ready to serve`);
+    } else if (status === 'completed') {
+      triggerToast(language === 'th' ? `✓ ปิดบิล ${tableLabel} เรียบร้อยแล้ว` : `Bill closed for ${tableLabel}`);
+    } else if (status === 'pending') {
+      triggerToast(language === 'th' ? `↩️ ย้อนสถานะ ${tableLabel} กลับไปรอทำ` : `Reverted ${tableLabel} to pending`);
+    }
+  };
+
+  const handleCancelOrderWrapped = async (orderId: string, reason: string) => {
+    await onCancelOrder?.(orderId, reason);
+    triggerToast(language === 'th' ? `🚫 ปฏิเสธออเดอร์เรียบร้อยแล้ว (${reason})` : `Order rejected (${reason})`);
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28 relative">
+      
+      {/* Action Toast Feedback Popup */}
+      {toastMessage && (
+        <div className="fixed top-20 right-5 sm:right-8 z-50 bg-stone-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-black animate-in slide-in-from-top-4 duration-200 border border-stone-700">
+          <Bell className="w-4 h-4 text-amber-400 animate-pulse" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Top Controls & Metrics Bar */}
       <div className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
@@ -151,62 +201,72 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
         />
       )}
 
-      {/* Filter Tabs */}
+      {/* Clean Filter Tabs without Emojis */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
         <button
           onClick={() => setFilter('active')}
-          className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
+          className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition flex items-center gap-2 flex-shrink-0 cursor-pointer ${
             filter === 'active'
               ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25'
-              : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
+              : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200/90 shadow-2xs'
           }`}
         >
           <UtensilsCrossed className="w-3.5 h-3.5" />
           <span>{t('kdsFilterActive', language)}</span>
-          <span className="ml-1 bg-white/30 text-white px-1.5 py-0.2 rounded-full text-[10px]">
+          <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-black ${
+            filter === 'active' ? 'bg-white/25 text-white' : 'bg-stone-100 text-stone-700'
+          }`}>
             {inProgressOrders.length}
           </span>
         </button>
 
         <button
           onClick={() => setFilter('ready')}
-          className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
+          className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition flex items-center gap-2 flex-shrink-0 cursor-pointer ${
             filter === 'ready'
               ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25'
-              : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
+              : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200/90 shadow-2xs'
           }`}
         >
           <Sparkles className="w-3.5 h-3.5" />
           <span>{t('kdsFilterReady', language)}</span>
-          <span className="ml-1 bg-stone-100 text-stone-700 px-1.5 py-0.2 rounded-full text-[10px]">
+          <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-black ${
+            filter === 'ready' ? 'bg-white/25 text-white' : 'bg-stone-100 text-stone-700'
+          }`}>
             {readyOrders.length}
           </span>
         </button>
 
         <button
           onClick={() => setFilter('completed')}
-          className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
+          className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition flex items-center gap-2 flex-shrink-0 cursor-pointer ${
             filter === 'completed'
               ? 'bg-stone-900 text-white shadow-md'
-              : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
+              : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200/90 shadow-2xs'
           }`}
         >
+          <CheckCircle2 className="w-3.5 h-3.5" />
           <span>{t('kdsFilterCompleted', language)}</span>
-          <span className="ml-1 bg-stone-100 text-stone-700 px-1.5 py-0.2 rounded-full text-[10px]">
+          <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-black ${
+            filter === 'completed' ? 'bg-white/25 text-white' : 'bg-stone-100 text-stone-700'
+          }`}>
             {completedOrders.length + cancelledOrders.length}
           </span>
         </button>
 
         <button
           onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 flex-shrink-0 cursor-pointer ${
+          className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition flex items-center gap-2 flex-shrink-0 cursor-pointer ${
             filter === 'all'
               ? 'bg-stone-700 text-white shadow-md'
-              : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
+              : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200/90 shadow-2xs'
           }`}
         >
+          <Layers className="w-3.5 h-3.5" />
           <span>{t('kdsFilterAll', language)}</span>
-          <span className="ml-1 bg-stone-100 text-stone-700 px-1.5 py-0.2 rounded-full text-[10px]">
+          <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-black ${
+            filter === 'all' ? 'bg-white/25 text-white' : 'bg-stone-100 text-stone-700'
+          }`}>
             {orders.length}
           </span>
         </button>
@@ -230,7 +290,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
               key={order.id}
               order={order}
               language={language}
-              onUpdateStatus={onUpdateStatus}
+              onUpdateStatus={handleUpdateStatusWrapped}
               onPrintReceipt={onPrintReceipt}
               onRejectOrder={(ord) => setRejectTargetOrder(ord)}
             />
@@ -252,9 +312,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
         onClose={() => setRejectTargetOrder(null)}
         order={rejectTargetOrder}
         language={language}
-        onConfirmCancel={(orderId, reason) => {
-          onCancelOrder?.(orderId, reason);
-        }}
+        onConfirmCancel={handleCancelOrderWrapped}
       />
     </div>
   );
