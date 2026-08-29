@@ -20,6 +20,7 @@ export interface OptionGroup {
 
 export interface MenuItem {
   id: string;
+  storeId?: string;
   categoryId: string;
   name: string;
   nameEn?: string;
@@ -36,6 +37,7 @@ export interface MenuItem {
 
 export interface MenuCategory {
   id: string;
+  storeId?: string;
   name: string;
   nameEn: string;
   icon: string;
@@ -81,6 +83,7 @@ export interface Order {
 
 export interface StoreConfig {
   id?: string;
+  userId?: string;
   name: string;
   nameEn: string;
   tagline: string;

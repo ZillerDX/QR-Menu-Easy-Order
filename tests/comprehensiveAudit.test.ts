@@ -39,12 +39,58 @@ describe('Comprehensive System Audit & Flow Verification', () => {
   });
 
   describe('2. Multi-Store Isolation & Routing', () => {
-    it('should cleanly tag orders with storeId', () => {
+    it('should cleanly isolate store configurations per shopId', () => {
+      const storeAConfig: StoreConfig = {
+        ...initialStoreConfig,
+        id: 'shop-user-alpha',
+        name: 'Alpha Cafe',
+        nameEn: 'Alpha Cafe',
+      };
+      const storeBConfig: StoreConfig = {
+        ...initialStoreConfig,
+        id: 'shop-user-beta',
+        name: 'Beta Bistro',
+        nameEn: 'Beta Bistro',
+      };
+
+      syncManager.saveStoreConfig(storeAConfig, 'shop-user-alpha');
+      syncManager.saveStoreConfig(storeBConfig, 'shop-user-beta');
+
+      const loadedA = syncManager.getStoreConfig('shop-user-alpha');
+      const loadedB = syncManager.getStoreConfig('shop-user-beta');
+
+      expect(loadedA.name).toBe('Alpha Cafe');
+      expect(loadedB.name).toBe('Beta Bistro');
+      expect(loadedA.id).not.toBe(loadedB.id);
+    });
+
+    it('should cleanly isolate menu items and stock between stores', () => {
+      const customItemA: MenuItem = {
+        id: 'item-alpha-special',
+        storeId: 'shop-user-alpha',
+        categoryId: 'coffee',
+        name: 'Alpha Special Roast',
+        description: 'Special roast for Alpha Cafe',
+        price: 120,
+        imageUrl: '',
+        isAvailable: true,
+      };
+
+      syncManager.saveMenuItem(customItemA, 'shop-user-alpha');
+
+      const itemsAlpha = syncManager.getMenuItems('shop-user-alpha');
+      const itemsBeta = syncManager.getMenuItems('shop-user-beta');
+
+      expect(itemsAlpha.some((i) => i.id === 'item-alpha-special')).toBe(true);
+      expect(itemsBeta.some((i) => i.id === 'item-alpha-special')).toBe(false);
+    });
+
+    it('should cleanly isolate orders per shopId', () => {
       const storeAOrder: Order = {
         id: 'ord-shop-a-1',
         orderNumber: '#101',
         tableNumber: '01',
-        storeId: 'cafe-order-branch-1',
+        storeId: 'shop-user-alpha',
         items: [],
         subtotal: 150,
         totalPrice: 150,
@@ -58,7 +104,7 @@ describe('Comprehensive System Audit & Flow Verification', () => {
         id: 'ord-shop-b-1',
         orderNumber: '#102',
         tableNumber: '01',
-        storeId: 'bistro-central',
+        storeId: 'shop-user-beta',
         items: [],
         subtotal: 350,
         totalPrice: 350,
@@ -68,12 +114,11 @@ describe('Comprehensive System Audit & Flow Verification', () => {
         createdAt: new Date().toISOString(),
       };
 
-      syncManager.saveOrder(storeAOrder);
-      syncManager.saveOrder(storeBOrder);
+      syncManager.saveOrder(storeAOrder, 'shop-user-alpha');
+      syncManager.saveOrder(storeBOrder, 'shop-user-beta');
 
-      const allOrders = syncManager.getOrders();
-      const branchAOrders = allOrders.filter((o) => o.storeId === 'cafe-order-branch-1');
-      const branchBOrders = allOrders.filter((o) => o.storeId === 'bistro-central');
+      const branchAOrders = syncManager.getOrders('shop-user-alpha');
+      const branchBOrders = syncManager.getOrders('shop-user-beta');
 
       expect(branchAOrders.length).toBe(1);
       expect(branchAOrders[0].id).toBe('ord-shop-a-1');

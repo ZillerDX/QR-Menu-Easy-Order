@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { MenuItem, MenuCategory, CartItem, Order, OrderStatus, SelectedOption, Language, StoreConfig } from './types';
+import { initialMenuItems, initialCategories, initialStoreConfig } from './data/initialMenu';
 import { syncManager } from './utils/storage';
 import { soundService } from './utils/sound';
 import { t, getInitialLanguage, saveLanguagePreference } from './utils/i18n';
@@ -22,7 +23,6 @@ import { User } from '@supabase/supabase-js';
 import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight, Hourglass, Flame, CheckCircle2, ShoppingBag, Ban, Loader2 } from 'lucide-react';
 
 export function App() {
-  const [storeConfig, setStoreConfig] = useState<StoreConfig>(() => syncManager.getStoreConfig());
   const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
   const [isAuthReady, setIsAuthReady] = useState(false);
 
@@ -33,7 +33,7 @@ export function App() {
       const shop = params.get('shop');
       if (shop) return shop;
     }
-    return syncManager.getStoreConfig().id || 'cafe-order';
+    return 'cafe-order';
   });
 
   // 2. Synchronously resolve Table Number and Customer mode from URL query parameter
@@ -57,9 +57,10 @@ export function App() {
   const [activeRole, setActiveRole] = useState<AppRole>('customer');
   const [isSimulatorMode, setIsSimulatorMode] = useState(false);
 
-  const [categories, setCategories] = useState<MenuCategory[]>([]);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [storeConfig, setStoreConfig] = useState<StoreConfig>(() => syncManager.getStoreConfig(shopId));
+  const [categories, setCategories] = useState<MenuCategory[]>(() => syncManager.getCategories(shopId));
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(() => syncManager.getMenuItems(shopId));
+  const [orders, setOrders] = useState<Order[]>(() => syncManager.getOrders(shopId));
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('popular');
   const [searchQuery, setSearchQuery] = useState('');
@@ -78,7 +79,7 @@ export function App() {
     if (typeof window !== 'undefined') {
       const sessionOrderId = sessionStorage.getItem('my_active_order_id');
       if (!sessionOrderId) return null;
-      const all = syncManager.getOrders();
+      const all = syncManager.getOrders(shopId);
       const match = all.find((o) => o.id === sessionOrderId);
       return match || null;
     }
@@ -89,22 +90,209 @@ export function App() {
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [errorToast, setErrorToast] = useState<string | null>(null);
 
-  // Fetch Latest Orders strictly scoped to current shopId from Supabase
-  const fetchRemoteOrders = useCallback(async () => {
+  // Auto-provision or resolve user's store from Supabase
+  const resolveUserStore = useCallback(async (currentUser: User): Promise<{ shopId: string; config: StoreConfig }> => {
     try {
-      const { data, error } = await supabase
+      // 1. Check if user already owns a store_config
+      const { data: existing, error } = await supabase
+        .from('store_config')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+      if (!error && existing) {
+        const mappedConfig: StoreConfig = {
+          id: existing.id,
+          userId: existing.user_id,
+          name: existing.name,
+          nameEn: existing.name_en,
+          tagline: existing.tagline,
+          taglineEn: existing.tagline_en,
+          logoUrl: existing.logo_url,
+          promptpayNumber: existing.promptpay_number,
+          promptpayName: existing.promptpay_name,
+          openTime: existing.open_time,
+          tableCount: existing.table_count,
+          taxId: existing.tax_id,
+          address: existing.address,
+          branchNumber: existing.branch_number,
+        };
+        return { shopId: existing.id, config: mappedConfig };
+      }
+
+      // 2. If new user, create a unique shopId
+      const userPrefix = currentUser.email ? currentUser.email.split('@')[0] : 'mystore';
+      const cleanSlug = userPrefix.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const uniqueSuffix = currentUser.id.replace(/-/g, '').slice(0, 6);
+      const newShopId = `shop-${cleanSlug || 'store'}-${uniqueSuffix}`;
+
+      const newStoreConfig: StoreConfig = {
+        ...initialStoreConfig,
+        id: newShopId,
+        userId: currentUser.id,
+        name: `ร้าน ${userPrefix}`,
+        nameEn: `${userPrefix}'s Cafe`,
+        promptpayName: `${userPrefix}`,
+      };
+
+      // 3. Insert store_config
+      await supabase.from('store_config').upsert({
+        id: newShopId,
+        user_id: currentUser.id,
+        name: newStoreConfig.name,
+        name_en: newStoreConfig.nameEn,
+        tagline: newStoreConfig.tagline,
+        tagline_en: newStoreConfig.taglineEn,
+        logo_url: newStoreConfig.logoUrl,
+        promptpay_number: newStoreConfig.promptpayNumber,
+        promptpay_name: newStoreConfig.promptpayName,
+        open_time: newStoreConfig.openTime,
+        table_count: newStoreConfig.tableCount,
+        tax_id: newStoreConfig.taxId,
+        address: newStoreConfig.address,
+        branch_number: newStoreConfig.branchNumber,
+        updated_at: new Date().toISOString(),
+      });
+
+      // 4. Provision default categories for new store
+      const initialCatsForStore = initialCategories.map((c) => ({
+        id: c.id,
+        store_id: newShopId,
+        name: c.name,
+        name_en: c.nameEn,
+        icon: c.icon,
+        sort_order: 0,
+      }));
+      await supabase.from('categories').upsert(initialCatsForStore);
+
+      // 5. Provision default menu items for new store
+      const initialItemsForStore = initialMenuItems.map((item) => ({
+        id: item.id,
+        store_id: newShopId,
+        category_id: item.categoryId,
+        name: item.name,
+        name_en: item.nameEn,
+        description: item.description,
+        description_en: item.descriptionEn,
+        price: item.price,
+        image_url: item.imageUrl,
+        is_popular: !!item.isPopular,
+        is_recommended: !!item.isChefRecommend,
+        is_available: item.isAvailable !== false,
+        option_groups: item.optionGroups || [],
+      }));
+      await supabase.from('menu_items').upsert(initialItemsForStore);
+
+      // Save locally
+      syncManager.saveStoreConfig(newStoreConfig, newShopId);
+      syncManager.setCategories(initialCategories.map(c => ({ ...c, storeId: newShopId })), newShopId);
+      syncManager.setMenuItems(initialMenuItems.map(i => ({ ...i, storeId: newShopId })), newShopId);
+
+      return { shopId: newShopId, config: newStoreConfig };
+    } catch (err) {
+      console.warn("Error resolving user store:", err);
+      return { shopId: `shop-${currentUser.id.slice(0, 8)}`, config: syncManager.getStoreConfig(shopId) };
+    }
+  }, [shopId]);
+
+  // Fetch full store data (config, categories, menu, orders) from Supabase for current shopId
+  const fetchStoreData = useCallback(async (targetShopId: string) => {
+    try {
+      // 1. Fetch Store Config
+      const { data: configData } = await supabase
+        .from('store_config')
+        .select('*')
+        .eq('id', targetShopId)
+        .maybeSingle();
+
+      if (configData) {
+        const mappedConfig: StoreConfig = {
+          id: configData.id,
+          userId: configData.user_id,
+          name: configData.name,
+          nameEn: configData.name_en,
+          tagline: configData.tagline,
+          taglineEn: configData.tagline_en,
+          logoUrl: configData.logo_url,
+          promptpayNumber: configData.promptpay_number,
+          promptpayName: configData.promptpay_name,
+          openTime: configData.open_time,
+          tableCount: configData.table_count,
+          taxId: configData.tax_id,
+          address: configData.address,
+          branchNumber: configData.branch_number,
+        };
+        setStoreConfig(mappedConfig);
+        syncManager.saveStoreConfig(mappedConfig, targetShopId);
+      } else {
+        setStoreConfig(syncManager.getStoreConfig(targetShopId));
+      }
+
+      // 2. Fetch Categories
+      const { data: catsData } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('store_id', targetShopId)
+        .order('sort_order', { ascending: true });
+
+      if (catsData && catsData.length > 0) {
+        const mappedCats: MenuCategory[] = catsData.map((c: any) => ({
+          id: c.id,
+          storeId: c.store_id || targetShopId,
+          name: c.name,
+          nameEn: c.name_en || c.name,
+          icon: c.icon || 'Coffee',
+        }));
+        setCategories(mappedCats);
+        syncManager.setCategories(mappedCats, targetShopId);
+      } else {
+        const localCats = syncManager.getCategories(targetShopId);
+        setCategories(localCats);
+      }
+
+      // 3. Fetch Menu Items
+      const { data: itemsData } = await supabase
+        .from('menu_items')
+        .select('*')
+        .eq('store_id', targetShopId);
+
+      if (itemsData && itemsData.length > 0) {
+        const mappedItems: MenuItem[] = itemsData.map((it: any) => ({
+          id: it.id,
+          storeId: it.store_id || targetShopId,
+          categoryId: it.category_id,
+          name: it.name,
+          nameEn: it.name_en,
+          description: it.description || '',
+          descriptionEn: it.description_en || '',
+          price: Number(it.price),
+          imageUrl: it.image_url || '',
+          isAvailable: it.is_available !== false,
+          isPopular: !!it.is_popular,
+          isChefRecommend: !!it.is_recommended,
+          optionGroups: it.option_groups || [],
+        }));
+        setMenuItems(mappedItems);
+        syncManager.setMenuItems(mappedItems, targetShopId);
+      } else {
+        const localItems = syncManager.getMenuItems(targetShopId);
+        setMenuItems(localItems);
+      }
+
+      // 4. Fetch Orders
+      const { data: ordersData } = await supabase
         .from('orders')
         .select('*')
-        .eq('store_id', shopId)
+        .eq('store_id', targetShopId)
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (!error && data && data.length > 0) {
-        const mapped: Order[] = data.map((row: any) => ({
+      if (ordersData) {
+        const mappedOrders: Order[] = ordersData.map((row: any) => ({
           id: row.id,
           orderNumber: row.order_number,
           tableNumber: row.table_number,
-          storeId: row.store_id || shopId,
+          storeId: row.store_id || targetShopId,
           status: row.status,
           paymentMethod: row.payment_method,
           paymentStatus: row.payment_status,
@@ -115,73 +303,88 @@ export function App() {
           cancelReason: row.cancel_reason,
           createdAt: row.created_at,
         }));
-
-        setOrders(mapped);
+        setOrders(mappedOrders);
+        syncManager.setOrders(mappedOrders, targetShopId);
 
         // Sync customer tracked order
         const myOrderId = sessionStorage.getItem('my_active_order_id');
         if (myOrderId) {
-          const myOrder = mapped.find((o) => o.id === myOrderId);
+          const myOrder = mappedOrders.find((o) => o.id === myOrderId);
           if (myOrder) {
             setTrackedOrder(myOrder);
           }
         }
       }
     } catch (err) {
-      console.warn("Supabase fetch orders error:", err);
+      console.warn("Supabase fetch store data error:", err);
     }
-  }, [shopId]);
+  }, []);
 
-  // Initialize Auth & Routing (Zero-Flash)
+  // Initialize Auth, Routing & Isolated Store Resolution
   useEffect(() => {
-    authService.getSession().then((session) => {
+    let currentActiveShop = shopId;
+
+    authService.getSession().then(async (session) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       
       const params = new URLSearchParams(window.location.search);
       const tableParam = params.get('table');
       const roleParam = params.get('role');
+      const urlShopParam = params.get('shop');
 
       if (tableParam) {
         setActiveRole('customer');
+        if (urlShopParam) {
+          currentActiveShop = urlShopParam;
+          setShopId(urlShopParam);
+        }
       } else if (currentUser) {
         setActiveRole((roleParam as AppRole) || 'kitchen');
+        const { shopId: userShop, config: userConfig } = await resolveUserStore(currentUser);
+        currentActiveShop = userShop;
+        setShopId(userShop);
+        setStoreConfig(userConfig);
+      } else if (urlShopParam) {
+        currentActiveShop = urlShopParam;
+        setShopId(urlShopParam);
       }
+
+      await fetchStoreData(currentActiveShop);
       setIsAuthReady(true);
     }).catch(() => {
       setIsAuthReady(true);
     });
 
-    const { data: authListener } = authService.onAuthStateChange((newUser) => {
+    const { data: authListener } = authService.onAuthStateChange(async (newUser) => {
       setUser(newUser);
       if (newUser && !hasTableParam) {
         setActiveRole('kitchen');
+        const { shopId: userShop, config: userConfig } = await resolveUserStore(newUser);
+        setShopId(userShop);
+        setStoreConfig(userConfig);
+        await fetchStoreData(userShop);
       }
     });
 
-    setStoreConfig(syncManager.getStoreConfig());
-    setCategories(syncManager.getCategories());
-    setMenuItems(syncManager.getMenuItems());
-    setOrders(syncManager.getOrders());
-
-    fetchRemoteOrders();
-
-    const handleFocus = () => fetchRemoteOrders();
+    const handleFocus = () => fetchStoreData(shopId);
     const handleVisibilityChange = () => {
-      if (!document.hidden) fetchRemoteOrders();
+      if (!document.hidden) fetchStoreData(shopId);
     };
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    const pollInterval = setInterval(fetchRemoteOrders, 3500);
+    const pollInterval = setInterval(() => fetchStoreData(shopId), 4000);
 
     const unsubscribe = syncManager.subscribe((event) => {
+      if (event.storeId && event.storeId !== shopId) return;
+
       if (event.type === 'ORDER_CREATED') {
-        const updated = syncManager.getOrders();
+        const updated = syncManager.getOrders(shopId);
         setOrders(updated);
         soundService.playNewOrderChime();
       } else if (event.type === 'ORDER_STATUS_UPDATED') {
-        const updated = syncManager.getOrders();
+        const updated = syncManager.getOrders(shopId);
         setOrders(updated);
         const myOrderId = sessionStorage.getItem('my_active_order_id');
         if (myOrderId && event.payload.id === myOrderId) {
@@ -194,9 +397,9 @@ export function App() {
       } else if (event.type === 'STORE_CONFIG_UPDATED') {
         setStoreConfig(event.payload);
       } else if (event.type === 'SYSTEM_RESET') {
-        setStoreConfig(syncManager.getStoreConfig());
-        setCategories(syncManager.getCategories());
-        setMenuItems(syncManager.getMenuItems());
+        setStoreConfig(syncManager.getStoreConfig(shopId));
+        setCategories(syncManager.getCategories(shopId));
+        setMenuItems(syncManager.getMenuItems(shopId));
         setOrders([]);
         setCart([]);
         setTrackedOrder(null);
@@ -205,13 +408,12 @@ export function App() {
       }
     });
 
+    // Realtime channel strictly filtered to current shopId
     const orderSubscription = supabase
-      .channel('public:orders:realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+      .channel(`public:orders:${shopId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `store_id=eq.${shopId}` }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newO: any = payload.new;
-          if (newO.store_id && newO.store_id !== shopId) return;
-
           const mappedOrder: Order = {
             id: newO.id,
             orderNumber: newO.order_number,
@@ -264,7 +466,7 @@ export function App() {
       clearInterval(pollInterval);
       supabase.removeChannel(orderSubscription);
     };
-  }, [fetchRemoteOrders, hasTableParam, shopId]);
+  }, [fetchStoreData, hasTableParam, resolveUserStore, shopId]);
 
   const handleToggleLanguage = () => {
     const nextLang: Language = language === 'en' ? 'th' : 'en';
@@ -290,19 +492,43 @@ export function App() {
       setUser(null);
       setIsSimulatorMode(false);
       setActiveRole('customer');
+      setShopId('cafe-order');
+      await fetchStoreData('cafe-order');
     } catch (e) {
       console.error("Logout error:", e);
       setUser(null);
       setIsSimulatorMode(false);
       setActiveRole('customer');
+      setShopId('cafe-order');
+      await fetchStoreData('cafe-order');
     }
   };
 
-  const handleSaveStoreConfig = (config: StoreConfig) => {
-    syncManager.saveStoreConfig(config);
-    setStoreConfig(config);
-    if (config.id) {
-      setShopId(config.id);
+  const handleSaveStoreConfig = async (config: StoreConfig) => {
+    const saved = syncManager.saveStoreConfig(config, shopId);
+    setStoreConfig(saved);
+    try {
+      await supabase.from('store_config').upsert({
+        id: shopId,
+        user_id: user?.id,
+        name: config.name,
+        name_en: config.nameEn,
+        tagline: config.tagline,
+        tagline_en: config.taglineEn,
+        logo_url: config.logoUrl,
+        promptpay_number: config.promptpayNumber,
+        promptpay_name: config.promptpayName,
+        open_time: config.openTime,
+        table_count: config.tableCount,
+        tax_id: config.taxId,
+        address: config.address,
+        branch_number: config.branchNumber,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error("Supabase upsert store_config error:", err);
+      setErrorToast(language === 'th' ? '⚠️ บันทึกการตั้งค่าไปยังเซิร์ฟเวอร์ไม่สำเร็จ' : '⚠️ Failed to save store settings to server');
+      setTimeout(() => setErrorToast(null), 5000);
     }
   };
 
@@ -376,7 +602,7 @@ export function App() {
       createdAt: new Date().toISOString(),
     };
 
-    syncManager.saveOrder(newOrder);
+    syncManager.saveOrder(newOrder, shopId);
     setCart([]);
     setIsCountdownOpen(false);
 
@@ -409,7 +635,7 @@ export function App() {
     status: OrderStatus,
     paymentStatus?: Order['paymentStatus']
   ) => {
-    const updated = syncManager.updateOrderStatus(orderId, status, paymentStatus);
+    const updated = syncManager.updateOrderStatus(orderId, status, paymentStatus, shopId);
     setOrders(updated);
 
     const myOrderId = sessionStorage.getItem('my_active_order_id');
@@ -434,7 +660,7 @@ export function App() {
   };
 
   const handleCancelOrder = async (orderId: string, reason: string) => {
-    const updated = syncManager.updateOrderStatus(orderId, 'cancelled');
+    const updated = syncManager.updateOrderStatus(orderId, 'cancelled', undefined, shopId);
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status: 'cancelled', cancelReason: reason } : o))
     );
@@ -460,24 +686,88 @@ export function App() {
     }
   };
 
-  const handleToggleStock = (itemId: string) => {
-    syncManager.toggleItemAvailability(itemId);
+  const handleToggleStock = async (itemId: string) => {
+    const updated = syncManager.toggleItemAvailability(itemId, shopId);
+    setMenuItems(updated);
+    const target = updated.find((i) => i.id === itemId);
+    if (target) {
+      try {
+        await supabase
+          .from('menu_items')
+          .update({ is_available: target.isAvailable })
+          .eq('store_id', shopId)
+          .eq('id', itemId);
+      } catch (err) {
+        console.error("Supabase toggle stock error:", err);
+      }
+    }
   };
 
-  const handleSaveMenuItem = (item: MenuItem) => {
-    syncManager.saveMenuItem(item);
+  const handleSaveMenuItem = async (item: MenuItem) => {
+    const itemWithStore = { ...item, storeId: shopId };
+    const updated = syncManager.saveMenuItem(itemWithStore, shopId);
+    setMenuItems(updated);
+    try {
+      await supabase.from('menu_items').upsert({
+        id: item.id,
+        store_id: shopId,
+        category_id: item.categoryId,
+        name: item.name,
+        name_en: item.nameEn,
+        description: item.description,
+        description_en: item.descriptionEn,
+        price: item.price,
+        image_url: item.imageUrl,
+        is_popular: !!item.isPopular,
+        is_recommended: !!item.isChefRecommend,
+        is_available: item.isAvailable !== false,
+        option_groups: item.optionGroups || [],
+      });
+    } catch (err) {
+      console.error("Supabase upsert menu item error:", err);
+      setErrorToast(language === 'th' ? '⚠️ บันทึกเมนูไปยังเซิร์ฟเวอร์ไม่สำเร็จ' : '⚠️ Failed to save menu item to server');
+      setTimeout(() => setErrorToast(null), 5000);
+    }
   };
 
-  const handleDeleteMenuItem = (itemId: string) => {
-    syncManager.deleteMenuItem(itemId);
+  const handleDeleteMenuItem = async (itemId: string) => {
+    const updated = syncManager.deleteMenuItem(itemId, shopId);
+    setMenuItems(updated);
+    try {
+      await supabase.from('menu_items').delete().eq('store_id', shopId).eq('id', itemId);
+    } catch (err) {
+      console.error("Supabase delete menu item error:", err);
+    }
   };
 
-  const handleSaveCategory = (cat: MenuCategory) => {
-    syncManager.saveCategory(cat);
+  const handleSaveCategory = async (cat: MenuCategory) => {
+    const catWithStore = { ...cat, storeId: shopId };
+    const updated = syncManager.saveCategory(catWithStore, shopId);
+    setCategories(updated);
+    try {
+      await supabase.from('categories').upsert({
+        id: cat.id,
+        store_id: shopId,
+        name: cat.name,
+        name_en: cat.nameEn,
+        icon: cat.icon,
+        sort_order: 0,
+      });
+    } catch (err) {
+      console.error("Supabase upsert category error:", err);
+      setErrorToast(language === 'th' ? '⚠️ บันทึกหมวดหมู่ไปยังเซิร์ฟเวอร์ไม่สำเร็จ' : '⚠️ Failed to save category to server');
+      setTimeout(() => setErrorToast(null), 5000);
+    }
   };
 
-  const handleDeleteCategory = (catId: string) => {
-    syncManager.deleteCategory(catId);
+  const handleDeleteCategory = async (catId: string) => {
+    const updated = syncManager.deleteCategory(catId, shopId);
+    setCategories(updated);
+    try {
+      await supabase.from('categories').delete().eq('store_id', shopId).eq('id', catId);
+    } catch (err) {
+      console.error("Supabase delete category error:", err);
+    }
   };
 
   const handleResetData = () => {
@@ -485,10 +775,11 @@ export function App() {
   };
 
   const handleExecuteResetData = () => {
-    syncManager.resetAll();
+    syncManager.resetAll(shopId);
     sessionStorage.removeItem('my_active_order_id');
     setTrackedOrder(null);
     setIsResetConfirmOpen(false);
+    fetchStoreData(shopId);
   };
 
   const handleCloseTracker = () => {
