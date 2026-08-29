@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { MenuItem, MenuCategory, CartItem, Order, OrderStatus, SelectedOption, Language, StoreConfig } from './types';
 import { initialMenuItems, initialCategories, initialStoreConfig } from './data/initialMenu';
 import { syncManager } from './utils/storage';
-import { soundService } from './utils/sound';
+import { soundService, SoundPreset } from './utils/sound';
 import { t, getInitialLanguage, saveLanguagePreference } from './utils/i18n';
 import { Header } from './components/common/Header';
 import { RoleSwitcher, AppRole } from './components/common/RoleSwitcher';
@@ -390,7 +390,12 @@ export function App() {
       if (event.type === 'ORDER_CREATED') {
         const updated = syncManager.getOrders(shopId);
         setOrders(updated);
-        soundService.playNewOrderChime();
+        try {
+          const savedPreset = (localStorage.getItem('pos_sound_preset') as SoundPreset) || 'cheerful';
+          soundService.playNewOrderChime(savedPreset);
+        } catch {
+          soundService.playNewOrderChime();
+        }
       } else if (event.type === 'ORDER_STATUS_UPDATED') {
         const updated = syncManager.getOrders(shopId);
         setOrders(updated);
@@ -441,7 +446,21 @@ export function App() {
             if (prev.some((o) => o.id === mappedOrder.id)) return prev;
             return [mappedOrder, ...prev];
           });
-          soundService.playNewOrderChime();
+          
+          try {
+            const savedPreset = (localStorage.getItem('pos_sound_preset') as SoundPreset) || 'cheerful';
+            soundService.playNewOrderChime(savedPreset);
+          } catch {
+            soundService.playNewOrderChime();
+          }
+
+          const tableLabel = mappedOrder.tableNumber === 'TAKEAWAY' ? 'กลับบ้าน' : `โต๊ะ ${mappedOrder.tableNumber}`;
+          soundService.showDesktopNotification(
+            language === 'th' ? `🔔 มีออเดอร์ใหม่เข้า! (${tableLabel})` : `🔔 New Order (${tableLabel})`,
+            language === 'th' 
+              ? `${mappedOrder.items.length} รายการ • รวม ฿${mappedOrder.totalPrice.toLocaleString()}`
+              : `${mappedOrder.items.length} items • ฿${mappedOrder.totalPrice.toLocaleString()}`
+          );
         } else if (payload.eventType === 'UPDATE') {
           const updatedO: any = payload.new;
           setOrders((prev) =>

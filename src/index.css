@@ -58,6 +58,11 @@
   100% { transform: scale(1); opacity: 1; }
 }
 
+@keyframes shrink-progress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
 .animate-pulse-subtle {
   animation: pulse-subtle 2.5s infinite ease-in-out;
 }

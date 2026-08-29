@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { 
   UtensilsCrossed, 
   Volume2, 
+  VolumeX,
   PackageOpen, 
-  RotateCcw, 
   Sparkles, 
   TrendingUp, 
   BarChart3, 
@@ -16,7 +16,9 @@ import {
   Flame,
   Receipt,
   Activity,
-  AlertCircle
+  AlertCircle,
+  Settings2,
+  X
 } from 'lucide-react';
 import { Order, MenuItem, MenuCategory, Language, OrderStatus } from '../../types';
 import { t } from '../../utils/i18n';
@@ -24,6 +26,7 @@ import { OrderCard } from './OrderCard';
 import { StockManager } from './StockManager';
 import { SalesDashboardModal } from './SalesDashboardModal';
 import { CancelOrderModal } from './CancelOrderModal';
+import { NotificationSettingsModal } from './NotificationSettingsModal';
 import { soundService } from '../../utils/sound';
 
 interface KitchenDashboardProps {
@@ -54,11 +57,23 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
   const [filter, setFilter] = useState<'active' | 'ready' | 'completed' | 'all'>('active');
   const [showStock, setShowStock] = useState(false);
   const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
+  const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
   const [rejectTargetOrder, setRejectTargetOrder] = useState<Order | null>(null);
-  const [toast, setToast] = useState<{ message: string; targetTab?: 'active' | 'ready' | 'completed' } | null>(null);
+  const [toast, setToast] = useState<{
+    id: number;
+    title: string;
+    message?: string;
+    type?: 'sound' | 'order' | 'ready' | 'completed' | 'cooking';
+    targetTab?: 'active' | 'ready' | 'completed';
+  } | null>(null);
 
-  const triggerToast = (message: string, targetTab?: 'active' | 'ready' | 'completed') => {
-    setToast({ message, targetTab });
+  const triggerToast = (
+    title: string,
+    message?: string,
+    type: 'sound' | 'order' | 'ready' | 'completed' | 'cooking' = 'sound',
+    targetTab?: 'active' | 'ready' | 'completed'
+  ) => {
+    setToast({ id: Date.now(), title, message, type, targetTab });
     setTimeout(() => setToast(null), 4000);
   };
 
@@ -84,9 +99,13 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
     .filter((o) => o.status === 'completed')
     .reduce((sum, o) => sum + o.totalPrice, 0);
 
-  const handleTestSound = () => {
+  const handleQuickTestSound = () => {
     soundService.playNewOrderChime();
-    triggerToast(language === 'th' ? '🔔 ทดสอบเสียงแจ้งเตือนออเดอร์ใหม่' : 'Tested notification sound');
+    triggerToast(
+      language === 'th' ? '🔔 ทดสอบเสียงแจ้งเตือน' : 'Notification Sound Test',
+      language === 'th' ? 'เล่นเสียงเตือนเรียบร้อย (คลิกปุ่มตั้งค่าเพื่อเปลี่ยนเสียง)' : 'Chime played successfully',
+      'sound'
+    );
   };
 
   const handleUpdateStatusWrapped = async (orderId: string, status: OrderStatus, paymentStatus?: Order['paymentStatus']) => {
@@ -95,47 +114,114 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
     const tableLabel = target ? (target.tableNumber === 'TAKEAWAY' ? 'กลับบ้าน' : `โต๊ะ ${target.tableNumber}`) : '';
     
     if (status === 'cooking') {
-      triggerToast(language === 'th' ? `🍳 เริ่มปรุงอาหาร ${tableLabel}` : `Started cooking for ${tableLabel}`);
+      triggerToast(
+        language === 'th' ? '🍳 กำลังเริ่มปรุงอาหาร' : 'Cooking in progress',
+        tableLabel,
+        'cooking'
+      );
     } else if (status === 'ready') {
       triggerToast(
-        language === 'th'
-          ? `✨ ออเดอร์ ${tableLabel} ปรุงเสร็จแล้ว! ย้ายไปที่แท็บ "พร้อมเสิร์ฟ"`
-          : `Order for ${tableLabel} is ready! Moved to "Ready to Serve" tab`,
+        language === 'th' ? '✨ ปรุงเสร็จแล้ว (พร้อมเสิร์ฟ)' : 'Dish is Ready to Serve!',
+        language === 'th' ? `ออเดอร์ ${tableLabel} ย้ายไปที่แท็บพร้อมเสิร์ฟ` : `Order for ${tableLabel} moved to Ready tab`,
+        'ready',
         'ready'
       );
     } else if (status === 'completed') {
-      triggerToast(language === 'th' ? `✓ ปิดบิล ${tableLabel} เรียบร้อยแล้ว` : `Bill closed for ${tableLabel}`, 'completed');
+      triggerToast(
+        language === 'th' ? '✓ ปิดบิลเรียบร้อยแล้ว' : 'Bill Closed',
+        tableLabel,
+        'completed',
+        'completed'
+      );
     } else if (status === 'pending') {
-      triggerToast(language === 'th' ? `↩️ ย้อนสถานะ ${tableLabel} กลับไปรอทำ` : `Reverted ${tableLabel} to pending`, 'active');
+      triggerToast(
+        language === 'th' ? '↩️ ย้อนสถานะกลับไปรอทำ' : 'Order reverted to pending',
+        tableLabel,
+        'cooking',
+        'active'
+      );
     }
   };
 
   const handleCancelOrderWrapped = async (orderId: string, reason: string) => {
     await onCancelOrder?.(orderId, reason);
-    triggerToast(language === 'th' ? `🚫 ปฏิเสธออเดอร์เรียบร้อยแล้ว (${reason})` : `Order rejected (${reason})`, 'completed');
+    triggerToast(
+      language === 'th' ? '🚫 ปฏิเสธออเดอร์แล้ว' : 'Order Rejected',
+      reason,
+      'sound',
+      'completed'
+    );
   };
 
   return (
     <div className="w-full max-w-6xl mx-auto px-3.5 sm:px-6 py-5 sm:py-6 space-y-5 sm:space-y-6 pb-28 relative">
       
-      {/* Action Toast Feedback Popup with Instant Tab Navigation */}
+      {/* Premium Floating Notification Toast with Smooth Animated Glass Styling */}
       {toast && (
-        <div className="fixed top-20 right-4 sm:right-8 z-50 bg-stone-900/95 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-black animate-in slide-in-from-top-4 duration-200 border border-stone-700/80">
-          <Bell className="w-4 h-4 text-amber-400 animate-pulse flex-shrink-0" />
-          <span>{toast.message}</span>
-          {toast.targetTab && filter !== toast.targetTab && (
-            <button
-              type="button"
-              onClick={() => {
-                if (toast.targetTab) setFilter(toast.targetTab);
-                setToast(null);
-              }}
-              className="ml-1 bg-orange-500 hover:bg-orange-600 text-white px-2.5 py-1 rounded-xl text-[11px] font-black transition cursor-pointer flex items-center gap-1 active:scale-95 flex-shrink-0 shadow-xs"
-            >
-              <span>{language === 'th' ? 'ดูแท็บนี้' : 'View'}</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          )}
+        <div 
+          key={toast.id}
+          className="fixed top-20 right-4 sm:right-8 z-50 max-w-sm sm:max-w-md w-[92vw] sm:w-auto bg-white/95 backdrop-blur-xl border border-stone-200/90 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-top-4 duration-300 ring-1 ring-black/5"
+        >
+          <div className="p-4 flex items-start gap-3.5">
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-xs ${
+              toast.type === 'ready'
+                ? 'bg-emerald-100 text-emerald-700'
+                : toast.type === 'completed'
+                ? 'bg-stone-100 text-stone-700'
+                : toast.type === 'cooking'
+                ? 'bg-amber-100 text-amber-700'
+                : 'bg-orange-100 text-orange-600'
+            }`}>
+              {toast.type === 'ready' ? (
+                <Sparkles className="w-5 h-5 animate-bounce" />
+              ) : toast.type === 'completed' ? (
+                <CheckCircle2 className="w-5 h-5" />
+              ) : toast.type === 'cooking' ? (
+                <ChefHat className="w-5 h-5 animate-pulse" />
+              ) : (
+                <Bell className="w-5 h-5 animate-pulse" />
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0 pr-1">
+              <h4 className="text-xs sm:text-sm font-black text-stone-900 leading-tight">
+                {toast.title}
+              </h4>
+              {toast.message && (
+                <p className="text-xs text-stone-500 font-medium mt-0.5 leading-snug">
+                  {toast.message}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {toast.targetTab && filter !== toast.targetTab && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (toast.targetTab) setFilter(toast.targetTab);
+                    setToast(null);
+                  }}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-2.5 py-1 rounded-xl text-[11px] font-black transition cursor-pointer flex items-center gap-1 active:scale-95 shadow-2xs"
+                >
+                  <span>{language === 'th' ? 'ดูแท็บนี้' : 'View'}</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setToast(null)}
+                className="p-1 rounded-lg text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Progress Shrink Bar */}
+          <div className="h-1 w-full bg-stone-100 overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-400 animate-[shrink-progress_4s_linear_forwards]" />
+          </div>
         </div>
       )}
 
@@ -160,7 +246,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
             </div>
           </div>
 
-          {/* Quick Action Tools (No Reset Button) */}
+          {/* Quick Action Tools (Analytics, Notification & Sound Settings, Stock) */}
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setIsSalesModalOpen(true)}
@@ -170,14 +256,26 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
               <span>{language === 'th' ? 'สรุปยอดขาย' : 'Analytics'}</span>
             </button>
 
-            <button
-              onClick={handleTestSound}
-              title="Test sound notification"
-              className="px-3.5 py-2.5 rounded-2xl bg-stone-50 hover:bg-stone-100 text-stone-700 border border-stone-200/90 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-2xs"
-            >
-              <Volume2 className="w-4 h-4 text-orange-500" />
-              <span className="hidden sm:inline">{t('kdsTestSound', language)}</span>
-            </button>
+            {/* Notification & Sound Setting Button */}
+            <div className="flex items-center rounded-2xl border border-stone-200/90 bg-stone-50 shadow-2xs overflow-hidden">
+              <button
+                type="button"
+                onClick={handleQuickTestSound}
+                title={language === 'th' ? 'ทดสอบเสียงแจ้งเตือน' : 'Test sound alert'}
+                className="px-3.5 py-2.5 hover:bg-stone-100 text-stone-700 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+              >
+                <Volume2 className="w-4 h-4 text-orange-500" />
+                <span className="hidden sm:inline">{language === 'th' ? 'ทดสอบเสียง' : 'Sound Test'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsNotificationSettingsOpen(true)}
+                title={language === 'th' ? 'ตั้งค่าเสียงและการแจ้งเตือน' : 'Notification Settings'}
+                className="p-2.5 hover:bg-stone-200/80 text-stone-500 hover:text-stone-800 border-l border-stone-200 transition cursor-pointer active:scale-95"
+              >
+                <Settings2 className="w-4 h-4" />
+              </button>
+            </div>
 
             <button
               onClick={() => setShowStock(!showStock)}
@@ -403,6 +501,20 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
         order={rejectTargetOrder}
         language={language}
         onConfirmCancel={handleCancelOrderWrapped}
+      />
+
+      {/* Notification & Sound Settings Modal */}
+      <NotificationSettingsModal
+        isOpen={isNotificationSettingsOpen}
+        onClose={() => setIsNotificationSettingsOpen(false)}
+        language={language}
+        onTestChime={(preset) => {
+          triggerToast(
+            language === 'th' ? '🔔 ทดสอบเสียงสำเร็จ' : 'Sound Test Successful',
+            language === 'th' ? `เลือกรูปแบบเสียง: ${preset}` : `Preset selected: ${preset}`,
+            'sound'
+          );
+        }}
       />
     </div>
   );
