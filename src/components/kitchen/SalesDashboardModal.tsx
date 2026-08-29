@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   X, Calendar, TrendingUp, Receipt, CreditCard, 
   Award, Clock, Printer, Download, BarChart3, 
   ArrowRight, CheckCircle2, Flame, ShoppingBag,
-  CalendarRange, Sparkles, Check
+  CalendarRange
 } from 'lucide-react';
 import { Order, Language } from '../../types';
 import { t } from '../../utils/i18n';
@@ -32,19 +32,23 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
   });
   const [customEnd, setCustomEnd] = useState(() => new Date().toISOString().split('T')[0]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
     } else {
       document.body.style.overflow = '';
-      document.body.style.touchAction = '';
     }
     return () => {
       document.body.style.overflow = '';
-      document.body.style.touchAction = '';
     };
   }, [isOpen]);
+
+  // Safe helper to parse local YYYY-MM-DD
+  const parseLocalDate = (dateStr: string) => {
+    if (!dateStr) return new Date();
+    const parts = dateStr.split('-').map(Number);
+    return new Date(parts[0] || new Date().getFullYear(), (parts[1] || 1) - 1, parts[2] || 1);
+  };
 
   // Filter orders by time preset
   const filteredOrders = useMemo(() => {
@@ -58,6 +62,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     return orders.filter((o) => {
       if (o.status === 'cancelled') return false;
       const orderDate = new Date(o.createdAt);
+      if (isNaN(orderDate.getTime())) return false;
 
       switch (preset) {
         case 'today':
@@ -69,8 +74,10 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
         case '30days':
           return orderDate >= thirtyDaysAgo;
         case 'custom': {
-          const start = new Date(`${customStart}T00:00:00`);
-          const end = new Date(`${customEnd}T23:59:59.999`);
+          const partsS = customStart.split('-').map(Number);
+          const partsE = customEnd.split('-').map(Number);
+          const start = new Date(partsS[0], (partsS[1] || 1) - 1, partsS[2] || 1, 0, 0, 0);
+          const end = new Date(partsE[0], (partsE[1] || 1) - 1, partsE[2] || 1, 23, 59, 59, 999);
           return orderDate >= start && orderDate <= end;
         }
         case 'all':
@@ -82,26 +89,26 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
 
   // Analytics Metrics Calculations
   const metrics = useMemo(() => {
-    const totalSales = filteredOrders.reduce((sum, o) => sum + o.totalPrice, 0);
+    const totalSales = filteredOrders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
     const totalBills = filteredOrders.length;
     const avgTicket = totalBills > 0 ? Math.round(totalSales / totalBills) : 0;
 
     // Payment methods
     const promptpayOrders = filteredOrders.filter((o) => o.paymentMethod === 'promptpay');
     const cashOrders = filteredOrders.filter((o) => o.paymentMethod === 'cash');
-    const promptpaySales = promptpayOrders.reduce((sum, o) => sum + o.totalPrice, 0);
-    const cashSales = cashOrders.reduce((sum, o) => sum + o.totalPrice, 0);
+    const promptpaySales = promptpayOrders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+    const cashSales = cashOrders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
     const promptpayPercent = totalSales > 0 ? Math.round((promptpaySales / totalSales) * 100) : 0;
     const cashPercent = totalSales > 0 ? 100 - promptpayPercent : 0;
 
     // Paid status
-    const paidSales = filteredOrders.filter((o) => o.paymentStatus === 'paid').reduce((sum, o) => sum + o.totalPrice, 0);
+    const paidSales = filteredOrders.filter((o) => o.paymentStatus === 'paid').reduce((sum, o) => sum + (o.totalPrice || 0), 0);
     const unpaidSales = totalSales - paidSales;
 
     // Best Sellers Ranking
     const itemSalesMap: Record<string, { name: string; nameEn?: string; count: number; revenue: number; image?: string }> = {};
     filteredOrders.forEach((order) => {
-      order.items.forEach((item) => {
+      (order.items || []).forEach((item) => {
         const key = item.menuItem?.id || item.menuItem?.name || 'unknown';
         if (!itemSalesMap[key]) {
           itemSalesMap[key] = {
@@ -112,8 +119,8 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
             image: item.menuItem?.imageUrl,
           };
         }
-        itemSalesMap[key].count += item.quantity;
-        itemSalesMap[key].revenue += item.totalItemPrice;
+        itemSalesMap[key].count += (item.quantity || 1);
+        itemSalesMap[key].revenue += (item.totalItemPrice || 0);
       });
     });
 
@@ -127,9 +134,12 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     const hourlyCounts: number[] = Array(24).fill(0);
     const hourlySales: number[] = Array(24).fill(0);
     filteredOrders.forEach((o) => {
-      const hr = new Date(o.createdAt).getHours();
-      hourlyCounts[hr] += 1;
-      hourlySales[hr] += o.totalPrice;
+      const d = new Date(o.createdAt);
+      if (!isNaN(d.getTime())) {
+        const hr = d.getHours();
+        hourlyCounts[hr] += 1;
+        hourlySales[hr] += (o.totalPrice || 0);
+      }
     });
 
     const maxHourlySales = Math.max(...hourlySales, 1);
@@ -172,7 +182,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
       o.orderNumber,
       o.tableNumber,
       new Date(o.createdAt).toLocaleString(language === 'th' ? 'th-TH' : 'en-US'),
-      o.items.reduce((s, i) => s + i.quantity, 0),
+      (o.items || []).reduce((s, i) => s + (i.quantity || 1), 0),
       o.paymentMethod,
       o.paymentStatus,
       o.status,
@@ -203,7 +213,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
   const formatDisplayDate = (dateStr: string) => {
     if (!dateStr) return '';
     try {
-      const d = new Date(dateStr + 'T00:00:00');
+      const d = parseLocalDate(dateStr);
       return d.toLocaleDateString(language === 'th' ? 'th-TH' : 'en-US', {
         day: 'numeric',
         month: 'short',
@@ -217,10 +227,10 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
   const daysSelectedCount = useMemo(() => {
     if (!customStart || !customEnd) return 1;
     try {
-      const s = new Date(customStart + 'T00:00:00').getTime();
-      const e = new Date(customEnd + 'T00:00:00').getTime();
+      const s = parseLocalDate(customStart).getTime();
+      const e = parseLocalDate(customEnd).getTime();
       const diff = Math.round(Math.abs(e - s) / (1000 * 60 * 60 * 24)) + 1;
-      return diff;
+      return isNaN(diff) ? 1 : diff;
     } catch {
       return 1;
     }
@@ -259,48 +269,53 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
   };
 
   const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      
-      {/* Modal Dialog Card */}
-      <div className="relative w-full max-w-5xl bg-[#fffdfa] rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5">
+      {/* Full-Screen Glassmorphic Backdrop */}
+      <div 
+        className="fixed inset-0 bg-stone-950/75 backdrop-blur-md transition-opacity animate-in fade-in duration-200"
+        onClick={onClose}
+      />
+
+      {/* Main Modal Card Container */}
+      <div className="relative w-full max-w-5xl bg-[#fafaf9] rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 flex flex-col max-h-[92vh]">
         
-        {/* 1. Header (Consistent Warm Minimalist Design) */}
-        <div className="px-6 py-4 sm:py-5 border-b border-stone-100 flex items-center justify-between bg-[#fffdfa] flex-shrink-0">
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 border border-emerald-200 text-emerald-600 flex items-center justify-center shadow-2xs flex-shrink-0">
-              <BarChart3 className="w-5 h-5 text-emerald-600 stroke-[2.5]" />
+        {/* 1. Header (Premium Dark Slate Contrast with Rounded Top) */}
+        <div className="px-6 py-4 sm:py-5 bg-stone-900 border-b border-stone-800 flex items-center justify-between text-white flex-shrink-0 relative overflow-hidden">
+          <div className="flex items-center gap-3.5 relative z-10">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/10 flex-shrink-0">
+              <BarChart3 className="w-5 h-5 stroke-[2.5]" />
             </div>
             <div>
-              <h3 className="font-black text-stone-900 text-base sm:text-lg tracking-tight">
+              <h3 className="font-black text-white text-base sm:text-lg tracking-tight">
                 {language === 'th' ? 'แดชบอร์ดสรุปยอดขาย' : 'Sales Analytics'}
               </h3>
-              <p className="text-xs text-stone-500 font-medium mt-0.5">
-                {language === 'th' ? 'รายงานผลการขาย สินค้าขายดี และช่วงเวลาพีคของร้าน' : 'Real-time revenue, top selling dishes, and peak business hours'}
+              <p className="text-xs text-stone-400 font-medium mt-0.5">
+                {language === 'th' ? 'รายงานผลการขาย สินค้าขายดี และช่วงเวลาพีคของร้าน' : 'Revenue metrics, top selling dishes, and peak business hours'}
               </p>
             </div>
           </div>
 
-          {/* Header Action Tools */}
-          <div className="flex items-center gap-2">
+          {/* Action Tools */}
+          <div className="flex items-center gap-2 relative z-10">
             <button
               onClick={handleExportCSV}
-              className="px-3.5 py-2 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-stone-200/80"
+              className="px-3.5 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-stone-200 hover:text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-white/10 shadow-2xs"
               title="Export CSV Data"
             >
-              <Download className="w-3.5 h-3.5 text-emerald-600" />
+              <Download className="w-3.5 h-3.5 text-emerald-400" />
               <span>CSV</span>
             </button>
             <button
               onClick={handlePrint}
-              className="px-3.5 py-2 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-stone-200/80"
+              className="px-3.5 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-stone-200 hover:text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-white/10 shadow-2xs"
               title="Print Summary Report"
             >
-              <Printer className="w-3.5 h-3.5 text-amber-600" />
+              <Printer className="w-3.5 h-3.5 text-amber-400" />
               <span>{language === 'th' ? 'พิมพ์รายงาน' : 'Print'}</span>
             </button>
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-800 flex items-center justify-center transition cursor-pointer active:scale-95 ml-1"
+              className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-stone-300 hover:text-white flex items-center justify-center transition cursor-pointer active:scale-95 ml-1 border border-white/10"
               title={t('close', language)}
             >
               <X className="w-4 h-4" />
@@ -324,7 +339,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                       className={`px-3.5 sm:px-4 py-2 rounded-2xl text-xs font-black transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-95 ${
                         isActive
                           ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/25 ring-2 ring-emerald-500/20'
-                          : 'bg-stone-50 hover:bg-stone-100 text-stone-600 hover:text-stone-900 border border-stone-200/70'
+                          : 'bg-stone-50 hover:bg-stone-100 text-stone-700 hover:text-stone-900 border border-stone-200/70'
                       }`}
                     >
                       {getPresetLabel(p)}
