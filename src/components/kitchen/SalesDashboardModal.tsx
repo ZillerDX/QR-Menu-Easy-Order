@@ -21,7 +21,7 @@ type TimePreset = 'today' | 'yesterday' | '7days' | '30days' | 'all' | 'custom';
 export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
   isOpen,
   onClose,
-  orders,
+  orders = [],
   language,
 }) => {
   const [preset, setPreset] = useState<TimePreset>('today');
@@ -50,8 +50,28 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     return new Date(parts[0] || new Date().getFullYear(), (parts[1] || 1) - 1, parts[2] || 1);
   };
 
-  // Filter orders by time preset
+  const formatPrice = (amount: number | undefined | null) => {
+    const num = Number(amount);
+    return isNaN(num) ? '0' : num.toLocaleString();
+  };
+
+  const formatTimeDisplay = (dateStr: string | undefined | null, lang: Language) => {
+    if (!dateStr) return '--:--';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '--:--';
+      return d.toLocaleTimeString(lang === 'th' ? 'th-TH' : 'en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return '--:--';
+    }
+  };
+
+  // Filter orders by time preset safely
   const filteredOrders = useMemo(() => {
+    if (!Array.isArray(orders)) return [];
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
     const yesterdayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
@@ -60,7 +80,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     return orders.filter((o) => {
-      if (o.status === 'cancelled') return false;
+      if (!o || o.status === 'cancelled') return false;
       const orderDate = new Date(o.createdAt);
       if (isNaN(orderDate.getTime())) return false;
 
@@ -74,10 +94,10 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
         case '30days':
           return orderDate >= thirtyDaysAgo;
         case 'custom': {
-          const partsS = customStart.split('-').map(Number);
-          const partsE = customEnd.split('-').map(Number);
-          const start = new Date(partsS[0], (partsS[1] || 1) - 1, partsS[2] || 1, 0, 0, 0);
-          const end = new Date(partsE[0], (partsE[1] || 1) - 1, partsE[2] || 1, 23, 59, 59, 999);
+          const partsS = (customStart || '').split('-').map(Number);
+          const partsE = (customEnd || '').split('-').map(Number);
+          const start = new Date(partsS[0] || 2020, (partsS[1] || 1) - 1, partsS[2] || 1, 0, 0, 0);
+          const end = new Date(partsE[0] || 2030, (partsE[1] || 1) - 1, partsE[2] || 1, 23, 59, 59, 999);
           return orderDate >= start && orderDate <= end;
         }
         case 'all':
@@ -87,28 +107,29 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     });
   }, [orders, preset, customStart, customEnd]);
 
-  // Analytics Metrics Calculations
+  // Analytics Metrics Calculations safely
   const metrics = useMemo(() => {
-    const totalSales = filteredOrders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+    const totalSales = filteredOrders.reduce((sum, o) => sum + (Number(o?.totalPrice) || 0), 0);
     const totalBills = filteredOrders.length;
     const avgTicket = totalBills > 0 ? Math.round(totalSales / totalBills) : 0;
 
     // Payment methods
-    const promptpayOrders = filteredOrders.filter((o) => o.paymentMethod === 'promptpay');
-    const cashOrders = filteredOrders.filter((o) => o.paymentMethod === 'cash');
-    const promptpaySales = promptpayOrders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
-    const cashSales = cashOrders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+    const promptpayOrders = filteredOrders.filter((o) => o?.paymentMethod === 'promptpay');
+    const cashOrders = filteredOrders.filter((o) => o?.paymentMethod === 'cash');
+    const promptpaySales = promptpayOrders.reduce((sum, o) => sum + (Number(o?.totalPrice) || 0), 0);
+    const cashSales = cashOrders.reduce((sum, o) => sum + (Number(o?.totalPrice) || 0), 0);
     const promptpayPercent = totalSales > 0 ? Math.round((promptpaySales / totalSales) * 100) : 0;
     const cashPercent = totalSales > 0 ? 100 - promptpayPercent : 0;
 
     // Paid status
-    const paidSales = filteredOrders.filter((o) => o.paymentStatus === 'paid').reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+    const paidSales = filteredOrders.filter((o) => o?.paymentStatus === 'paid').reduce((sum, o) => sum + (Number(o?.totalPrice) || 0), 0);
     const unpaidSales = totalSales - paidSales;
 
     // Best Sellers Ranking
     const itemSalesMap: Record<string, { name: string; nameEn?: string; count: number; revenue: number; image?: string }> = {};
     filteredOrders.forEach((order) => {
-      (order.items || []).forEach((item) => {
+      (order?.items || []).forEach((item) => {
+        if (!item) return;
         const key = item.menuItem?.id || item.menuItem?.name || 'unknown';
         if (!itemSalesMap[key]) {
           itemSalesMap[key] = {
@@ -119,8 +140,8 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
             image: item.menuItem?.imageUrl,
           };
         }
-        itemSalesMap[key].count += (item.quantity || 1);
-        itemSalesMap[key].revenue += (item.totalItemPrice || 0);
+        itemSalesMap[key].count += (Number(item.quantity) || 1);
+        itemSalesMap[key].revenue += (Number(item.totalItemPrice) || 0);
       });
     });
 
@@ -134,11 +155,14 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     const hourlyCounts: number[] = Array(24).fill(0);
     const hourlySales: number[] = Array(24).fill(0);
     filteredOrders.forEach((o) => {
+      if (!o?.createdAt) return;
       const d = new Date(o.createdAt);
       if (!isNaN(d.getTime())) {
         const hr = d.getHours();
-        hourlyCounts[hr] += 1;
-        hourlySales[hr] += (o.totalPrice || 0);
+        if (hr >= 0 && hr < 24) {
+          hourlyCounts[hr] += 1;
+          hourlySales[hr] += (Number(o.totalPrice) || 0);
+        }
       }
     });
 
@@ -182,7 +206,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
       o.orderNumber,
       o.tableNumber,
       new Date(o.createdAt).toLocaleString(language === 'th' ? 'th-TH' : 'en-US'),
-      (o.items || []).reduce((s, i) => s + (i.quantity || 1), 0),
+      (o.items || []).reduce((s, i) => s + (Number(i.quantity) || 1), 0),
       o.paymentMethod,
       o.paymentStatus,
       o.status,
@@ -465,7 +489,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
               </div>
               <div className="mt-3">
                 <div className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
-                  ฿{metrics.totalSales.toLocaleString()}
+                  ฿{formatPrice(metrics.totalSales)}
                 </div>
                 <div className="text-[11px] text-emerald-700 font-bold flex items-center gap-1.5 mt-1 bg-emerald-50 px-2 py-0.5 rounded-lg w-fit border border-emerald-200/60">
                   <CheckCircle2 className="w-3 h-3 text-emerald-600" />
@@ -508,7 +532,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
               </div>
               <div className="mt-3">
                 <div className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
-                  ฿{metrics.avgTicket.toLocaleString()}
+                  ฿{formatPrice(metrics.avgTicket)}
                 </div>
                 <div className="text-[11px] text-blue-700 font-bold flex items-center gap-1.5 mt-1 bg-blue-50 px-2 py-0.5 rounded-lg w-fit border border-blue-200/60">
                   <span>{language === 'th' ? 'ค่าเฉลี่ยต่อใบเสร็จ' : 'per receipt'}</span>
@@ -549,14 +573,14 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                       <span className="w-2 h-2 rounded-full bg-blue-500" />
                       {language === 'th' ? 'พร้อมเพย์' : 'PromptPay'} ({metrics.promptpayCount})
                     </span>
-                    <span className="font-black text-stone-800">฿{metrics.promptpaySales.toLocaleString()}</span>
+                    <span className="font-black text-stone-800">฿{formatPrice(metrics.promptpaySales)}</span>
                   </div>
                   <div className="flex items-center justify-between font-bold">
                     <span className="flex items-center gap-1 text-emerald-700">
                       <span className="w-2 h-2 rounded-full bg-emerald-500" />
                       {language === 'th' ? 'เงินสด' : 'Cash'} ({metrics.cashCount})
                     </span>
-                    <span className="font-black text-stone-800">฿{metrics.cashSales.toLocaleString()}</span>
+                    <span className="font-black text-stone-800">฿{formatPrice(metrics.cashSales)}</span>
                   </div>
                 </div>
               </div>
@@ -628,7 +652,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                               </h5>
                               <div className="text-[11px] text-stone-400 font-bold flex items-center gap-1.5 mt-0.5">
                                 <span>{language === 'th' ? 'ยอดขาย:' : 'Revenue:'}</span>
-                                <span className="font-extrabold text-stone-700">฿{item.revenue.toLocaleString()}</span>
+                                <span className="font-extrabold text-stone-700">฿{formatPrice(item.revenue)}</span>
                               </div>
                             </div>
                           </div>
@@ -685,8 +709,8 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                         {/* Hover Floating Tooltip */}
                         <div className="absolute -top-10 bg-stone-900 text-white text-[10px] font-black px-2.5 py-1 rounded-xl opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-30 pointer-events-none shadow-xl border border-stone-700">
                           {language === 'th'
-                            ? `${hr}:00 น. • ฿${sales.toLocaleString()} (${orderCount} บิล)`
-                            : `${hr}:00 • ฿${sales.toLocaleString()} (${orderCount} bills)`}
+                            ? `${hr}:00 น. • ฿${formatPrice(sales)} (${orderCount} บิล)`
+                            : `${hr}:00 • ฿${formatPrice(sales)} (${orderCount} bills)`}
                         </div>
 
                         <div
@@ -764,7 +788,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                   <tbody className="divide-y divide-stone-50">
                     {filteredOrders.slice(0, 15).map((o) => (
                       <tr key={o.id} className="hover:bg-stone-50/80 transition">
-                        <td className="py-3 pl-3 font-black text-stone-900">{o.orderNumber}</td>
+                        <td className="py-3 pl-3 font-black text-stone-900">{o.orderNumber || '-'}</td>
                         <td className="py-3 font-extrabold text-stone-700">
                           {o.tableNumber === 'TAKEAWAY' ? (
                             <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded-md text-[10px]">
@@ -772,12 +796,12 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                             </span>
                           ) : (
                             <span className="bg-stone-100 text-stone-800 px-2 py-0.5 rounded-md text-[10px]">
-                              {language === 'th' ? 'โต๊ะ' : 'Table'} {o.tableNumber}
+                              {language === 'th' ? 'โต๊ะ' : 'Table'} {o.tableNumber || '-'}
                             </span>
                           )}
                         </td>
                         <td className="py-3 text-stone-400 font-bold">
-                          {new Date(o.createdAt).toLocaleTimeString(language === 'th' ? 'th-TH' : 'en-US', { hour: '2-digit', minute: '2-digit' })}{language === 'th' ? ' น.' : ''}
+                          {formatTimeDisplay(o.createdAt, language)}{language === 'th' ? ' น.' : ''}
                         </td>
                         <td className="py-3">
                           <span className={`px-2.5 py-0.5 rounded-lg font-black text-[10px] inline-flex items-center gap-1 ${
@@ -798,7 +822,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                           </span>
                         </td>
                         <td className="py-3 pr-3 font-black text-stone-900 text-right text-sm">
-                          ฿{o.totalPrice.toLocaleString()}
+                          ฿{formatPrice(o.totalPrice)}
                         </td>
                       </tr>
                     ))}
@@ -814,7 +838,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
         <div className="px-6 py-4 bg-white border-t border-stone-200/80 flex items-center justify-between flex-shrink-0">
           <div className="text-xs sm:text-sm font-bold text-stone-600 flex items-center gap-2">
             <span>{language === 'th' ? 'สรุปยอดทั้งหมด:' : 'Grand Total:'}</span>
-            <span className="text-lg font-black text-emerald-600">฿{metrics.totalSales.toLocaleString()}</span>
+            <span className="text-lg font-black text-emerald-600">฿{formatPrice(metrics.totalSales)}</span>
             <span className="text-stone-400 text-xs">({metrics.totalBills} {language === 'th' ? 'บิล' : 'bills'})</span>
           </div>
           <button

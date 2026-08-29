@@ -20,9 +20,71 @@ import { ReceiptModal } from './components/common/ReceiptModal';
 import { StorePortalLanding } from './components/portal/StorePortalLanding';
 import { supabase, authService } from './utils/supabaseClient';
 import { User } from '@supabase/supabase-js';
-import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight, Hourglass, Flame, CheckCircle2, ShoppingBag, Ban, Loader2 } from 'lucide-react';
+import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight, Hourglass, Flame, CheckCircle2, ShoppingBag, Ban, Loader2, RotateCcw } from 'lucide-react';
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#fafaf9] flex flex-col items-center justify-center p-6 text-center space-y-4">
+          <div className="w-16 h-16 rounded-3xl bg-orange-500/10 border border-orange-200 text-orange-600 flex items-center justify-center font-black text-2xl shadow-sm">
+            ☕
+          </div>
+          <h2 className="text-xl font-black text-stone-900">พบปัญหาในการแสดงผลชั่วคราว</h2>
+          <p className="text-xs text-stone-500 max-w-md leading-relaxed font-medium">
+            ระบบได้บันทึกข้อผิดพลาดไว้แล้ว กรุณากดปุ่มด้านล่างเพื่อเริ่มการทำงานใหม่
+          </p>
+          {this.state.error && (
+            <pre className="p-3 bg-red-50 text-red-700 border border-red-200 rounded-2xl text-[11px] font-mono max-w-lg overflow-x-auto text-left">
+              {this.state.error.message}
+            </pre>
+          )}
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-black text-xs rounded-2xl shadow-md shadow-orange-500/20 transition cursor-pointer flex items-center gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span>รีเฟรชหน้าจอ (Reload App)</span>
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
+  );
+}
+
+function AppContent() {
   const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
   const [isAuthReady, setIsAuthReady] = useState(false);
 
