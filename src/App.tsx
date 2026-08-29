@@ -15,16 +15,16 @@ import { MenuAdmin } from './components/admin/MenuAdmin';
 import { StoreSettings } from './components/admin/StoreSettings';
 import { QRGenerator } from './components/table-qr/QRGenerator';
 import { ConfirmModal } from './components/common/ConfirmModal';
-import { AuthModal } from './components/auth/AuthModal';
 import { ReceiptModal } from './components/common/ReceiptModal';
 import { StorePortalLanding } from './components/portal/StorePortalLanding';
 import { supabase, authService } from './utils/supabaseClient';
 import { User } from '@supabase/supabase-js';
-import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight, Hourglass, Flame, CheckCircle2, ShoppingBag, Ban } from 'lucide-react';
+import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight, Hourglass, Flame, CheckCircle2, ShoppingBag, Ban, Loader2 } from 'lucide-react';
 
 export function App() {
   const [storeConfig, setStoreConfig] = useState<StoreConfig>(() => syncManager.getStoreConfig());
   const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
   // 1. Resolve Store / Shop ID from URL query or default
   const [shopId, setShopId] = useState<string>(() => {
@@ -64,9 +64,8 @@ export function App() {
   const [selectedCategory, setSelectedCategory] = useState<string>('popular');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Supabase Auth & RBAC State
+  // Supabase Auth State
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Modals & Sheets
   const [activeModalItem, setActiveModalItem] = useState<MenuItem | null>(null);
@@ -74,7 +73,7 @@ export function App() {
   const [isCountdownOpen, setIsCountdownOpen] = useState(false);
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
   
-  // 3. Tracked order strictly scoped to THIS CUSTOMER'S ACTIVE BROWSER SESSION ONLY!
+  // Tracked order strictly scoped to THIS CUSTOMER'S ACTIVE BROWSER SESSION ONLY!
   const [trackedOrder, setTrackedOrder] = useState<Order | null>(() => {
     if (typeof window !== 'undefined') {
       const sessionOrderId = sessionStorage.getItem('my_active_order_id');
@@ -132,7 +131,7 @@ export function App() {
     }
   }, [shopId]);
 
-  // Initialize Auth & Routing
+  // Initialize Auth & Routing (Zero-Flash)
   useEffect(() => {
     authService.getSession().then((session) => {
       const currentUser = session?.user ?? null;
@@ -149,6 +148,9 @@ export function App() {
       } else if (currentUser) {
         setActiveRole((roleParam as AppRole) || 'kitchen');
       }
+      setIsAuthReady(true);
+    }).catch(() => {
+      setIsAuthReady(true);
     });
 
     const { data: authListener } = authService.onAuthStateChange((newUser) => {
@@ -276,7 +278,8 @@ export function App() {
 
   const handleSelectRole = (role: AppRole) => {
     if (role !== 'customer' && !user) {
-      setIsAuthModalOpen(true);
+      setIsSimulatorMode(false);
+      setActiveRole('customer');
       return;
     }
     setActiveRole(role);
@@ -348,14 +351,12 @@ export function App() {
     setCart((prev) => prev.filter((item) => item.cartItemId !== cartItemId));
   };
 
-  // Step 1: Trigger 3-second countdown modal
   const handleStartCheckout = () => {
     if (cart.length === 0) return;
     setIsCartOpen(false);
     setIsCountdownOpen(true);
   };
 
-  // Step 2: Finalize Submission after 3 seconds without cancellation
   const handleFinalizeOrder = async () => {
     if (cart.length === 0) return;
 
@@ -521,7 +522,7 @@ export function App() {
     }
   };
 
-  const pendingCount = orders.filter((o) => o.status === 'pending' || o.status === 'cooking' || o.status === 'ready').length;
+  const pendingCount = orders.filter((o) => o.status === 'pending' || o.status === 'cooking').length;
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const cartSubtotal = cart.reduce((sum, item) => sum + item.totalItemPrice, 0);
 
@@ -529,6 +530,18 @@ export function App() {
   const isDirectNonTableAccess = !hasTableParam;
   const shouldShowStorePortal = isDirectNonTableAccess && !user && !isSimulatorMode;
   const isCustomerDining = hasTableParam || isSimulatorMode;
+
+  // Zero-Flash Initial Splash Loader (Clean & Instant)
+  if (!isAuthReady) {
+    return (
+      <div className="min-h-screen bg-[#fafaf9] flex flex-col items-center justify-center space-y-3">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 p-0.5 shadow-md flex items-center justify-center animate-pulse">
+          <img src={storeConfig.logoUrl} alt="Logo" className="w-full h-full object-cover rounded-[14px]" />
+        </div>
+        <span className="text-xs font-bold text-stone-400">Loading Cafe Order...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#fafaf9] text-stone-900 flex flex-col selection:bg-orange-500 selection:text-white">
@@ -542,7 +555,6 @@ export function App() {
         language={language}
         onToggleLanguage={handleToggleLanguage}
         user={user}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
         onLogout={handleLogout}
         isCustomerView={isCustomerDining && !user}
       />
@@ -554,7 +566,6 @@ export function App() {
           <StorePortalLanding
             storeConfig={storeConfig}
             language={language}
-            onOpenAuth={() => setIsAuthModalOpen(true)}
             onLoginSuccess={() => {
               setActiveRole('kitchen');
             }}
@@ -774,17 +785,6 @@ export function App() {
         />
       )}
 
-      {/* Auth Modal for Store Staff & Google Login */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        language={language}
-        onSuccess={() => {
-          setIsAuthModalOpen(false);
-          setActiveRole('kitchen');
-        }}
-      />
-
       {/* Item Customization Modal */}
       <ItemModal
         item={activeModalItem}
@@ -826,7 +826,7 @@ export function App() {
         language={language}
       />
 
-      {/* Receipt Printing Modal Slip with Dynamic PromptPay QR */}
+      {/* Receipt Printing Modal Slip & Full Legal Tax Invoice with Dynamic PromptPay QR */}
       <ReceiptModal
         isOpen={!!receiptOrder}
         onClose={() => setReceiptOrder(null)}

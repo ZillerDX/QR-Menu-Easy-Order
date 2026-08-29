@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ShoppingBag, Store, LogIn, LogOut, ShieldCheck } from 'lucide-react';
+import React from 'react';
+import { ShoppingBag, Store, LogOut } from 'lucide-react';
 import { StoreConfig, Language } from '../../types';
 import { t } from '../../utils/i18n';
 import { AppRole } from './RoleSwitcher';
@@ -14,7 +14,6 @@ interface HeaderProps {
   language: Language;
   onToggleLanguage: () => void;
   user: User | null;
-  onOpenAuth: () => void;
   onLogout: () => void;
   isCustomerView?: boolean;
 }
@@ -28,12 +27,9 @@ export const Header: React.FC<HeaderProps> = ({
   language,
   onToggleLanguage,
   user,
-  onOpenAuth,
   onLogout,
   isCustomerView = true,
 }) => {
-  const [logoClickCount, setLogoClickCount] = useState(0);
-
   const getTableDisplayLabel = (table: string) => {
     if (table === 'TAKEAWAY') {
       return language === 'th' ? 'กลับบ้าน' : 'Takeaway';
@@ -41,27 +37,12 @@ export const Header: React.FC<HeaderProps> = ({
     return `${language === 'th' ? 'โต๊ะ' : 'Table'} ${table}`;
   };
 
-  // Staff Secret Login Trigger: Click logo 3 times to open auth modal if not logged in
-  const handleLogoClick = () => {
-    if (!user) {
-      const nextCount = logoClickCount + 1;
-      if (nextCount >= 3) {
-        setLogoClickCount(0);
-        onOpenAuth();
-      } else {
-        setLogoClickCount(nextCount);
-        setTimeout(() => setLogoClickCount(0), 2000);
-      }
-    }
-  };
-
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-2xs">
       <div className="max-w-6xl mx-auto px-3.5 sm:px-6 py-2.5 flex items-center justify-between gap-2">
         {/* Left: Brand Logo & Title */}
         <div 
-          onClick={handleLogoClick}
-          className="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none group"
+          className="flex items-center gap-2.5 sm:gap-3 select-none group"
           title={!user ? "Cafe Order" : "Staff Portal"}
         >
           <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl overflow-hidden shadow-xs border border-orange-200/80 p-0.5 bg-gradient-to-tr from-amber-500 to-orange-500 flex-shrink-0 group-hover:scale-105 transition-transform duration-200">
