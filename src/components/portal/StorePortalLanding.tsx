@@ -6,7 +6,6 @@ import { Lock, Mail, KeyRound, AlertCircle, CheckCircle2, ArrowRight, Sparkles, 
 interface StorePortalLandingProps {
   storeConfig: StoreConfig;
   language: Language;
-  onOpenAuth?: () => void;
   onEnterSimulator: (tableNum?: string) => void;
   onLoginSuccess?: () => void;
 }

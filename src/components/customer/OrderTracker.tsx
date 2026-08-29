@@ -243,7 +243,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
                         {item.quantity}x
                       </span>
                       <span className="text-stone-900 font-black text-xs sm:text-sm leading-snug">
-                        {language === 'en' && item.menuItem?.nameEn ? item.menuItem.nameEn : item.menuItem?.name}
+                        {language === 'en' && item.menuItem?.nameEn ? item.menuItem.nameEn : (item.menuItem?.name || 'Unknown Item')}
                       </span>
                     </div>
                     {item.selectedOptions && item.selectedOptions.length > 0 && (

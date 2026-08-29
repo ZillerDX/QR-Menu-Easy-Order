@@ -87,6 +87,7 @@ export function App() {
 
   const [isOrderTrackerOpen, setIsOrderTrackerOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
 
   // Fetch Latest Orders strictly scoped to current shopId from Supabase
   const fetchRemoteOrders = useCallback(async () => {
@@ -142,8 +143,6 @@ export function App() {
       const roleParam = params.get('role');
 
       if (tableParam) {
-        setTableNumber(tableParam);
-        setHasTableParam(true);
         setActiveRole('customer');
       } else if (currentUser) {
         setActiveRole((roleParam as AppRole) || 'kitchen');
@@ -400,6 +399,8 @@ export function App() {
       }]);
     } catch (e) {
       console.error("Supabase insert order error:", e);
+      setErrorToast(language === 'th' ? '⚠️ ส่งออเดอร์ไปยังเซิร์ฟเวอร์ไม่สำเร็จ แต่ออเดอร์ถูกบันทึกในเครื่องแล้ว' : '⚠️ Failed to sync order to server, but saved locally');
+      setTimeout(() => setErrorToast(null), 5000);
     }
   };
 
@@ -427,6 +428,8 @@ export function App() {
         .eq('id', orderId);
     } catch (e) {
       console.error("Supabase update status error:", e);
+      setErrorToast(language === 'th' ? '⚠️ อัปเดตสถานะไปยังเซิร์ฟเวอร์ไม่สำเร็จ' : '⚠️ Failed to sync status update to server');
+      setTimeout(() => setErrorToast(null), 5000);
     }
   };
 
@@ -452,6 +455,8 @@ export function App() {
         .eq('id', orderId);
     } catch (e) {
       console.error("Supabase cancel order error:", e);
+      setErrorToast(language === 'th' ? '⚠️ ยกเลิกออเดอร์บนเซิร์ฟเวอร์ไม่สำเร็จ' : '⚠️ Failed to sync cancellation to server');
+      setTimeout(() => setErrorToast(null), 5000);
     }
   };
 
@@ -854,6 +859,13 @@ export function App() {
         onConfirm={handleExecuteResetData}
         onCancel={() => setIsResetConfirmOpen(false)}
       />
+      {/* Error Toast Notification */}
+      {errorToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[99999] max-w-md w-[92vw] bg-red-600 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 animate-in slide-in-from-top-3 duration-300 font-bold text-xs sm:text-sm">
+          <span className="flex-1">{errorToast}</span>
+          <button type="button" onClick={() => setErrorToast(null)} className="text-white/80 hover:text-white px-2 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-black cursor-pointer transition">✕</button>
+        </div>
+      )}
     </div>
   );
 }

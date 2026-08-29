@@ -107,9 +107,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1">
                     <h4 className="text-sm font-extrabold text-stone-900 leading-snug">
-                      {language === 'en' && cartItem.menuItem.nameEn
+                      {language === 'en' && cartItem.menuItem?.nameEn
                         ? cartItem.menuItem.nameEn
-                        : cartItem.menuItem.name}
+                        : (cartItem.menuItem?.name || 'Unknown Item')}
                     </h4>
 
                     {cartItem.selectedOptions.length > 0 && (

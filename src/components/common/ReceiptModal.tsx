@@ -108,7 +108,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       />
 
       {/* Container */}
-      <div className="relative w-full max-w-lg bg-white rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 flex flex-col max-h-[94vh] print:max-h-none print:shadow-none print:border-none print:w-full print:max-w-none print:rounded-none print:static print:p-0 print:m-0">
+      <div className="relative w-full max-w-lg bg-white rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 flex flex-col max-h-[94vh] print:max-h-none print:shadow-none print:border-none print:w-full print:max-w-none print:rounded-none print:static print:p-0 print:m-0 print:overflow-visible">
         
         {/* Modal Top Bar (Hidden on Print) */}
         <div className="px-5 py-3.5 bg-stone-900 text-white flex items-center justify-between flex-shrink-0 print:hidden no-print">
