@@ -274,6 +274,24 @@ class RealtimeSyncManager {
     return updated;
   }
 
+  restockAll(shopId = DEFAULT_SHOP_ID): MenuItem[] {
+    const items = this.getMenuItems(shopId);
+    const updated = items.map((item) => ({ ...item, isAvailable: true }));
+    safeStorage.setItem(getMenuKey(shopId), JSON.stringify(updated));
+    this.broadcast({ type: 'MENU_UPDATED', payload: updated, storeId: shopId });
+    return updated;
+  }
+
+  restockCategory(categoryId: string, shopId = DEFAULT_SHOP_ID): MenuItem[] {
+    const items = this.getMenuItems(shopId);
+    const updated = items.map((item) =>
+      item.categoryId === categoryId ? { ...item, isAvailable: true } : item
+    );
+    safeStorage.setItem(getMenuKey(shopId), JSON.stringify(updated));
+    this.broadcast({ type: 'MENU_UPDATED', payload: updated, storeId: shopId });
+    return updated;
+  }
+
   // --- Store Config ---
   getStoreConfig(shopId = DEFAULT_SHOP_ID): StoreConfig {
     try {

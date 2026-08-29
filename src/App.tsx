@@ -772,6 +772,33 @@ export function App() {
     }
   };
 
+  const handleRestockAll = async () => {
+    const updated = syncManager.restockAll(shopId);
+    setMenuItems(updated);
+    try {
+      await supabase
+        .from('menu_items')
+        .update({ is_available: true })
+        .eq('store_id', shopId);
+    } catch (err) {
+      console.error("Supabase bulk restock all error:", err);
+    }
+  };
+
+  const handleRestockCategory = async (categoryId: string) => {
+    const updated = syncManager.restockCategory(categoryId, shopId);
+    setMenuItems(updated);
+    try {
+      await supabase
+        .from('menu_items')
+        .update({ is_available: true })
+        .eq('store_id', shopId)
+        .eq('category_id', categoryId);
+    } catch (err) {
+      console.error("Supabase bulk restock category error:", err);
+    }
+  };
+
   const handleSaveMenuItem = async (item: MenuItem) => {
     const itemWithStore = { ...item, storeId: shopId };
     const updated = syncManager.saveMenuItem(itemWithStore, shopId);
@@ -1110,10 +1137,12 @@ export function App() {
           <KitchenDashboard
             orders={orders}
             menuItems={menuItems}
+            categories={categories}
             language={language}
             onUpdateStatus={handleUpdateOrderStatus}
             onToggleStock={handleToggleStock}
-            onResetData={handleResetData}
+            onRestockAll={handleRestockAll}
+            onRestockCategory={handleRestockCategory}
             onPrintReceipt={(order) => setReceiptOrder(order)}
             onCancelOrder={handleCancelOrder}
           />
