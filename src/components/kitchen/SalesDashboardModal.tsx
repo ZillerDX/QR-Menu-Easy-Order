@@ -24,6 +24,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
   orders = [],
   language,
 }) => {
+  // 1. All State Hooks
   const [preset, setPreset] = useState<TimePreset>('today');
   const [customStart, setCustomStart] = useState(() => {
     const d = new Date();
@@ -32,6 +33,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
   });
   const [customEnd, setCustomEnd] = useState(() => new Date().toISOString().split('T')[0]);
 
+  // 2. All Effect Hooks
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -69,7 +71,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     }
   };
 
-  // Filter orders by time preset safely
+  // 3. All Memo Hooks (MUST BE CALLED UNCONDITIONALLY BEFORE ANY RETURN)
   const filteredOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
     const now = new Date();
@@ -107,7 +109,6 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     });
   }, [orders, preset, customStart, customEnd]);
 
-  // Analytics Metrics Calculations safely
   const metrics = useMemo(() => {
     const totalSales = filteredOrders.reduce((sum, o) => sum + (Number(o?.totalPrice) || 0), 0);
     const totalBills = filteredOrders.length;
@@ -192,8 +193,19 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     };
   }, [filteredOrders]);
 
-  if (!isOpen) return null;
+  const daysSelectedCount = useMemo(() => {
+    if (!customStart || !customEnd) return 1;
+    try {
+      const s = parseLocalDate(customStart).getTime();
+      const e = parseLocalDate(customEnd).getTime();
+      const diff = Math.round(Math.abs(e - s) / (1000 * 60 * 60 * 24)) + 1;
+      return isNaN(diff) ? 1 : diff;
+    } catch {
+      return 1;
+    }
+  }, [customStart, customEnd]);
 
+  // 4. Helper Handlers
   const handlePrint = () => {
     window.print();
   };
@@ -248,18 +260,6 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     }
   };
 
-  const daysSelectedCount = useMemo(() => {
-    if (!customStart || !customEnd) return 1;
-    try {
-      const s = parseLocalDate(customStart).getTime();
-      const e = parseLocalDate(customEnd).getTime();
-      const diff = Math.round(Math.abs(e - s) / (1000 * 60 * 60 * 24)) + 1;
-      return isNaN(diff) ? 1 : diff;
-    } catch {
-      return 1;
-    }
-  }, [customStart, customEnd]);
-
   const setShortcutRange = (type: 'thisWeek' | 'thisMonth' | 'lastMonth' | 'last7' | 'last30') => {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
@@ -291,6 +291,9 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
       setCustomEnd(todayStr);
     }
   };
+
+  // 5. Early return AFTER ALL HOOKS ARE CALLED
+  if (!isOpen) return null;
 
   const modalContent = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5">
