@@ -1,0 +1,39 @@
+{
+  "projectId": "bf4a08c1-f41f-4ae1-a790-9988c4ea6840",
+  "type": "frontend",
+  "name": "Admin Menu Management & Category Editor",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Switch role to 'จัดการเมนู (Menu Admin)' from the role switcher"
+    },
+    {
+      "type": "assertion",
+      "description": "Menu Admin panel displays list of all dishes, search box, category tabs, and 'เพิ่มเมนูใหม่ (Add Dish)' button"
+    },
+    {
+      "type": "action",
+      "description": "Click 'เพิ่มเมนูใหม่ (Add Dish)' button"
+    },
+    {
+      "type": "assertion",
+      "description": "Item Editor modal opens with fields for Name TH/EN, Price, Category, Image URL, Description, and Option Groups"
+    },
+    {
+      "type": "action",
+      "description": "Click 'จัดการหมวดหมู่ (Manage Categories)' button"
+    },
+    {
+      "type": "assertion",
+      "description": "Category Modal opens displaying all active categories with edit, delete, and icon selector tools"
+    },
+    {
+      "type": "action",
+      "description": "Close category modal and search for 'Matcha' in the menu search input"
+    },
+    {
+      "type": "assertion",
+      "description": "Menu list filters to show matching Matcha items with quick edit and delete action buttons"
+    }
+  ]
+}

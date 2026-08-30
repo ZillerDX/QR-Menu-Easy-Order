@@ -1,0 +1,59 @@
+{
+  "projectId": "bf4a08c1-f41f-4ae1-a790-9988c4ea6840",
+  "type": "frontend",
+  "name": "Customer Dining Order Flow & Item Customization",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the app with table parameter '?table=01' to simulate customer scanning table QR code"
+    },
+    {
+      "type": "assertion",
+      "description": "The header displays the store logo, store name, and Table 01 badge indicator"
+    },
+    {
+      "type": "action",
+      "description": "Click on category filter tabs (Coffee, Food, Dessert) and type 'Americano' in the search bar"
+    },
+    {
+      "type": "assertion",
+      "description": "Menu grid updates to show matching items with clear photos, price in THB, and tags"
+    },
+    {
+      "type": "action",
+      "description": "Click on 'Iced Americano' or first coffee item to open the Item Detail Modal"
+    },
+    {
+      "type": "assertion",
+      "description": "Item modal displays price, image, sweetness levels, size radio buttons, and special notes textarea"
+    },
+    {
+      "type": "action",
+      "description": "Select 'หวานน้อย 25%' (Low Sweetness 25%), add note 'ไม่หวานมาก', and click 'เพิ่มลงตะกร้า' (Add to Cart)"
+    },
+    {
+      "type": "assertion",
+      "description": "Item modal closes and the floating cart badge in bottom bar increments to show 1 item"
+    },
+    {
+      "type": "action",
+      "description": "Click on the floating cart bar to open the Cart Drawer"
+    },
+    {
+      "type": "assertion",
+      "description": "Cart Drawer displays selected item, chosen customizations, subtotal, and Dining Type selector"
+    },
+    {
+      "type": "action",
+      "description": "Select payment method 'เงินสด (Cash at Counter)' and click 'ยืนยันสั่งอาหาร' (Confirm Order)"
+    },
+    {
+      "type": "assertion",
+      "description": "Order Countdown Modal appears showing order summary and starts 3-second countdown before finalizing"
+    },
+    {
+      "type": "assertion",
+      "description": "Order Tracker Sheet opens showing active status 'รอดำเนินการ (Pending)', order number, and table number"
+    }
+  ]
+}

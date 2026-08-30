@@ -78,6 +78,8 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
                 <img
                   src={formData.logoUrl}
                   alt="Store Logo"
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover rounded-[22px]"
                 />
               ) : (

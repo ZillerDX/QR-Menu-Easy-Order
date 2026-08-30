@@ -640,6 +640,8 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                               <img
                                 src={item.image}
                                 alt={item.name}
+                                loading="lazy"
+                                decoding="async"
                                 className="w-10 h-10 rounded-xl object-cover border border-stone-200/80 flex-shrink-0"
                               />
                             ) : (

@@ -1,0 +1,39 @@
+{
+  "projectId": "bf4a08c1-f41f-4ae1-a790-9988c4ea6840",
+  "type": "frontend",
+  "name": "Store Settings & System Reset Controls",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Switch role to 'ตั้งค่าร้าน (Store Settings)' from the role switcher"
+    },
+    {
+      "type": "assertion",
+      "description": "Settings form displays fields for Store Name (TH/EN), PromptPay Number, Account Name, Business Hours, Table Capacity, and Tax ID"
+    },
+    {
+      "type": "action",
+      "description": "Scroll to the 'Staff Permissions' and 'System Reset' section at the bottom"
+    },
+    {
+      "type": "assertion",
+      "description": "Danger zone card displays 'รีเซ็ตข้อมูลระบบ (Reset System Data)' button with warning notes"
+    },
+    {
+      "type": "action",
+      "description": "Click 'รีเซ็ตข้อมูลระบบ' button"
+    },
+    {
+      "type": "assertion",
+      "description": "Confirm modal pops up asking for confirmation before wiping test data"
+    },
+    {
+      "type": "action",
+      "description": "Click 'ยกเลิก (Cancel)' in the confirm modal"
+    },
+    {
+      "type": "assertion",
+      "description": "Modal dismisses safely without altering store configuration"
+    }
+  ]
+}

@@ -10,17 +10,18 @@ import { MenuCard } from './components/customer/MenuCard';
 import { ItemModal } from './components/customer/ItemModal';
 import { CartDrawer } from './components/customer/CartDrawer';
 import { OrderTracker } from './components/customer/OrderTracker';
-import { OrderCountdownModal } from './components/customer/OrderCountdownModal';
-import { KitchenDashboard } from './components/kitchen/KitchenDashboard';
-import { MenuAdmin } from './components/admin/MenuAdmin';
-import { StoreSettings } from './components/admin/StoreSettings';
-import { QRGenerator } from './components/table-qr/QRGenerator';
 import { ConfirmModal } from './components/common/ConfirmModal';
-import { ReceiptModal } from './components/common/ReceiptModal';
-import { StorePortalLanding } from './components/portal/StorePortalLanding';
 import { supabase, authService } from './utils/supabaseClient';
 import { User } from '@supabase/supabase-js';
 import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight, Hourglass, Flame, CheckCircle2, ShoppingBag, Ban, Loader2, RotateCcw } from 'lucide-react';
+
+const KitchenDashboard = React.lazy(() => import('./components/kitchen/KitchenDashboard').then((m) => ({ default: m.KitchenDashboard })));
+const MenuAdmin = React.lazy(() => import('./components/admin/MenuAdmin').then((m) => ({ default: m.MenuAdmin })));
+const StoreSettings = React.lazy(() => import('./components/admin/StoreSettings').then((m) => ({ default: m.StoreSettings })));
+const QRGenerator = React.lazy(() => import('./components/table-qr/QRGenerator').then((m) => ({ default: m.QRGenerator })));
+const StorePortalLanding = React.lazy(() => import('./components/portal/StorePortalLanding').then((m) => ({ default: m.StorePortalLanding })));
+const ReceiptModal = React.lazy(() => import('./components/common/ReceiptModal').then((m) => ({ default: m.ReceiptModal })));
+const OrderCountdownModal = React.lazy(() => import('./components/customer/OrderCountdownModal').then((m) => ({ default: m.OrderCountdownModal })));
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -1036,220 +1037,227 @@ function AppContent() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full">
-        {/* VIEW 0: STORE PORTAL LANDING (FOR DIRECT STORE ACCESS / NON-CUSTOMER) */}
-        {shouldShowStorePortal && (
-          <StorePortalLanding
-            storeConfig={storeConfig}
-            language={language}
-            onLoginSuccess={() => {
-              setActiveRole('kitchen');
-            }}
-            onEnterSimulator={(tbl) => {
-              if (tbl) setTableNumber(tbl);
-              setIsSimulatorMode(true);
-              setActiveRole('customer');
-            }}
-          />
-        )}
+      <main className="flex-1 w-full flex flex-col">
+        <React.Suspense fallback={
+          <div className="flex-1 flex flex-col items-center justify-center py-28 space-y-3">
+            <div className="w-9 h-9 border-3 border-orange-500 border-t-transparent rounded-full animate-spin" />
+            <span className="text-xs font-bold text-stone-400">Loading...</span>
+          </div>
+        }>
+          {/* VIEW 0: STORE PORTAL LANDING (FOR DIRECT STORE ACCESS / NON-CUSTOMER) */}
+          {shouldShowStorePortal && (
+            <StorePortalLanding
+              storeConfig={storeConfig}
+              language={language}
+              onLoginSuccess={() => {
+                setActiveRole('kitchen');
+              }}
+              onEnterSimulator={(tbl) => {
+                if (tbl) setTableNumber(tbl);
+                setIsSimulatorMode(true);
+                setActiveRole('customer');
+              }}
+            />
+          )}
 
-        {/* VIEW 1: CUSTOMER VIEW (OR TEST SIMULATOR) */}
-        {(!shouldShowStorePortal && activeRole === 'customer') && (
-          <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
-            
-            {/* Simulator Mode Exit Pill (Shown ONLY if shop owner is in testing mode) */}
-            {isSimulatorMode && !hasTableParam && (
-              <div className="bg-stone-900 text-white rounded-2xl p-3 px-4 flex items-center justify-between shadow-md animate-in slide-in-from-top-3">
-                <div className="flex items-center gap-2 text-xs font-black">
-                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                  <span>{language === 'th' ? 'โหมดทดสอบสั่งอาหารจำลองสำหรับเจ้าของร้าน (โต๊ะ ' + tableNumber + ')' : `Store Simulator Mode (Table ${tableNumber})`}</span>
+          {/* VIEW 1: CUSTOMER VIEW (OR TEST SIMULATOR) */}
+          {(!shouldShowStorePortal && activeRole === 'customer') && (
+            <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
+              
+              {/* Simulator Mode Exit Pill (Shown ONLY if shop owner is in testing mode) */}
+              {isSimulatorMode && !hasTableParam && (
+                <div className="bg-stone-900 text-white rounded-2xl p-3 px-4 flex items-center justify-between shadow-md animate-in slide-in-from-top-3">
+                  <div className="flex items-center gap-2 text-xs font-black">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                    <span>{language === 'th' ? 'โหมดทดสอบสั่งอาหารจำลองสำหรับเจ้าของร้าน (โต๊ะ ' + tableNumber + ')' : `Store Simulator Mode (Table ${tableNumber})`}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSimulatorMode(false);
+                      if (!user) setActiveRole('customer');
+                    }}
+                    className="text-xs bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-xl font-bold cursor-pointer transition"
+                  >
+                    {language === 'th' ? 'กลับหน้าพอร์ทัลร้าน' : 'Exit Simulator'}
+                  </button>
                 </div>
+              )}
+
+              {/* Active Tracked Order Banner */}
+              {trackedOrder && (
+                <div
+                  onClick={() => setIsOrderTrackerOpen(true)}
+                  className={`relative overflow-hidden rounded-3xl p-4 sm:p-5 text-white shadow-xl flex items-center justify-between animate-pulse-subtle cursor-pointer hover:shadow-2xl transition-all duration-300 group hover:-translate-y-0.5 ${
+                    trackedOrder.status === 'cancelled'
+                      ? 'bg-gradient-to-r from-red-600 to-rose-600 shadow-red-500/25'
+                      : 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 shadow-orange-500/25'
+                  }`}
+                >
+                  <div className="absolute inset-0 shimmer-gradient pointer-events-none opacity-30" />
+                  <div className="flex items-center gap-3.5 relative z-10">
+                    <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white flex-shrink-0 shadow-inner group-hover:scale-105 transition-transform duration-200">
+                      {trackedOrder.status === 'pending' && <Hourglass className="w-6 h-6 animate-spin" />}
+                      {trackedOrder.status === 'cooking' && <Flame className="w-6 h-6 animate-bounce" />}
+                      {trackedOrder.status === 'ready' && <Sparkles className="w-6 h-6 animate-pulse" />}
+                      {trackedOrder.status === 'completed' && <CheckCircle2 className="w-6 h-6" />}
+                      {trackedOrder.status === 'cancelled' && <Ban className="w-6 h-6" />}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-sm tracking-tight">
+                          {language === 'th' ? 'ติดตามออเดอร์' : 'Order Tracking'}: {trackedOrder.orderNumber}
+                        </span>
+                        <span className="bg-white/25 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-xs">
+                          {trackedOrder.tableNumber === 'TAKEAWAY' ? t('takeaway', language) : `${language === 'th' ? 'โต๊ะ' : 'Table'} ${trackedOrder.tableNumber}`}
+                        </span>
+                      </div>
+                      <p className="text-xs text-orange-100 font-medium mt-0.5">
+                        {trackedOrder.status === 'pending' && (language === 'th' ? 'กำลังรอคิวรับออเดอร์...' : 'Waiting for kitchen confirmation...')}
+                        {trackedOrder.status === 'cooking' && (language === 'th' ? 'ห้องครัวกำลังปรุงเมนูของคุณอย่างพิถีพิถัน 🔥' : 'Kitchen is preparing your meal 🔥')}
+                        {trackedOrder.status === 'ready' && (language === 'th' ? 'อาหารพร้อมเสิร์ฟแล้ว! กำลังนำไปส่งที่โต๊ะ ✨' : 'Food is ready to be served! ✨')}
+                        {trackedOrder.status === 'completed' && (language === 'th' ? 'ออเดอร์เสร็จสมบูรณ์ ทานให้อร่อยนะคะ' : 'Order completed. Enjoy your meal!')}
+                        {trackedOrder.status === 'cancelled' && (language === 'th' ? `❌ ออเดอร์ถูกยกเลิก (${trackedOrder.cancelReason || 'กรุณาติดต่อพนักงาน'})` : 'Order was cancelled by store')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 relative z-10 pl-2">
+                    <span className="hidden sm:inline text-xs font-black bg-white text-orange-600 px-3 py-1.5 rounded-xl shadow-md group-hover:bg-orange-50 transition">
+                      {language === 'th' ? 'แตะเพื่อดูสถานะ' : 'View Status'}
+                    </span>
+                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center group-hover:translate-x-1 transition-transform">
+                      <ArrowRight className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Category Navigation Pills */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar scroll-smooth">
+                {categories.map((category) => {
+                  const isSelected = selectedCategory === category.id;
+                  return (
+                    <button
+                      key={category.id}
+                      onClick={() => setSelectedCategory(category.id)}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-xs sm:text-sm transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-95 ${
+                        isSelected
+                          ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25 ring-2 ring-orange-500/20'
+                          : 'bg-white text-stone-700 hover:bg-orange-50 hover:text-orange-600 border border-stone-200/80 shadow-2xs'
+                      }`}
+                    >
+                      {getCategoryIcon(category.icon)}
+                      <span>{language === 'en' && category.nameEn ? category.nameEn : category.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Search Input Bar */}
+              <div className="relative">
+                <Search className="w-4 h-4 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder={t('searchPlaceholder', language)}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-white border border-stone-200/90 rounded-2xl text-xs sm:text-sm focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 shadow-2xs transition font-medium"
+                />
+              </div>
+
+              {/* Menu Grid */}
+              {filteredMenuItems.length === 0 ? (
+                <div className="text-center py-16 bg-white rounded-3xl border border-stone-200 shadow-xs">
+                  <Utensils className="w-12 h-12 mx-auto text-stone-300 mb-2" />
+                  <p className="text-sm font-bold text-stone-500">
+                    {language === 'th' ? 'ไม่พบเมนูที่ค้นหา' : 'No menu items found'}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+                  {filteredMenuItems.map((item) => (
+                    <MenuCard
+                      key={item.id}
+                      item={item}
+                      language={language}
+                      onSelect={(it) => setActiveModalItem(it)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Floating Action Button (FAB) Cart Button on Bottom-Right */}
+              {totalCartCount > 0 && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsSimulatorMode(false);
-                    if (!user) setActiveRole('customer');
-                  }}
-                  className="text-xs bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-xl font-bold cursor-pointer transition"
+                  onClick={() => setIsCartOpen(true)}
+                  className="fixed bottom-6 right-5 sm:right-8 z-30 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-full p-3.5 sm:px-5 sm:py-3.5 shadow-2xl shadow-orange-500/40 hover:shadow-orange-500/50 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-2.5 cursor-pointer ring-4 ring-white/90 group animate-in slide-in-from-bottom-5"
+                  title="View Cart"
                 >
-                  {language === 'th' ? 'กลับหน้าพอร์ทัลร้าน' : 'Exit Simulator'}
+                  <div className="relative">
+                    <ShoppingBag className="w-6 h-6 sm:w-5 sm:h-5 text-white group-hover:rotate-12 transition-transform duration-300" />
+                    <span className="absolute -top-2.5 -right-2.5 bg-red-600 text-white text-[11px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white animate-heartbeat shadow-sm">
+                      {totalCartCount}
+                    </span>
+                  </div>
+                  <span className="hidden sm:inline font-black text-sm">
+                    {language === 'th' ? 'ดูตะกร้า' : 'Cart'}
+                  </span>
+                  <span className="font-black text-xs bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-xs">
+                    ฿{cartSubtotal.toLocaleString()}
+                  </span>
                 </button>
-              </div>
-            )}
-
-            {/* Active Tracked Order Banner */}
-            {trackedOrder && (
-              <div
-                onClick={() => setIsOrderTrackerOpen(true)}
-                className={`relative overflow-hidden rounded-3xl p-4 sm:p-5 text-white shadow-xl flex items-center justify-between animate-pulse-subtle cursor-pointer hover:shadow-2xl transition-all duration-300 group hover:-translate-y-0.5 ${
-                  trackedOrder.status === 'cancelled'
-                    ? 'bg-gradient-to-r from-red-600 to-rose-600 shadow-red-500/25'
-                    : 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 shadow-orange-500/25'
-                }`}
-              >
-                <div className="absolute inset-0 shimmer-gradient pointer-events-none opacity-30" />
-                <div className="flex items-center gap-3.5 relative z-10">
-                  <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white flex-shrink-0 shadow-inner group-hover:scale-105 transition-transform duration-200">
-                    {trackedOrder.status === 'pending' && <Hourglass className="w-6 h-6 animate-spin" />}
-                    {trackedOrder.status === 'cooking' && <Flame className="w-6 h-6 animate-bounce" />}
-                    {trackedOrder.status === 'ready' && <Sparkles className="w-6 h-6 animate-pulse" />}
-                    {trackedOrder.status === 'completed' && <CheckCircle2 className="w-6 h-6" />}
-                    {trackedOrder.status === 'cancelled' && <Ban className="w-6 h-6" />}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-black text-sm tracking-tight">
-                        {language === 'th' ? 'ติดตามออเดอร์' : 'Order Tracking'}: {trackedOrder.orderNumber}
-                      </span>
-                      <span className="bg-white/25 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-xs">
-                        {trackedOrder.tableNumber === 'TAKEAWAY' ? t('takeaway', language) : `${language === 'th' ? 'โต๊ะ' : 'Table'} ${trackedOrder.tableNumber}`}
-                      </span>
-                    </div>
-                    <p className="text-xs text-orange-100 font-medium mt-0.5">
-                      {trackedOrder.status === 'pending' && (language === 'th' ? 'กำลังรอคิวรับออเดอร์...' : 'Waiting for kitchen confirmation...')}
-                      {trackedOrder.status === 'cooking' && (language === 'th' ? 'ห้องครัวกำลังปรุงเมนูของคุณอย่างพิถีพิถัน 🔥' : 'Kitchen is preparing your meal 🔥')}
-                      {trackedOrder.status === 'ready' && (language === 'th' ? 'อาหารพร้อมเสิร์ฟแล้ว! กำลังนำไปส่งที่โต๊ะ ✨' : 'Food is ready to be served! ✨')}
-                      {trackedOrder.status === 'completed' && (language === 'th' ? 'ออเดอร์เสร็จสมบูรณ์ ทานให้อร่อยนะคะ' : 'Order completed. Enjoy your meal!')}
-                      {trackedOrder.status === 'cancelled' && (language === 'th' ? `❌ ออเดอร์ถูกยกเลิก (${trackedOrder.cancelReason || 'กรุณาติดต่อพนักงาน'})` : 'Order was cancelled by store')}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 relative z-10 pl-2">
-                  <span className="hidden sm:inline text-xs font-black bg-white text-orange-600 px-3 py-1.5 rounded-xl shadow-md group-hover:bg-orange-50 transition">
-                    {language === 'th' ? 'แตะเพื่อดูสถานะ' : 'View Status'}
-                  </span>
-                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center group-hover:translate-x-1 transition-transform">
-                    <ArrowRight className="w-4 h-4 text-white" />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Category Navigation Pills */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar scroll-smooth">
-              {categories.map((category) => {
-                const isSelected = selectedCategory === category.id;
-                return (
-                  <button
-                    key={category.id}
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-xs sm:text-sm transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-95 ${
-                      isSelected
-                        ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25 ring-2 ring-orange-500/20'
-                        : 'bg-white text-stone-700 hover:bg-orange-50 hover:text-orange-600 border border-stone-200/80 shadow-2xs'
-                    }`}
-                  >
-                    {getCategoryIcon(category.icon)}
-                    <span>{language === 'en' && category.nameEn ? category.nameEn : category.name}</span>
-                  </button>
-                );
-              })}
+              )}
             </div>
+          )}
 
-            {/* Search Input Bar */}
-            <div className="relative">
-              <Search className="w-4 h-4 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder={t('searchPlaceholder', language)}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 bg-white border border-stone-200/90 rounded-2xl text-xs sm:text-sm focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 shadow-2xs transition font-medium"
-              />
-            </div>
+          {/* VIEW 2: KITCHEN DISPLAY SYSTEM (KDS) */}
+          {activeRole === 'kitchen' && user && (
+            <KitchenDashboard
+              orders={orders}
+              menuItems={menuItems}
+              categories={categories}
+              language={language}
+              onUpdateStatus={handleUpdateOrderStatus}
+              onToggleStock={handleToggleStock}
+              onRestockAll={handleRestockAll}
+              onRestockCategory={handleRestockCategory}
+              onPrintReceipt={(order) => setReceiptOrder(order)}
+              onCancelOrder={handleCancelOrder}
+            />
+          )}
 
-            {/* Menu Grid */}
-            {filteredMenuItems.length === 0 ? (
-              <div className="text-center py-16 bg-white rounded-3xl border border-stone-200 shadow-xs">
-                <Utensils className="w-12 h-12 mx-auto text-stone-300 mb-2" />
-                <p className="text-sm font-bold text-stone-500">
-                  {language === 'th' ? 'ไม่พบเมนูที่ค้นหา' : 'No menu items found'}
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
-                {filteredMenuItems.map((item) => (
-                  <MenuCard
-                    key={item.id}
-                    item={item}
-                    language={language}
-                    onSelect={(it) => setActiveModalItem(it)}
-                  />
-                ))}
-              </div>
-            )}
+          {/* VIEW 3: MENU & CATEGORY ADMIN */}
+          {activeRole === 'admin' && user && (
+            <MenuAdmin
+              menuItems={menuItems}
+              categories={categories}
+              language={language}
+              onSaveMenuItem={handleSaveMenuItem}
+              onDeleteMenuItem={handleDeleteMenuItem}
+              onToggleStock={handleToggleStock}
+              onSaveCategory={handleSaveCategory}
+              onDeleteCategory={handleDeleteCategory}
+            />
+          )}
 
-            {/* Floating Action Button (FAB) Cart Button on Bottom-Right */}
-            {totalCartCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setIsCartOpen(true)}
-                className="fixed bottom-6 right-5 sm:right-8 z-30 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-full p-3.5 sm:px-5 sm:py-3.5 shadow-2xl shadow-orange-500/40 hover:shadow-orange-500/50 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-2.5 cursor-pointer ring-4 ring-white/90 group animate-in slide-in-from-bottom-5"
-                title="View Cart"
-              >
-                <div className="relative">
-                  <ShoppingBag className="w-6 h-6 sm:w-5 sm:h-5 text-white group-hover:rotate-12 transition-transform duration-300" />
-                  <span className="absolute -top-2.5 -right-2.5 bg-red-600 text-white text-[11px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white animate-heartbeat shadow-sm">
-                    {totalCartCount}
-                  </span>
-                </div>
-                <span className="hidden sm:inline font-black text-sm">
-                  {language === 'th' ? 'ดูตะกร้า' : 'Cart'}
-                </span>
-                <span className="font-black text-xs bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-xs">
-                  ฿{cartSubtotal.toLocaleString()}
-                </span>
-              </button>
-            )}
-          </div>
-        )}
+          {/* VIEW 4: STORE SETTINGS */}
+          {activeRole === 'settings' && user && (
+            <StoreSettings
+              storeConfig={storeConfig}
+              language={language}
+              onSave={handleSaveStoreConfig}
+              user={user}
+              onLogout={handleLogout}
+            />
+          )}
 
-        {/* VIEW 2: KITCHEN DISPLAY SYSTEM (KDS) */}
-        {activeRole === 'kitchen' && user && (
-          <KitchenDashboard
-            orders={orders}
-            menuItems={menuItems}
-            categories={categories}
-            language={language}
-            onUpdateStatus={handleUpdateOrderStatus}
-            onToggleStock={handleToggleStock}
-            onRestockAll={handleRestockAll}
-            onRestockCategory={handleRestockCategory}
-            onPrintReceipt={(order) => setReceiptOrder(order)}
-            onCancelOrder={handleCancelOrder}
-          />
-        )}
-
-        {/* VIEW 3: MENU & CATEGORY ADMIN */}
-        {activeRole === 'admin' && user && (
-          <MenuAdmin
-            menuItems={menuItems}
-            categories={categories}
-            language={language}
-            onSaveMenuItem={handleSaveMenuItem}
-            onDeleteMenuItem={handleDeleteMenuItem}
-            onToggleStock={handleToggleStock}
-            onSaveCategory={handleSaveCategory}
-            onDeleteCategory={handleDeleteCategory}
-          />
-        )}
-
-        {/* VIEW 4: STORE SETTINGS */}
-        {activeRole === 'settings' && user && (
-          <StoreSettings
-            storeConfig={storeConfig}
-            language={language}
-            onSave={handleSaveStoreConfig}
-            user={user}
-            onLogout={handleLogout}
-          />
-        )}
-
-        {/* VIEW 5: TABLE QR GENERATOR */}
-        {activeRole === 'qr' && user && (
-          <QRGenerator storeConfig={storeConfig} language={language} />
-        )}
+          {/* VIEW 5: TABLE QR GENERATOR */}
+          {activeRole === 'qr' && user && (
+            <QRGenerator storeConfig={storeConfig} language={language} />
+          )}
+        </React.Suspense>
       </main>
 
       {/* Role Switcher Floating Bar (Strictly visible ONLY to authenticated staff or simulator) */}
@@ -1283,19 +1291,6 @@ function AppContent() {
         onCheckout={handleStartCheckout}
       />
 
-      {/* 3-Second Undo / Cancellation Countdown Modal */}
-      <OrderCountdownModal
-        isOpen={isCountdownOpen}
-        onCancel={() => {
-          setIsCountdownOpen(false);
-          setIsCartOpen(true);
-        }}
-        onComplete={handleFinalizeOrder}
-        language={language}
-        tableNumber={tableNumber}
-        totalPrice={cartSubtotal}
-      />
-
       {/* Live Order Tracker Modal Dialog */}
       <OrderTracker
         isOpen={isOrderTrackerOpen}
@@ -1304,14 +1299,30 @@ function AppContent() {
         language={language}
       />
 
-      {/* Receipt Printing Modal Slip & Full Legal Tax Invoice with Dynamic PromptPay QR */}
-      <ReceiptModal
-        isOpen={!!receiptOrder}
-        onClose={() => setReceiptOrder(null)}
-        order={receiptOrder}
-        storeConfig={storeConfig}
-        language={language}
-      />
+      {/* Lazy Loaded Modals with React.Suspense */}
+      <React.Suspense fallback={null}>
+        {/* 3-Second Undo / Cancellation Countdown Modal */}
+        <OrderCountdownModal
+          isOpen={isCountdownOpen}
+          onCancel={() => {
+            setIsCountdownOpen(false);
+            setIsCartOpen(true);
+          }}
+          onComplete={handleFinalizeOrder}
+          language={language}
+          tableNumber={tableNumber}
+          totalPrice={cartSubtotal}
+        />
+
+        {/* Receipt Printing Modal Slip & Full Legal Tax Invoice with Dynamic PromptPay QR */}
+        <ReceiptModal
+          isOpen={!!receiptOrder}
+          onClose={() => setReceiptOrder(null)}
+          order={receiptOrder}
+          storeConfig={storeConfig}
+          language={language}
+        />
+      </React.Suspense>
 
       {/* Reset System Confirmation Modal */}
       <ConfirmModal

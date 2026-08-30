@@ -406,6 +406,8 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
                   <img
                     src={formData.imageUrl}
                     alt="Preview"
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                 ) : (

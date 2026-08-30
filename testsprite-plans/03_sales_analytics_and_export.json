@@ -1,0 +1,59 @@
+{
+  "projectId": "bf4a08c1-f41f-4ae1-a790-9988c4ea6840",
+  "type": "frontend",
+  "name": "Sales Analytics Dashboard & Custom Date Range",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Switch to Kitchen view and click 'ยอดขายวันนี้ (Sales Analytics)' button in the top bar"
+    },
+    {
+      "type": "assertion",
+      "description": "Sales Dashboard modal opens with dark slate header, emerald icon, and glassmorphic backdrop overlay"
+    },
+    {
+      "type": "assertion",
+      "description": "Four KPI cards display Total Sales (฿), Total Orders, Average Ticket Size, and Payment Split percentage"
+    },
+    {
+      "type": "action",
+      "description": "Click time preset filter '7 วันล่าสุด (7 Days)'"
+    },
+    {
+      "type": "assertion",
+      "description": "KPI stat values, 5 Best Selling Dishes list, and 24-Hour Peak Hours traffic graph update immediately"
+    },
+    {
+      "type": "action",
+      "description": "Click 'กำหนดช่วงเวลา (Custom Range)' preset"
+    },
+    {
+      "type": "assertion",
+      "description": "Custom Date Range drawer opens showing Start Date card, End Date card, formatted date labels, and shortcut chips"
+    },
+    {
+      "type": "action",
+      "description": "Click 'เดือนนี้ (This Month)' shortcut chip"
+    },
+    {
+      "type": "assertion",
+      "description": "Start and End dates update to the 1st of current month and today's date with selected days badge"
+    },
+    {
+      "type": "action",
+      "description": "Click 'CSV' export button in the modal header"
+    },
+    {
+      "type": "assertion",
+      "description": "CSV data file download is triggered with UTF-8 BOM encoding"
+    },
+    {
+      "type": "action",
+      "description": "Click the close button (X) in the header"
+    },
+    {
+      "type": "assertion",
+      "description": "Modal closes cleanly and returns to the Kitchen Dashboard"
+    }
+  ]
+}

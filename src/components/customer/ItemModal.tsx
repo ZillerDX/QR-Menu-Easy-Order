@@ -136,6 +136,8 @@ export const ItemModal: React.FC<ItemModalProps> = ({
           <img
             src={item.imageUrl}
             alt={item.name}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover"
           />
           <button

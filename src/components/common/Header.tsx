@@ -49,6 +49,8 @@ export const Header: React.FC<HeaderProps> = ({
             <img
               src={storeConfig.logoUrl}
               alt={storeConfig.name}
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover rounded-[14px]"
             />
           </div>

@@ -1,0 +1,31 @@
+{
+  "projectId": "bf4a08c1-f41f-4ae1-a790-9988c4ea6840",
+  "type": "frontend",
+  "name": "Table QR Code Generator & Printing Flow",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Switch role to 'สร้าง QR โต๊ะ (Table QR)' from the role switcher"
+    },
+    {
+      "type": "assertion",
+      "description": "QR Generator page loads showing Table Count controls, Shop Name, and grid of generated Table QR cards"
+    },
+    {
+      "type": "action",
+      "description": "Change total tables count input to '12'"
+    },
+    {
+      "type": "assertion",
+      "description": "Grid automatically renders 12 high-resolution QR cards with distinct URLs containing '?table=XX'"
+    },
+    {
+      "type": "action",
+      "description": "Click 'พิมพ์ QR ทั้งหมด (Print All QRs)' button"
+    },
+    {
+      "type": "assertion",
+      "description": "Print dialog / stylesheet format triggers ready for standee and table placement"
+    }
+  ]
+}

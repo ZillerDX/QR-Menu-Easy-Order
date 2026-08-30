@@ -1,0 +1,31 @@
+{
+  "projectId": "bf4a08c1-f41f-4ae1-a790-9988c4ea6840",
+  "type": "frontend",
+  "name": "Sound & Kitchen Notification Presets",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "In Kitchen view, click the Sound / Notification bell button in the toolbar"
+    },
+    {
+      "type": "assertion",
+      "description": "Notification Settings modal opens with frosted blur backdrop and 4 distinct sound preset options (Cheerful, Elegant, Digital, Minimalist)"
+    },
+    {
+      "type": "action",
+      "description": "Click the play button to preview the 'นุ่มนวล หรูหรา (Elegant)' sound preset"
+    },
+    {
+      "type": "assertion",
+      "description": "Audio synthesizer plays the chime and playing animation indicator activates"
+    },
+    {
+      "type": "action",
+      "description": "Select 'ทันสมัย ดิจิทัล (Digital)' preset and click 'บันทึกการตั้งค่า (Save Settings)'"
+    },
+    {
+      "type": "assertion",
+      "description": "Modal closes and new sound preference is persisted to local storage"
+    }
+  ]
+}

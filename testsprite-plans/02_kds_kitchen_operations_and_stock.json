@@ -1,0 +1,55 @@
+{
+  "projectId": "bf4a08c1-f41f-4ae1-a790-9988c4ea6840",
+  "type": "frontend",
+  "name": "KDS Kitchen Operations & Stock Management",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Switch role to 'ครัว (Kitchen)' from the role switcher or navigation bar"
+    },
+    {
+      "type": "assertion",
+      "description": "Kitchen Display System loads with columns for In Kitchen (รอดำเนินการ/กำลังทำ), Ready to Serve (พร้อมเสิร์ฟ), and Completed (เสร็จสิ้น)"
+    },
+    {
+      "type": "action",
+      "description": "Find an active order card in 'รอดำเนินการ' status and click 'เริ่มทำอาหาร (Start Cooking)'"
+    },
+    {
+      "type": "assertion",
+      "description": "Order card status changes to 'กำลังทำ (Cooking)' with active preparation timer"
+    },
+    {
+      "type": "action",
+      "description": "Click 'พร้อมเสิร์ฟ (Ready to Serve)' button on the cooking order"
+    },
+    {
+      "type": "assertion",
+      "description": "Order moves to 'พร้อมเสิร์ฟ (Ready)' column with completion notification tone triggered"
+    },
+    {
+      "type": "action",
+      "description": "Click 'เสร็จสิ้น (Complete)' button on the ready order"
+    },
+    {
+      "type": "assertion",
+      "description": "Order moves to 'เสร็จสิ้น (Completed)' section and updates total finished bills count"
+    },
+    {
+      "type": "action",
+      "description": "Click 'จัดการสต็อกสินค้า (Stock Manager)' button in the kitchen toolbar"
+    },
+    {
+      "type": "assertion",
+      "description": "Stock Manager modal opens displaying all menu items categorized with stock toggle switches"
+    },
+    {
+      "type": "action",
+      "description": "Toggle an item to 'หมด (Out of stock)' and click 'รีสต็อกทั้งหมด (Restock All)'"
+    },
+    {
+      "type": "assertion",
+      "description": "All items reflect in-stock state and notification confirms inventory updated"
+    }
+  ]
+}

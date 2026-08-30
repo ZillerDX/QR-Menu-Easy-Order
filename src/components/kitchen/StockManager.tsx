@@ -167,6 +167,8 @@ export const StockManager: React.FC<StockManagerProps> = ({
                 <img
                   src={item.imageUrl}
                   alt={item.name}
+                  loading="lazy"
+                  decoding="async"
                   className="w-12 h-12 rounded-xl object-cover flex-shrink-0 border border-stone-100 shadow-2xs"
                 />
                 <div className="min-w-0">

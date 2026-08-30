@@ -23,11 +23,12 @@ import {
 import { Order, MenuItem, MenuCategory, Language, OrderStatus } from '../../types';
 import { t } from '../../utils/i18n';
 import { OrderCard } from './OrderCard';
-import { StockManager } from './StockManager';
-import { SalesDashboardModal } from './SalesDashboardModal';
-import { CancelOrderModal } from './CancelOrderModal';
-import { NotificationSettingsModal } from './NotificationSettingsModal';
 import { soundService } from '../../utils/sound';
+
+const StockManager = React.lazy(() => import('./StockManager').then((m) => ({ default: m.StockManager })));
+const SalesDashboardModal = React.lazy(() => import('./SalesDashboardModal').then((m) => ({ default: m.SalesDashboardModal })));
+const CancelOrderModal = React.lazy(() => import('./CancelOrderModal').then((m) => ({ default: m.CancelOrderModal })));
+const NotificationSettingsModal = React.lazy(() => import('./NotificationSettingsModal').then((m) => ({ default: m.NotificationSettingsModal })));
 
 interface KitchenDashboardProps {
   orders: Order[];
@@ -393,14 +394,16 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
       </div>
 
       {showStock && (
-        <StockManager
-          menuItems={menuItems}
-          categories={categories}
-          language={language}
-          onToggleStock={onToggleStock}
-          onRestockAll={onRestockAll}
-          onRestockCategory={onRestockCategory}
-        />
+        <React.Suspense fallback={null}>
+          <StockManager
+            menuItems={menuItems}
+            categories={categories}
+            language={language}
+            onToggleStock={onToggleStock}
+            onRestockAll={onRestockAll}
+            onRestockCategory={onRestockCategory}
+          />
+        </React.Suspense>
       )}
 
       {/* 2. Restaurant Order Lane Tabs */}
@@ -506,36 +509,39 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
         </div>
       )}
 
-      {/* Sales Analytics Popup Dashboard Modal */}
-      <SalesDashboardModal
-        isOpen={isSalesModalOpen}
-        onClose={() => setIsSalesModalOpen(false)}
-        orders={orders}
-        language={language}
-      />
+      {/* Lazy Loaded Modals with Suspense */}
+      <React.Suspense fallback={null}>
+        {/* Sales Analytics Popup Dashboard Modal */}
+        <SalesDashboardModal
+          isOpen={isSalesModalOpen}
+          onClose={() => setIsSalesModalOpen(false)}
+          orders={orders}
+          language={language}
+        />
 
-      {/* Cancel / Reject Order Modal */}
-      <CancelOrderModal
-        isOpen={!!rejectTargetOrder}
-        onClose={() => setRejectTargetOrder(null)}
-        order={rejectTargetOrder}
-        language={language}
-        onConfirmCancel={handleCancelOrderWrapped}
-      />
+        {/* Cancel / Reject Order Modal */}
+        <CancelOrderModal
+          isOpen={!!rejectTargetOrder}
+          onClose={() => setRejectTargetOrder(null)}
+          order={rejectTargetOrder}
+          language={language}
+          onConfirmCancel={handleCancelOrderWrapped}
+        />
 
-      {/* Notification & Sound Settings Modal */}
-      <NotificationSettingsModal
-        isOpen={isNotificationSettingsOpen}
-        onClose={() => setIsNotificationSettingsOpen(false)}
-        language={language}
-        onTestChime={(preset) => {
-          triggerToast(
-            language === 'th' ? '🔔 ทดสอบเสียงสำเร็จ' : 'Sound Test Successful',
-            language === 'th' ? `เลือกรูปแบบเสียง: ${preset}` : `Preset selected: ${preset}`,
-            'sound'
-          );
-        }}
-      />
+        {/* Notification & Sound Settings Modal */}
+        <NotificationSettingsModal
+          isOpen={isNotificationSettingsOpen}
+          onClose={() => setIsNotificationSettingsOpen(false)}
+          language={language}
+          onTestChime={(preset) => {
+            triggerToast(
+              language === 'th' ? '🔔 ทดสอบเสียงสำเร็จ' : 'Sound Test Successful',
+              language === 'th' ? `เลือกรูปแบบเสียง: ${preset}` : `Preset selected: ${preset}`,
+              'sound'
+            );
+          }}
+        />
+      </React.Suspense>
     </div>
   );
 };
