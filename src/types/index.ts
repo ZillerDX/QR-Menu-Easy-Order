@@ -96,4 +96,6 @@ export interface StoreConfig {
   taxId?: string;
   address?: string;
   branchNumber?: string;
+  phone?: string;
+  companyLegalName?: string;
 }

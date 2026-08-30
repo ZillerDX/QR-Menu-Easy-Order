@@ -259,6 +259,34 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block font-black text-stone-800 text-xs sm:text-sm mb-1.5">
+                {language === 'th' ? 'ชื่อนิติบุคคล / ชื่อผู้ประกอบการจดทะเบียน (Legal Name)' : 'Legal Registered Company Name'}
+              </label>
+              <input
+                type="text"
+                value={formData.companyLegalName || ''}
+                onChange={(e) => setFormData({ ...formData, companyLegalName: e.target.value })}
+                className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm"
+                placeholder="เช่น บริษัท คาเฟ่ ออเดอร์ (ไทยแลนด์) จำกัด"
+              />
+            </div>
+
+            <div>
+              <label className="block font-black text-stone-800 text-xs sm:text-sm mb-1.5">
+                {language === 'th' ? 'เบอร์โทรศัพท์ร้านค้า (Phone for Tax Invoice)' : 'Official Phone Number'}
+              </label>
+              <input
+                type="text"
+                value={formData.phone || ''}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm"
+                placeholder="เช่น 02-123-4567 หรือ 081-234-5678"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block font-black text-stone-800 text-xs sm:text-sm mb-1.5">
                 {language === 'th' ? 'เลขประจำตัวผู้เสียภาษีอากร 13 หลัก (Tax ID)' : 'Store Tax ID (13 digits)'}
               </label>
               <input

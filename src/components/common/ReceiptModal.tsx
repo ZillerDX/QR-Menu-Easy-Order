@@ -1,10 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import QRCode from 'qrcode';
-import { X, Printer, QrCode, Store, Clock, Utensils, ShieldCheck, Building2, User, FileText, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { 
+  X, Printer, QrCode, Building2, User, 
+  FileText, ShieldCheck, ChevronDown, ChevronUp,
+  Phone, MapPin, Receipt, CheckCircle2
+} from 'lucide-react';
 import { Order, StoreConfig, Language } from '../../types';
 import { CAFE_ORDER_LOGO_DATA_URI } from '../../data/logoData';
 import { generatePromptPayPayload } from '../../utils/promptpay';
+import { calculateVatBreakdown, formatTaxId } from '../../utils/taxInvoice';
+import { t } from '../../utils/i18n';
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -43,11 +49,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   const qrCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  // Generate PromptPay QR Code
   useEffect(() => {
     if (isOpen && order && qrCanvasRef.current && storeConfig.promptpayNumber) {
       const payload = generatePromptPayPayload(storeConfig.promptpayNumber, order.totalPrice);
       QRCode.toCanvas(qrCanvasRef.current, payload, {
-        width: 150,
+        width: 140,
         margin: 1,
         color: {
           dark: '#000000',
@@ -57,6 +64,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     }
   }, [isOpen, order, storeConfig.promptpayNumber, docType]);
 
+  // Handle print body class
   useEffect(() => {
     if (isOpen) {
       document.body.classList.add('is-printing-receipt');
@@ -80,70 +88,97 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     window.print();
   };
 
-  const formattedDate = new Date(order.createdAt).toLocaleDateString('th-TH', {
+  const isTh = language === 'th';
+  const now = new Date(order.createdAt || new Date());
+  
+  const formattedDateThai = now.toLocaleDateString('th-TH', {
     year: 'numeric',
-    month: 'short',
+    month: 'long',
     day: 'numeric',
   });
 
-  const formattedTime = new Date(order.createdAt).toLocaleTimeString('th-TH', {
+  const formattedDateShort = now.toLocaleDateString(isTh ? 'th-TH' : 'en-US', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+
+  const formattedTime = now.toLocaleTimeString(isTh ? 'th-TH' : 'en-US', {
     hour: '2-digit',
     minute: '2-digit',
   });
 
-  // Calculate VAT 7% breakdown (VAT inclusive)
-  const totalAmount = order.totalPrice;
-  const taxBase = totalAmount * (100 / 107);
-  const vatAmount = totalAmount - taxBase;
+  // Calculate official 7% VAT breakdown (Thailand Revenue Department standard)
+  const vat = calculateVatBreakdown(order.totalPrice, 0.07);
+
+  // Seller info
+  const sellerLegalName = storeConfig.companyLegalName || (isTh ? storeConfig.name : (storeConfig.nameEn || storeConfig.name));
+  const sellerTaxId = storeConfig.taxId || '0105566012345';
+  const sellerBranch = storeConfig.branchNumber || '00000 (สำนักงานใหญ่)';
+  const sellerAddress = storeConfig.address || '123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110';
+  const sellerPhone = storeConfig.phone || '02-123-4567';
+
+  // Invoice & Book Number (Revenue Dept standard formatting)
+  const bookNo = '001';
+  const invoiceNo = `RC-${order.orderNumber.replace(/[^0-9A-Za-z]/g, '') || '0001'}`;
 
   const modalContent = (
     <div 
       id="print-receipt-portal"
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 print:static print:p-0 print:m-0 print:bg-white print:block"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200 print:static print:p-0 print:m-0 print:bg-white print:block"
     >
-      {/* Backdrop */}
+      {/* Backdrop (Screen Only) */}
       <div 
         className="fixed inset-0 bg-stone-950/80 backdrop-blur-md transition-opacity print:hidden no-print"
         onClick={onClose}
       />
 
-      {/* Container */}
-      <div className="relative w-full max-w-lg bg-white rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 flex flex-col max-h-[94vh] print:max-h-none print:shadow-none print:border-none print:w-full print:max-w-none print:rounded-none print:static print:p-0 print:m-0 print:overflow-visible">
+      {/* Main Document Container */}
+      <div className="relative w-full max-w-2xl bg-white rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 flex flex-col max-h-[94vh] print:max-h-none print:shadow-none print:border-none print:w-full print:max-w-none print:rounded-none print:static print:p-0 print:m-0 print:overflow-visible">
         
         {/* Modal Top Bar (Hidden on Print) */}
         <div className="px-5 py-3.5 bg-stone-900 text-white flex items-center justify-between flex-shrink-0 print:hidden no-print">
-          <div className="flex items-center gap-2">
-            <Printer className="w-4 h-4 text-orange-400" />
-            <span className="font-black text-xs sm:text-sm">
-              {language === 'th' ? 'พิมพ์ใบเสร็จรับเงิน / ใบกำกับภาษี' : 'Print Receipt & Tax Invoice'}
-            </span>
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-orange-500/20 text-orange-400 flex items-center justify-center">
+              <Printer className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-black text-xs sm:text-sm">
+                {isTh ? 'พิมพ์ใบเสร็จรับเงิน / ใบกำกับภาษี' : 'Tax Invoice & Receipt Printer'}
+              </span>
+              <span className="text-[10px] text-stone-400 block font-medium">
+                {isTh ? 'ถูกต้องตามประมวลรัษฎากร กรมสรรพากร' : 'Compliant with Thailand Revenue Department'}
+              </span>
+            </div>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-stone-300 flex items-center justify-center transition cursor-pointer"
-            title="Close"
+            className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-stone-300 hover:text-white flex items-center justify-center transition cursor-pointer"
+            title={t('close', language)}
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Document Type Selector Tabs (Hidden on Print) */}
+        {/* Document Mode Selector Tabs (Hidden on Print) */}
         <div className="p-3 bg-stone-100/90 border-b border-stone-200 flex-shrink-0 print:hidden no-print space-y-2.5">
-          <div className="grid grid-cols-2 gap-1.5 bg-stone-200/80 p-1 rounded-2xl text-xs font-black">
+          <div className="grid grid-cols-2 gap-2 bg-stone-200/80 p-1 rounded-2xl text-xs font-black">
             <button
               type="button"
               onClick={() => {
                 setDocType('abbreviated');
                 setShowTaxForm(false);
               }}
-              className={`py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                docType === 'abbreviated' ? 'bg-white text-stone-900 shadow-2xs' : 'text-stone-600 hover:text-stone-900'
+              className={`py-2 px-3 rounded-xl transition flex items-center justify-center gap-2 cursor-pointer ${
+                docType === 'abbreviated' 
+                  ? 'bg-white text-stone-950 shadow-xs ring-1 ring-stone-950/5' 
+                  : 'text-stone-600 hover:text-stone-900'
               }`}
             >
               <FileText className="w-3.5 h-3.5 text-orange-500" />
-              <span>{language === 'th' ? 'ใบเสร็จอย่างย่อ (สลิป POS)' : 'Abbreviated Slip'}</span>
+              <span>{isTh ? '1. ใบกำกับภาษีอย่างย่อ (สลิป POS)' : '1. Abbreviated Tax Invoice (POS)'}</span>
             </button>
 
             <button
@@ -152,16 +187,18 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 setDocType('fullTax');
                 setShowTaxForm(true);
               }}
-              className={`py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                docType === 'fullTax' ? 'bg-white text-stone-900 shadow-2xs' : 'text-stone-600 hover:text-stone-900'
+              className={`py-2 px-3 rounded-xl transition flex items-center justify-center gap-2 cursor-pointer ${
+                docType === 'fullTax' 
+                  ? 'bg-white text-stone-950 shadow-xs ring-1 ring-stone-950/5' 
+                  : 'text-stone-600 hover:text-stone-900'
               }`}
             >
               <Building2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{language === 'th' ? 'ใบกำกับภาษีเต็มรูป (มาตรา 86/4)' : 'Full Tax Invoice'}</span>
+              <span>{isTh ? '2. ใบกำกับภาษีเต็มรูป (มาตรา 86/4)' : '2. Full Tax Invoice (Sec. 86/4)'}</span>
             </button>
           </div>
 
-          {/* Customer Tax Info Toggle Form (Visible ONLY in Full Tax Mode) */}
+          {/* Customer Tax Info Form Toggle (Visible in Full Tax Mode) */}
           {docType === 'fullTax' && (
             <div className="bg-white rounded-2xl p-3.5 border border-stone-200 shadow-2xs space-y-3">
               <div 
@@ -171,11 +208,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
                   <span className="text-xs font-black text-stone-900">
-                    {language === 'th' ? 'ข้อมูลผู้ขอใบกำกับภาษี (Customer Tax Details)' : 'Customer Tax Info'}
+                    {isTh ? 'กรอกข้อมูลผู้ซื้อสำหรับออกใบกำกับภาษีเต็มรูป' : 'Customer Tax Details for Full Invoice'}
                   </span>
                   {taxInfo.name && (
-                    <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-md">
-                      ระบุแล้ว
+                    <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-md flex items-center gap-1 border border-emerald-200/60">
+                      <CheckCircle2 className="w-3 h-3" />
+                      {isTh ? 'ระบุแล้ว' : 'Saved'}
                     </span>
                   )}
                 </div>
@@ -183,7 +221,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               </div>
 
               {showTaxForm && (
-                <div className="space-y-2.5 pt-1 text-xs animate-in fade-in">
+                <div className="space-y-3 pt-1 text-xs animate-in fade-in">
                   <div className="flex gap-4">
                     <label className="flex items-center gap-1.5 font-bold text-stone-700 cursor-pointer">
                       <input
@@ -192,7 +230,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                         checked={taxInfo.customerType === 'individual'}
                         onChange={() => setTaxInfo({ ...taxInfo, customerType: 'individual' })}
                       />
-                      <span>บุคคลธรรมดา</span>
+                      <span>{isTh ? 'บุคคลธรรมดา' : 'Individual'}</span>
                     </label>
                     <label className="flex items-center gap-1.5 font-bold text-stone-700 cursor-pointer">
                       <input
@@ -201,27 +239,29 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                         checked={taxInfo.customerType === 'corporate'}
                         onChange={() => setTaxInfo({ ...taxInfo, customerType: 'corporate' })}
                       />
-                      <span>นิติบุคคล / บริษัท</span>
+                      <span>{isTh ? 'นิติบุคคล / บริษัท' : 'Corporate / Company'}</span>
                     </label>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div>
-                      <label className="block text-[11px] font-bold text-stone-600 mb-0.5">
-                        {taxInfo.customerType === 'corporate' ? 'ชื่อบริษัท / นิติบุคคล *' : 'ชื่อ-นามสกุล ผู้ซื้อ *'}
+                      <label className="block text-[11px] font-bold text-stone-600 mb-1">
+                        {taxInfo.customerType === 'corporate' 
+                          ? (isTh ? 'ชื่อบริษัท / นิติบุคคล *' : 'Company Name *') 
+                          : (isTh ? 'ชื่อ-นามสกุล ผู้ซื้อ *' : 'Customer Full Name *')}
                       </label>
                       <input
                         type="text"
                         value={taxInfo.name}
                         onChange={(e) => setTaxInfo({ ...taxInfo, name: e.target.value })}
-                        placeholder={taxInfo.customerType === 'corporate' ? 'บริษัท ตัวอย่าง จำกัด' : 'นายสมชาย ใจดี'}
-                        className="w-full px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:border-orange-500"
+                        placeholder={taxInfo.customerType === 'corporate' ? (isTh ? 'บริษัท ไอแท็กซ์ อินคอร์เปอร์เรชั่น จำกัด' : 'Company Name Ltd.') : (isTh ? 'นายสมชาย ใจดี' : 'John Doe')}
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-bold focus:bg-white focus:outline-none focus:border-orange-500"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-stone-600 mb-0.5">
-                        เลขประจำตัวผู้เสียภาษี 13 หลัก *
+                      <label className="block text-[11px] font-bold text-stone-600 mb-1">
+                        {isTh ? 'เลขประจำตัวผู้เสียภาษี / เลขบัตร ปชช. (13 หลัก) *' : 'Tax ID / ID Card No. (13 digits) *'}
                       </label>
                       <input
                         type="text"
@@ -229,35 +269,48 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                         value={taxInfo.taxId}
                         onChange={(e) => setTaxInfo({ ...taxInfo, taxId: e.target.value.replace(/[^0-9]/g, '') })}
                         placeholder="1234567890123"
-                        className="w-full px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono font-bold focus:bg-white focus:outline-none focus:border-orange-500"
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono font-bold focus:bg-white focus:outline-none focus:border-orange-500"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <div>
-                      <label className="block text-[11px] font-bold text-stone-600 mb-0.5">
-                        สาขา (Branch)
+                      <label className="block text-[11px] font-bold text-stone-600 mb-1">
+                        {isTh ? 'สาขา (Branch)' : 'Branch Info'}
                       </label>
                       <input
                         type="text"
                         value={taxInfo.branch}
                         onChange={(e) => setTaxInfo({ ...taxInfo, branch: e.target.value })}
-                        placeholder="00000 (สำนักงานใหญ่)"
-                        className="w-full px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:border-orange-500"
+                        placeholder={isTh ? '00000 (สำนักงานใหญ่)' : 'Head Office'}
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:border-orange-500"
                       />
                     </div>
 
-                    <div className="sm:col-span-2">
-                      <label className="block text-[11px] font-bold text-stone-600 mb-0.5">
-                        ที่อยู่ตามทะเบียนภาษี *
+                    <div>
+                      <label className="block text-[11px] font-bold text-stone-600 mb-1">
+                        {isTh ? 'เบอร์โทรศัพท์ (Phone)' : 'Phone Number'}
+                      </label>
+                      <input
+                        type="text"
+                        value={taxInfo.phone || ''}
+                        onChange={(e) => setTaxInfo({ ...taxInfo, phone: e.target.value })}
+                        placeholder="0812322222"
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:border-orange-500"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-3">
+                      <label className="block text-[11px] font-bold text-stone-600 mb-1">
+                        {isTh ? 'ที่อยู่ตามทะเบียนภาษีมูลค่าเพิ่ม / บัตรประชาชน *' : 'Registered Tax Address *'}
                       </label>
                       <input
                         type="text"
                         value={taxInfo.address}
                         onChange={(e) => setTaxInfo({ ...taxInfo, address: e.target.value })}
-                        placeholder="เลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์"
-                        className="w-full px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:border-orange-500"
+                        placeholder={isTh ? 'เลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์' : 'Address, Street, District, Province, Postal Code'}
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:border-orange-500"
                       />
                     </div>
                   </div>
@@ -270,53 +323,58 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         {/* ========================================================================= */}
         {/* DOCUMENT BODY (PRINTABLE AREA)                                             */}
         {/* ========================================================================= */}
-        <div className="p-6 overflow-y-auto font-sans text-stone-800 bg-[#fffdfa] print:p-0 print:m-0 print:overflow-visible print:bg-white">
+        <div className="p-4 sm:p-6 overflow-y-auto font-sans text-stone-900 bg-[#fffdfa] print:p-0 print:m-0 print:overflow-visible print:bg-white flex-1 min-h-0">
           
-          {/* OPTION A: THAI STANDARD 80MM POS THERMAL RECEIPT SLIP */}
+          {/* OPTION 1: ABBREVIATED TAX INVOICE (ใบกำกับภาษีอย่างย่อ - มาตรา 86/6) */}
           {docType === 'abbreviated' && (
-            <div className="pos-receipt-print-container space-y-3 max-w-sm mx-auto">
-              {/* Store Logo & Header */}
-              <div className="text-center space-y-1 pb-2 border-b border-dashed border-stone-300 print:border-black">
+            <div className="pos-receipt-print-container space-y-3 max-w-sm mx-auto bg-white p-4 rounded-2xl border border-stone-200/80 shadow-2xs print:border-none print:shadow-none print:p-0">
+              
+              {/* POS Header */}
+              <div className="text-center space-y-1 pb-2.5 border-b border-dashed border-stone-300 print:border-black">
                 <div className="w-12 h-12 mx-auto rounded-xl overflow-hidden p-0.5 border border-stone-200 print:border-none">
                   <img src={CAFE_ORDER_LOGO_DATA_URI} alt="Logo" className="w-full h-full object-cover rounded-lg" />
                 </div>
                 <h2 className="font-black text-base tracking-tight text-stone-950 print:text-black">
-                  {language === 'en' ? storeConfig.nameEn || storeConfig.name : storeConfig.name}
+                  {sellerLegalName}
                 </h2>
-                <p className="text-[11px] font-black text-stone-700 print:text-black uppercase">
+                <div className="inline-block bg-stone-900 text-white font-black px-2.5 py-0.5 rounded text-[11px] tracking-wide print:bg-transparent print:text-black print:border print:border-black">
                   ใบเสร็จรับเงิน / ใบกำกับภาษีอย่างย่อ
+                </div>
+                <p className="text-[9.5px] font-bold text-stone-500 print:text-black uppercase">
+                  (TAX INVOICE - ABB)
                 </p>
-                <p className="text-[10px] text-stone-600 print:text-black">
-                  เลขประจำตัวผู้เสียภาษี: {storeConfig.taxId || '0105566012345'}
-                </p>
-                <p className="text-[9.5px] text-stone-500 print:text-black leading-tight">
-                  {storeConfig.address || '123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110'}
-                </p>
+                <div className="text-[10px] text-stone-600 print:text-black space-y-0.5 pt-0.5">
+                  <p>
+                    <span className="font-bold">เลขประจำตัวผู้เสียภาษี:</span> {formatTaxId(sellerTaxId)} ({sellerBranch})
+                  </p>
+                  <p className="leading-tight">{sellerAddress}</p>
+                  {sellerPhone && <p><span className="font-bold">โทร:</span> {sellerPhone}</p>}
+                </div>
               </div>
 
-              {/* Receipt Meta */}
-              <div className="text-[11px] space-y-0.5 py-1 border-b border-dashed border-stone-300 print:border-black">
+              {/* Receipt Metadata */}
+              <div className="text-[11px] space-y-1 py-1.5 border-b border-dashed border-stone-300 print:border-black">
                 <div className="flex justify-between font-bold">
-                  <span>เลขที่ (Order #):</span>
-                  <span className="font-black text-stone-900 print:text-black">{order.orderNumber}</span>
+                  <span>เลขที่ (Invoice #):</span>
+                  <span className="font-mono font-black text-stone-950 print:text-black">{order.orderNumber}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>ตำแหน่ง (Table):</span>
+                  <span>โต๊ะ / ประเภท (Table):</span>
                   <span className="font-black text-stone-900 print:text-black">
-                    {order.tableNumber === 'TAKEAWAY' ? (language === 'th' ? 'สั่งกลับบ้าน' : 'Takeaway') : `โต๊ะ ${order.tableNumber}`}
+                    {order.tableNumber === 'TAKEAWAY' ? (isTh ? 'สั่งกลับบ้าน (Takeaway)' : 'Takeaway') : `${isTh ? 'โต๊ะ' : 'Table'} ${order.tableNumber}`}
                   </span>
                 </div>
-                <div className="flex justify-between text-stone-600 print:text-black text-[10px]">
-                  <span>วันที่ (Date):</span>
-                  <span>{formattedDate} {formattedTime}</span>
+                <div className="flex justify-between text-stone-600 print:text-black text-[10.5px]">
+                  <span>วันและเวลา (Date & Time):</span>
+                  <span>{formattedDateShort} {formattedTime} {isTh ? 'น.' : ''}</span>
                 </div>
               </div>
 
-              {/* Itemized List */}
-              <div className="space-y-1.5 py-1.5 border-b border-dashed border-stone-300 print:border-black text-[11px]">
-                <div className="flex justify-between text-[10px] font-black text-stone-500 print:text-black uppercase">
+              {/* Items List */}
+              <div className="space-y-2 py-2 border-b border-dashed border-stone-300 print:border-black text-xs">
+                <div className="flex justify-between text-[10px] font-black text-stone-400 print:text-black uppercase pb-0.5 border-b border-stone-100 print:border-none">
                   <span>รายการ (Items)</span>
-                  <span>จำนวนเงิน</span>
+                  <span>จำนวนเงิน (THB)</span>
                 </div>
 
                 {order.items.map((item, idx) => (
@@ -326,11 +384,11 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                         <span className="text-orange-600 print:text-black font-black">{item.quantity}x</span>
                         <span>{language === 'en' && item.menuItem.nameEn ? item.menuItem.nameEn : item.menuItem.name}</span>
                       </div>
-                      <span>฿{item.totalItemPrice.toLocaleString()}</span>
+                      <span className="font-mono">฿{item.totalItemPrice.toLocaleString()}</span>
                     </div>
 
                     {item.selectedOptions && item.selectedOptions.length > 0 && (
-                      <div className="pl-4 text-[9.5px] text-stone-500 print:text-black space-y-0.5">
+                      <div className="pl-4 text-[10px] text-stone-500 print:text-black space-y-0.5">
                         {item.selectedOptions.map((opt, i) => (
                           <div key={i} className="flex justify-between">
                             <span>• {opt.choiceName}</span>
@@ -343,216 +401,275 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 ))}
               </div>
 
-              {/* Totals & Net */}
-              <div className="space-y-1 py-1.5 border-b border-dashed border-stone-300 print:border-black text-[11px]">
-                <div className="flex justify-between text-stone-600 print:text-black">
-                  <span>มูลค่าก่อนภาษี (Tax Base):</span>
-                  <span>฿{taxBase.toFixed(2)}</span>
+              {/* VAT Breakdown & Totals */}
+              <div className="space-y-1.5 py-2 border-b border-dashed border-stone-300 print:border-black text-xs">
+                <div className="flex justify-between text-stone-600 print:text-black text-[11px]">
+                  <span>มูลค่าสินค้าก่อนภาษี (Tax Base):</span>
+                  <span className="font-mono">฿{vat.formattedTaxBase}</span>
                 </div>
-                <div className="flex justify-between text-stone-600 print:text-black">
+                <div className="flex justify-between text-stone-600 print:text-black text-[11px]">
                   <span>ภาษีมูลค่าเพิ่ม 7% (VAT 7%):</span>
-                  <span>฿{vatAmount.toFixed(2)}</span>
+                  <span className="font-mono">฿{vat.formattedVat}</span>
                 </div>
-                <div className="flex justify-between text-sm font-black text-stone-950 print:text-black pt-1 border-t border-stone-200 print:border-black">
-                  <span>ยอดสุทธิ (Total Due):</span>
-                  <span className="text-orange-600 print:text-black text-base">฿{totalAmount.toLocaleString()}</span>
+                <div className="flex justify-between text-sm font-black text-stone-950 print:text-black pt-1.5 border-t border-stone-200 print:border-black">
+                  <span>ยอดสุทธิรวม (Total Due):</span>
+                  <span className="text-orange-600 print:text-black text-base font-mono">฿{vat.formattedTotal}</span>
+                </div>
+                <div className="text-[10px] text-stone-500 print:text-black font-bold text-center pt-0.5">
+                  ({vat.bahtText})
                 </div>
               </div>
 
-              {/* PROMPTPAY QR PAYMENT BOX */}
-              <div className="p-3 rounded-xl bg-white border border-stone-200 print:border-black text-center space-y-1.5 shadow-xs print:shadow-none">
+              {/* Payment & PromptPay QR Box */}
+              <div className="p-3 rounded-xl bg-stone-50 print:bg-white border border-stone-200 print:border-black text-center space-y-1.5 shadow-2xs print:shadow-none">
                 <div className="flex items-center justify-center gap-1.5 text-stone-900 print:text-black font-black text-[11px]">
                   <QrCode className="w-3.5 h-3.5 text-blue-700 print:text-black" />
                   <span>สแกนจ่ายผ่านพร้อมเพย์ (PromptPay QR)</span>
                 </div>
 
-                <div className="p-1.5 bg-white rounded-lg inline-block border border-stone-100 print:border-black">
+                <div className="p-1 bg-white rounded-lg inline-block border border-stone-200 print:border-black">
                   <canvas ref={qrCanvasRef} className="mx-auto rounded" />
                 </div>
 
                 <div className="space-y-0.5 text-[10px] text-stone-700 print:text-black">
                   <p className="font-bold">{storeConfig.promptpayName}</p>
                   <p className="text-stone-500 print:text-black font-mono">PromptPay: {storeConfig.promptpayNumber}</p>
-                  <p className="text-[9px] text-stone-500 print:text-black">
+                  <p className="text-[9.5px] text-stone-500 print:text-black font-bold">
                     ยอดเงินระบุอัตโนมัติ ฿{order.totalPrice.toLocaleString()}
                   </p>
                 </div>
               </div>
 
-              {/* Footer */}
-              <div className="text-center pt-1 space-y-0.5 text-[10px] text-stone-400 print:text-black">
-                <p className="font-bold text-stone-600 print:text-black">*** ขอบคุณที่ใช้บริการ (Thank You) ***</p>
-                <p className="text-[9px]">ราคานี้รวมภาษีมูลค่าเพิ่ม 7% แล้ว (VAT Included)</p>
+              {/* Slip Footer */}
+              <div className="text-center pt-1 space-y-0.5 text-[10px] text-stone-500 print:text-black">
+                <p className="font-black text-stone-800 print:text-black">*** ขอบคุณที่ใช้บริการ (Thank You) ***</p>
+                <p className="text-[9.5px] font-bold text-stone-600 print:text-black">* ราคานี้รวมภาษีมูลค่าเพิ่ม 7% แล้ว (VAT Included) *</p>
               </div>
             </div>
           )}
 
-          {/* OPTION B: FULL LEGAL TAX INVOICE (มาตรา 86/4) */}
+          {/* OPTION 2: FULL TAX INVOICE (ใบกำกับภาษีแบบเต็มรูป - มาตรา 86/4 ตามแบบกรมสรรพากร / iTAX) */}
           {docType === 'fullTax' && (
-            <div className="a4-tax-invoice-container space-y-4 text-xs">
-              {/* Official Header */}
-              <div className="border-b-2 border-stone-800 pb-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <h2 className="text-lg font-black text-stone-950">
-                      {storeConfig.name}
-                    </h2>
-                    <p className="text-xs font-bold text-stone-700">
+            <div className="a4-tax-invoice-container space-y-4 text-xs bg-white p-4 sm:p-6 rounded-2xl border border-stone-300 print:border-black print:p-0 shadow-2xs print:shadow-none">
+              
+              {/* Top Row: Store Logo & Date (Left) | Document Title & Serial/No (Right) */}
+              <div className="flex items-start justify-between gap-4 border-b-2 border-stone-900 pb-3.5">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl overflow-hidden p-0.5 border border-stone-200 print:border-none flex-shrink-0">
+                    <img src={CAFE_ORDER_LOGO_DATA_URI} alt="Logo" className="w-full h-full object-cover rounded-lg" />
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-black text-stone-950 tracking-tight">
+                      {sellerLegalName}
+                    </h1>
+                    <p className="text-xs text-stone-600 font-bold">
                       {storeConfig.nameEn || 'Cafe Order Enterprise'}
                     </p>
-                    <p className="text-[11px] text-stone-600 max-w-sm">
-                      {storeConfig.address || '123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110'}
-                    </p>
-                    <p className="text-[11px] font-bold text-stone-900">
-                      เลขประจำตัวผู้เสียภาษีอากร: <span className="font-mono">{storeConfig.taxId || '0105566012345'}</span> ({storeConfig.branchNumber || 'สำนักงานใหญ่'})
+                    <p className="text-xs font-bold text-stone-800 mt-1">
+                      <span className="text-stone-500">วันที่: </span> {formattedDateThai}
                     </p>
                   </div>
+                </div>
 
-                  <div className="text-right space-y-1 flex-shrink-0">
-                    <div className="bg-stone-900 text-white font-black px-3 py-1 rounded-lg text-xs tracking-wider inline-block">
-                      ใบเสร็จรับเงิน / ใบกำกับภาษี
-                    </div>
-                    <p className="text-[10px] font-bold text-stone-500 uppercase">
-                      TAX INVOICE / RECEIPT (ต้นฉบับ)
-                    </p>
-                    <p className="text-xs font-mono font-bold text-stone-900 pt-1">
-                      เลขที่ (INV #): {order.orderNumber}
-                    </p>
-                    <p className="text-[11px] text-stone-600">
-                      วันที่ (Date): {formattedDate} {formattedTime}
-                    </p>
+                <div className="text-right space-y-1 flex-shrink-0">
+                  <h2 className="text-base sm:text-lg font-black text-stone-950 tracking-tight">
+                    ใบเสร็จรับเงิน / ใบกำกับภาษี
+                  </h2>
+                  <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">
+                    TAX INVOICE / RECEIPT (ต้นฉบับ / ORIGINAL)
+                  </p>
+                  <div className="flex items-center justify-end gap-3 text-xs font-bold text-stone-900 pt-1">
+                    <span>เล่มที่ <span className="font-mono font-black">{bookNo}</span></span>
+                    <span>เลขที่ <span className="font-mono font-black">{invoiceNo}</span></span>
                   </div>
                 </div>
               </div>
 
-              {/* Customer Legal Tax Details Box */}
-              <div className="bg-stone-50 p-3 rounded-xl border border-stone-200 space-y-1">
-                <div className="font-black text-stone-900 text-xs flex items-center gap-1.5 border-b border-stone-200 pb-1">
-                  <User className="w-3.5 h-3.5 text-stone-600" />
-                  <span>ข้อมูลผู้ซื้อ / ผู้รับบริการ (Customer Information):</span>
-                </div>
+              {/* Seller & Buyer 2-Column Info Grid (Exactly matching Revenue Department & iTAX specimen) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-1">
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 pt-1 text-[11px]">
-                  <p>
-                    <span className="font-bold text-stone-600">ชื่อผู้ซื้อ: </span>
-                    <span className="font-bold text-stone-900">{taxInfo.name || '(ลูกค้าทั่วไป / ไม่ประสงค์ออกนาม)'}</span>
-                  </p>
-                  <p>
-                    <span className="font-bold text-stone-600">เลขประจำตัวผู้เสียภาษี: </span>
-                    <span className="font-mono font-bold text-stone-900">{taxInfo.taxId || '-'}</span>
-                  </p>
-                  <p>
-                    <span className="font-bold text-stone-600">สาขา: </span>
-                    <span className="font-medium text-stone-800">{taxInfo.branch || 'สำนักงานใหญ่'}</span>
-                  </p>
-                  <p>
-                    <span className="font-bold text-stone-600">ตำแหน่ง/โต๊ะ: </span>
-                    <span className="font-medium text-stone-800">โต๊ะ {order.tableNumber}</span>
-                  </p>
-                  <p className="sm:col-span-2">
-                    <span className="font-bold text-stone-600">ที่อยู่: </span>
-                    <span className="font-medium text-stone-800">{taxInfo.address || '-'}</span>
-                  </p>
+                {/* 1. Seller Information (ข้อมูลผู้ขาย) */}
+                <div className="p-3 bg-stone-50/90 print:bg-white rounded-xl border border-stone-200 print:border-stone-400 space-y-1.5 text-[11px]">
+                  <div className="font-black text-stone-900 border-b border-stone-200 print:border-stone-300 pb-1 flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-stone-700" />
+                    <span>ข้อมูลผู้ขาย (Seller Information):</span>
+                  </div>
+                  <div className="space-y-1 text-stone-800 leading-snug">
+                    <p>
+                      <span className="font-bold text-stone-600">ชื่อผู้ขาย: </span>
+                      <span className="font-black">{sellerLegalName}</span>
+                    </p>
+                    <p>
+                      <span className="font-bold text-stone-600">ที่อยู่: </span>
+                      <span>{sellerAddress}</span>
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 pt-0.5">
+                      <p>
+                        <span className="font-bold text-stone-600">เลขประจำตัวผู้เสียภาษี: </span>
+                        <span className="font-mono font-bold block sm:inline">{formatTaxId(sellerTaxId)}</span>
+                      </p>
+                      <p>
+                        <span className="font-bold text-stone-600">โทรศัพท์: </span>
+                        <span className="font-mono">{sellerPhone}</span>
+                      </p>
+                    </div>
+                    <p className="text-[10.5px] text-stone-600 font-bold">
+                      สาขา: {sellerBranch}
+                    </p>
+                  </div>
                 </div>
+
+                {/* 2. Buyer Information (ข้อมูลผู้ซื้อ) */}
+                <div className="p-3 bg-stone-50/90 print:bg-white rounded-xl border border-stone-200 print:border-stone-400 space-y-1.5 text-[11px]">
+                  <div className="font-black text-stone-900 border-b border-stone-200 print:border-stone-300 pb-1 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-stone-700" />
+                    <span>ข้อมูลผู้ซื้อ (Buyer Information):</span>
+                  </div>
+                  <div className="space-y-1 text-stone-800 leading-snug">
+                    <p>
+                      <span className="font-bold text-stone-600">ชื่อผู้ซื้อ: </span>
+                      <span className="font-black text-stone-950">
+                        {taxInfo.name || (isTh ? '(ลูกค้าทั่วไป / ไม่ประสงค์ออกนาม)' : 'General Customer')}
+                      </span>
+                    </p>
+                    <p>
+                      <span className="font-bold text-stone-600">ที่อยู่: </span>
+                      <span>{taxInfo.address || '-'}</span>
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 pt-0.5">
+                      <p>
+                        <span className="font-bold text-stone-600">เลขประจำตัวผู้เสียภาษี: </span>
+                        <span className="font-mono font-bold block sm:inline">{formatTaxId(taxInfo.taxId) || '-'}</span>
+                      </p>
+                      <p>
+                        <span className="font-bold text-stone-600">โทรศัพท์: </span>
+                        <span className="font-mono">{taxInfo.phone || '-'}</span>
+                      </p>
+                    </div>
+                    <p className="text-[10.5px] text-stone-600 font-bold">
+                      สาขา: {taxInfo.branch || 'สำนักงานใหญ่'} • {order.tableNumber === 'TAKEAWAY' ? 'สั่งกลับบ้าน' : `โต๊ะ ${order.tableNumber}`}
+                    </p>
+                  </div>
+                </div>
+
               </div>
 
-              {/* Full Legal Items Table */}
-              <table className="w-full border-collapse text-xs">
-                <thead>
-                  <tr className="border-y-2 border-stone-800 bg-stone-100 font-black text-stone-900 text-[11px]">
-                    <th className="py-2 px-2 text-center w-10">ลำดับ</th>
-                    <th className="py-2 px-2 text-left">รายการสินค้า / บริการ</th>
-                    <th className="py-2 px-2 text-center w-16">จำนวน</th>
-                    <th className="py-2 px-2 text-right w-24">ราคา/หน่วย</th>
-                    <th className="py-2 px-2 text-right w-24">จำนวนเงิน</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-200">
-                  {order.items.map((item, idx) => (
-                    <tr key={idx} className="align-top">
-                      <td className="py-1.5 px-2 text-center text-stone-500 font-mono">{idx + 1}</td>
-                      <td className="py-1.5 px-2">
-                        <p className="font-bold text-stone-900">{item.menuItem.name}</p>
-                        {item.selectedOptions && item.selectedOptions.length > 0 && (
-                          <p className="text-[10px] text-stone-500">
-                            {item.selectedOptions.map((o) => o.choiceName).join(', ')}
-                          </p>
-                        )}
-                      </td>
-                      <td className="py-1.5 px-2 text-center font-bold text-stone-900">{item.quantity}</td>
-                      <td className="py-1.5 px-2 text-right font-mono">฿{item.unitPriceWithDelta.toLocaleString()}</td>
-                      <td className="py-1.5 px-2 text-right font-mono font-bold text-stone-900">฿{item.totalItemPrice.toLocaleString()}</td>
+              {/* Items Table with Standard Legal Borders */}
+              <div className="border border-stone-900 rounded-lg overflow-hidden">
+                <table className="w-full border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-stone-100 print:bg-stone-200 border-b border-stone-900 font-black text-stone-950 text-[11px]">
+                      <th className="py-2.5 px-3 text-center w-12 border-r border-stone-900">ลำดับ</th>
+                      <th className="py-2.5 px-3 text-left border-r border-stone-900">รายการสินค้า / บริการ</th>
+                      <th className="py-2.5 px-3 text-center w-16 border-r border-stone-900">จำนวน</th>
+                      <th className="py-2.5 px-3 text-right w-24 border-r border-stone-900">หน่วยละ</th>
+                      <th className="py-2.5 px-3 text-right w-28">จำนวนเงิน</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-stone-200 print:divide-stone-300">
+                    {order.items.map((item, idx) => (
+                      <tr key={idx} className="align-top">
+                        <td className="py-2 px-3 text-center text-stone-600 font-mono border-r border-stone-900">{idx + 1}</td>
+                        <td className="py-2 px-3 border-r border-stone-900">
+                          <p className="font-black text-stone-950">{item.menuItem.name}</p>
+                          {item.menuItem.nameEn && <p className="text-[10px] text-stone-500">{item.menuItem.nameEn}</p>}
+                          {item.selectedOptions && item.selectedOptions.length > 0 && (
+                            <p className="text-[10.5px] text-stone-600 pt-0.5">
+                              {item.selectedOptions.map((o) => o.choiceName).join(', ')}
+                            </p>
+                          )}
+                        </td>
+                        <td className="py-2 px-3 text-center font-bold text-stone-950 font-mono border-r border-stone-900">{item.quantity}</td>
+                        <td className="py-2 px-3 text-right font-mono border-r border-stone-900">{item.unitPriceWithDelta.toFixed(2)}</td>
+                        <td className="py-2 px-3 text-right font-mono font-black text-stone-950">{item.totalItemPrice.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-              {/* Legal Tax Calculations Breakdown */}
-              <div className="border-t-2 border-stone-800 pt-2.5 flex flex-col sm:flex-row justify-between items-start gap-4">
-                <div className="text-[11px] text-stone-500 space-y-0.5">
-                  <p className="font-bold text-stone-700">การชำระเงิน: {order.paymentMethod === 'promptpay' ? 'พร้อมเพย์ (PromptPay)' : 'เงินสด (Cash)'}</p>
-                  <p>สถานะการชำระ: {order.paymentStatus === 'paid' ? 'ชำระเงินเรียบร้อยแล้ว' : 'รอรับชำระ'}</p>
-                  <p className="text-[10px] text-stone-400 pt-1">เอกสารนี้ออกโดยระบบอัตโนมัติ ถูกต้องตามมาตรา 86/4 แห่งประมวลรัษฎากร</p>
+              {/* Summary and Legal VAT Calculation Block */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start pt-1">
+                
+                {/* Left Column: Baht Text and Payment Meta */}
+                <div className="md:col-span-7 space-y-2 text-xs">
+                  <div className="p-3 bg-stone-50 print:bg-white rounded-xl border border-stone-300 space-y-1">
+                    <p className="text-[11px] font-bold text-stone-600">
+                      จำนวนเงินตัวอักษร (Amount in Words):
+                    </p>
+                    <p className="text-xs font-black text-stone-950">
+                      ({vat.bahtText})
+                    </p>
+                  </div>
+
+                  <div className="text-[10.5px] text-stone-600 space-y-0.5 pt-1">
+                    <p><span className="font-bold">วิธีชำระเงิน:</span> {order.paymentMethod === 'promptpay' ? 'พร้อมเพย์ (PromptPay)' : 'เงินสด (Cash)'}</p>
+                    <p><span className="font-bold">สถานะ:</span> {order.paymentStatus === 'paid' ? 'ชำระเงินเรียบร้อยแล้ว (PAID)' : 'ค้างชำระ'}</p>
+                    <p className="text-[10px] text-stone-400 font-medium pt-0.5">
+                      เอกสารนี้ออกตามมาตรา 86/4 แห่งประมวลรัษฎากร กรมสรรพากร
+                    </p>
+                  </div>
                 </div>
 
-                <div className="w-full sm:w-64 space-y-1 text-xs">
-                  <div className="flex justify-between text-stone-600">
-                    <span>รวมมูลค่าสินค้า (Subtotal):</span>
-                    <span className="font-mono font-bold">฿{totalAmount.toFixed(2)}</span>
+                {/* Right Column: Pre-VAT, VAT 7%, Grand Total Table */}
+                <div className="md:col-span-5 border border-stone-900 rounded-xl overflow-hidden text-xs">
+                  <div className="flex justify-between p-2.5 bg-stone-50 print:bg-white border-b border-stone-200">
+                    <span className="font-bold text-stone-700">มูลค่ารวมก่อนเสียภาษี:</span>
+                    <span className="font-mono font-bold text-stone-950">{vat.formattedTaxBase}</span>
                   </div>
-                  <div className="flex justify-between text-stone-600">
-                    <span>มูลค่าก่อนภาษี (Tax Base):</span>
-                    <span className="font-mono">฿{taxBase.toFixed(2)}</span>
+                  <div className="flex justify-between p-2.5 bg-stone-50 print:bg-white border-b border-stone-900">
+                    <span className="font-bold text-stone-700">ภาษีมูลค่าเพิ่ม (VAT 7%):</span>
+                    <span className="font-mono font-bold text-stone-950">{vat.formattedVat}</span>
                   </div>
-                  <div className="flex justify-between text-stone-600">
-                    <span>ภาษีมูลค่าเพิ่ม 7% (VAT 7%):</span>
-                    <span className="font-mono">฿{vatAmount.toFixed(2)}</span>
+                  <div className="flex justify-between p-2.5 bg-stone-100 print:bg-stone-200 font-black text-sm text-stone-950">
+                    <span>ยอดรวมสุทธิ:</span>
+                    <span className="font-mono text-base text-orange-600 print:text-black">฿{vat.formattedTotal}</span>
                   </div>
-                  <div className="flex justify-between text-sm font-black text-stone-950 pt-1 border-t border-stone-800">
-                    <span>จำนวนเงินรวมทั้งสิ้น:</span>
-                    <span className="font-mono text-orange-600 text-base">฿{totalAmount.toFixed(2)}</span>
-                  </div>
+                </div>
+
+              </div>
+
+              {/* Official Signatures Grid */}
+              <div className="pt-6 grid grid-cols-2 gap-12 text-center text-xs text-stone-700">
+                <div className="space-y-8">
+                  <p className="font-bold">ผู้รับบริการ / ผู้จ่ายเงิน (Customer)</p>
+                  <p className="border-t border-dotted border-stone-500 pt-1.5 font-medium">ลงชื่อ ...................................................</p>
+                </div>
+                <div className="space-y-8">
+                  <p className="font-bold">ผู้รับเงิน / ผู้มีอำนาจลงนาม (Authorized)</p>
+                  <p className="border-t border-dotted border-stone-500 pt-1.5 font-medium">ลงชื่อ ...................................................</p>
                 </div>
               </div>
 
-              {/* Signature Section */}
-              <div className="pt-4 grid grid-cols-2 gap-8 text-center text-[11px] text-stone-500">
-                <div className="space-y-6">
-                  <p>ผู้รับบริการ / ผู้จ่ายเงิน</p>
-                  <p className="border-t border-dotted border-stone-400 pt-1 font-bold text-stone-700">ลงชื่อ ...................................................</p>
-                </div>
-                <div className="space-y-6">
-                  <p>ผู้รับเงิน / ผู้มีอำนาจลงนาม</p>
-                  <p className="border-t border-dotted border-stone-400 pt-1 font-bold text-stone-700">ลงชื่อ ...................................................</p>
-                </div>
-              </div>
             </div>
           )}
+
         </div>
 
-        {/* Modal Bottom Controls (Hidden on Print) */}
+        {/* Modal Bottom Action Controls (Hidden on Print) */}
         <div className="p-4 bg-stone-50 border-t border-stone-200 flex items-center justify-between flex-shrink-0 print:hidden no-print">
           <button
             type="button"
             onClick={handlePrint}
-            className="flex-1 py-3 bg-stone-900 hover:bg-black active:scale-98 text-white font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 transition cursor-pointer mr-2 shadow-md shadow-stone-900/10"
+            className="flex-1 py-3.5 bg-stone-900 hover:bg-black active:scale-[0.99] text-white font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 transition cursor-pointer mr-3 shadow-md shadow-stone-900/15"
           >
             <Printer className="w-4 h-4 text-orange-400" />
             <span>
               {docType === 'abbreviated'
-                ? (language === 'th' ? 'สั่งพิมพ์สลิปใบเสร็จ (Print POS Slip)' : 'Print POS Slip')
-                : (language === 'th' ? 'สั่งพิมพ์ใบกำกับภาษีเต็มรูป (Print Full Tax Invoice)' : 'Print Full Tax Invoice')}
+                ? (isTh ? 'สั่งพิมพ์ใบเสร็จอย่างย่อ (Print POS Slip)' : 'Print Abbreviated Slip')
+                : (isTh ? 'สั่งพิมพ์ใบกำกับภาษีเต็มรูป (Print Full Tax Invoice)' : 'Print Full Tax Invoice')}
             </span>
           </button>
 
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-3 bg-stone-200 hover:bg-stone-300 text-stone-700 font-bold text-xs sm:text-sm rounded-2xl transition cursor-pointer active:scale-95"
+            className="px-6 py-3.5 bg-stone-200 hover:bg-stone-300 text-stone-700 font-black text-xs sm:text-sm rounded-2xl transition cursor-pointer active:scale-95"
           >
-            {language === 'th' ? 'ปิด' : 'Close'}
+            {t('close', language)}
           </button>
         </div>
+
       </div>
     </div>
   );

@@ -15,6 +15,8 @@ export const initialStoreConfig: StoreConfig = {
   taxId: "0105566012345",
   address: "123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110",
   branchNumber: "00000 (สำนักงานใหญ่)",
+  phone: "02-123-4567",
+  companyLegalName: "บริษัท คาเฟ่ ออเดอร์ (ไทยแลนด์) จำกัด",
 };
 
 export const initialCategories: MenuCategory[] = [
