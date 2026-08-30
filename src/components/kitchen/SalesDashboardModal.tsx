@@ -2,10 +2,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   X, Calendar, TrendingUp, Receipt, CreditCard, 
-  Award, Clock, Printer, Download, BarChart3, 
+  Award, Clock, Download, BarChart3, 
   ArrowRight, CheckCircle2, Flame, ShoppingBag,
-  CalendarRange, ChevronLeft, ChevronRight, Sparkles,
-  ArrowUpRight, DollarSign
+  CalendarRange, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Order, Language } from '../../types';
 import { t } from '../../utils/i18n';
@@ -34,7 +33,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
   });
   const [customEnd, setCustomEnd] = useState(() => new Date().toISOString().split('T')[0]);
   
-  // Interactive Custom Calendar State (Replaces ugly native browser date popup)
+  // Interactive Custom Calendar State (Compact corner view)
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [activeDateTab, setActiveDateTab] = useState<'start' | 'end'>('start');
 
@@ -268,10 +267,6 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
   }, [calendarMonth, customStart, customEnd]);
 
   // 4. Helper Handlers
-  const handlePrint = () => {
-    window.print();
-  };
-
   const handleExportCSV = () => {
     if (filteredOrders.length === 0) return;
 
@@ -326,7 +321,6 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
   const handleSelectCalendarDate = (dateStr: string) => {
     if (activeDateTab === 'start') {
       setCustomStart(dateStr);
-      // If start is greater than end, move end to start
       if (dateStr > customEnd) {
         setCustomEnd(dateStr);
       }
@@ -392,45 +386,31 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
       {/* Main Modal Card Container */}
       <div className="relative w-full max-w-5xl bg-[#fcfbf9] rounded-[36px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 flex flex-col max-h-[92vh] selection:bg-emerald-500 selection:text-white">
         
-        {/* 1. Header (Premium Obsidian Glass with Emerald Accent) */}
+        {/* 1. Header (Clean Obsidian with single X close button & CSV export only) */}
         <div className="px-6 py-4 sm:py-5 bg-gradient-to-r from-stone-900 via-stone-900 to-stone-950 border-b border-stone-800/80 flex items-center justify-between text-white flex-shrink-0 relative overflow-hidden">
           <div className="flex items-center gap-3.5 relative z-10">
             <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/10 flex-shrink-0">
               <BarChart3 className="w-5 h-5 stroke-[2.5]" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-black text-white text-base sm:text-lg tracking-tight">
-                  {language === 'th' ? 'แดชบอร์ดสรุปยอดขาย' : 'Sales Analytics'}
-                </h3>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-black border border-emerald-500/30">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  <span>LIVE</span>
-                </span>
-              </div>
+              <h3 className="font-black text-white text-base sm:text-lg tracking-tight">
+                {language === 'th' ? 'แดชบอร์ดสรุปยอดขาย' : 'Sales Analytics'}
+              </h3>
               <p className="text-xs text-stone-400 font-medium mt-0.5">
                 {language === 'th' ? 'สรุปผลประกอบการ สินค้าขายดี และช่วงเวลาพีคของร้าน' : 'Revenue metrics, best sellers, and peak hourly traffic'}
               </p>
             </div>
           </div>
 
-          {/* Action Tools */}
+          {/* Action Tools (CSV only + Single X Close Button) */}
           <div className="flex items-center gap-2 relative z-10">
             <button
               onClick={handleExportCSV}
-              className="px-3.5 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-stone-200 hover:text-white text-xs font-black flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-white/10 shadow-2xs"
+              className="px-3.5 py-2 rounded-2xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 hover:text-emerald-200 text-xs font-black flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-emerald-500/30 shadow-2xs"
               title="Export CSV Data"
             >
-              <Download className="w-3.5 h-3.5 text-emerald-400" />
+              <Download className="w-3.5 h-3.5" />
               <span>CSV</span>
-            </button>
-            <button
-              onClick={handlePrint}
-              className="px-3.5 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-stone-200 hover:text-white text-xs font-black flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-white/10 shadow-2xs"
-              title="Print Summary Report"
-            >
-              <Printer className="w-3.5 h-3.5 text-amber-400" />
-              <span>{language === 'th' ? 'พิมพ์รายงาน' : 'Print'}</span>
             </button>
             <button
               onClick={onClose}
@@ -445,7 +425,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
         {/* 2. Scrollable Body Content */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 min-h-0 bg-[#fcfbf9]">
           
-          {/* Top Segmented Navigation & Time Range Bar */}
+          {/* Top Segmented Navigation & Compact Date Picker */}
           <div className="bg-white rounded-3xl p-3.5 border border-stone-200/80 shadow-2xs space-y-3">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               {/* Preset Pills */}
@@ -481,165 +461,155 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
               )}
             </div>
 
-            {/* Custom Interactive In-Modal Calendar & Range Selector (NO UGLY BROWSER POPUP) */}
+            {/* Compact Corner Date Range Picker (Side-by-side balanced card) */}
             {preset === 'custom' && (
-              <div className="p-4 sm:p-5 bg-stone-50/90 rounded-3xl border border-stone-200/90 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                {/* Date Inputs Selector Tabs */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Start Date Card */}
-                  <div
-                    onClick={() => setActiveDateTab('start')}
-                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                      activeDateTab === 'start'
-                        ? 'bg-white border-emerald-500 ring-2 ring-emerald-500/20 shadow-sm'
-                        : 'bg-white/80 border-stone-200 hover:border-stone-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider text-stone-400 mb-1">
-                      <span>{language === 'th' ? '1. วันที่เริ่มต้น (Start Date)' : '1. Start Date'}</span>
-                      {activeDateTab === 'start' && <span className="text-emerald-600 text-[10px]">● กำลังเลือก</span>}
-                    </div>
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 font-black">
-                        <Calendar className="w-4 h-4" />
-                      </div>
-                      <div className="text-sm font-black text-stone-900">
-                        {formatDisplayDate(customStart)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* End Date Card */}
-                  <div
-                    onClick={() => setActiveDateTab('end')}
-                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                      activeDateTab === 'end'
-                        ? 'bg-white border-emerald-500 ring-2 ring-emerald-500/20 shadow-sm'
-                        : 'bg-white/80 border-stone-200 hover:border-stone-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider text-stone-400 mb-1">
-                      <span>{language === 'th' ? '2. วันที่สิ้นสุด (End Date)' : '2. End Date'}</span>
-                      {activeDateTab === 'end' && <span className="text-emerald-600 text-[10px]">● กำลังเลือก</span>}
-                    </div>
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center flex-shrink-0 font-black">
-                        <Calendar className="w-4 h-4" />
-                      </div>
-                      <div className="text-sm font-black text-stone-900">
-                        {formatDisplayDate(customEnd)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Built-in Clean Calendar Grid */}
-                <div className="bg-white rounded-2xl p-4 border border-stone-200/80 shadow-2xs">
-                  {/* Calendar Navigation */}
-                  <div className="flex items-center justify-between mb-3 pb-2 border-b border-stone-100">
-                    <button
-                      type="button"
-                      onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
-                      className="w-8 h-8 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center justify-center transition cursor-pointer active:scale-95"
+              <div className="p-3.5 sm:p-4 bg-stone-50/90 rounded-2xl border border-stone-200/90 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-start">
+                  
+                  {/* Left Column: Date Range Cards + Shortcuts */}
+                  <div className="md:col-span-5 space-y-2.5">
+                    {/* Start Date Card */}
+                    <div
+                      onClick={() => setActiveDateTab('start')}
+                      className={`p-2.5 sm:p-3 rounded-xl border transition-all cursor-pointer ${
+                        activeDateTab === 'start'
+                          ? 'bg-white border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
+                          : 'bg-white/90 border-stone-200 hover:border-stone-300'
+                      }`}
                     >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <div className="text-xs sm:text-sm font-black text-stone-900">
-                      {curMonthName} {curYearDisplay}
+                      <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-stone-400 mb-0.5">
+                        <span>{language === 'th' ? '1. วันที่เริ่มต้น' : '1. Start Date'}</span>
+                        {activeDateTab === 'start' && <span className="text-emerald-600 font-bold">● กำลังเลือก</span>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-xs sm:text-sm font-black text-stone-900">
+                          {formatDisplayDate(customStart)}
+                        </span>
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
-                      className="w-8 h-8 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center justify-center transition cursor-pointer active:scale-95"
+
+                    {/* End Date Card */}
+                    <div
+                      onClick={() => setActiveDateTab('end')}
+                      className={`p-2.5 sm:p-3 rounded-xl border transition-all cursor-pointer ${
+                        activeDateTab === 'end'
+                          ? 'bg-white border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
+                          : 'bg-white/90 border-stone-200 hover:border-stone-300'
+                      }`}
                     >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+                      <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-stone-400 mb-0.5">
+                        <span>{language === 'th' ? '2. วันที่สิ้นสุด' : '2. End Date'}</span>
+                        {activeDateTab === 'end' && <span className="text-emerald-600 font-bold">● กำลังเลือก</span>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 text-teal-600" />
+                        <span className="text-xs sm:text-sm font-black text-stone-900">
+                          {formatDisplayDate(customEnd)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Compact Shortcuts */}
+                    <div className="pt-1 flex flex-wrap gap-1 text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => setShortcutRange('last7')}
+                        className="px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 font-bold transition cursor-pointer shadow-2xs"
+                      >
+                        {language === 'th' ? '7 วัน' : '7 Days'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShortcutRange('thisWeek')}
+                        className="px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 font-bold transition cursor-pointer shadow-2xs"
+                      >
+                        {language === 'th' ? 'สัปดาห์นี้' : 'This Week'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShortcutRange('thisMonth')}
+                        className="px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 font-bold transition cursor-pointer shadow-2xs"
+                      >
+                        {language === 'th' ? 'เดือนนี้' : 'This Month'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShortcutRange('last30')}
+                        className="px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 font-bold transition cursor-pointer shadow-2xs"
+                      >
+                        {language === 'th' ? '30 วัน' : '30 Days'}
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Day Headers (Sun - Sat) */}
-                  <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-black uppercase text-stone-400 mb-1.5">
-                    <span>{language === 'th' ? 'อา' : 'Su'}</span>
-                    <span>{language === 'th' ? 'จ' : 'Mo'}</span>
-                    <span>{language === 'th' ? 'อ' : 'Tu'}</span>
-                    <span>{language === 'th' ? 'พ' : 'We'}</span>
-                    <span>{language === 'th' ? 'พฤ' : 'Th'}</span>
-                    <span>{language === 'th' ? 'ศ' : 'Fr'}</span>
-                    <span>{language === 'th' ? 'ส' : 'Sa'}</span>
+                  {/* Right Column: Mini Compact Calendar */}
+                  <div className="md:col-span-7 bg-white rounded-xl p-3 border border-stone-200/80 shadow-2xs">
+                    {/* Calendar Month Header */}
+                    <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-stone-100">
+                      <button
+                        type="button"
+                        onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
+                        className="w-6 h-6 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center justify-center transition cursor-pointer"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+                      <div className="text-xs font-black text-stone-900">
+                        {curMonthName} {curYearDisplay}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
+                        className="w-6 h-6 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center justify-center transition cursor-pointer"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Day Headers */}
+                    <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-black uppercase text-stone-400 mb-1">
+                      <span>{language === 'th' ? 'อา' : 'Su'}</span>
+                      <span>{language === 'th' ? 'จ' : 'Mo'}</span>
+                      <span>{language === 'th' ? 'อ' : 'Tu'}</span>
+                      <span>{language === 'th' ? 'พ' : 'We'}</span>
+                      <span>{language === 'th' ? 'พฤ' : 'Th'}</span>
+                      <span>{language === 'th' ? 'ศ' : 'Fr'}</span>
+                      <span>{language === 'th' ? 'ส' : 'Sa'}</span>
+                    </div>
+
+                    {/* Day Cells (Compact h-7) */}
+                    <div className="grid grid-cols-7 gap-1">
+                      {calendarDays.map((day, idx) => {
+                        const isSelected = day.isStart || day.isEnd;
+
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleSelectCalendarDate(day.dateStr)}
+                            className={`h-7 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center cursor-pointer ${
+                              isSelected
+                                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black shadow-xs scale-105 z-10'
+                                : day.isInRange
+                                ? 'bg-emerald-50 text-emerald-900 font-extrabold'
+                                : day.isCurrentMonth
+                                ? 'hover:bg-stone-100 text-stone-800'
+                                : 'text-stone-300 hover:bg-stone-50'
+                            } ${day.isToday && !isSelected ? 'border border-emerald-400 font-black text-emerald-700' : ''}`}
+                          >
+                            {day.dayNum}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  {/* Calendar Days Cells */}
-                  <div className="grid grid-cols-7 gap-1">
-                    {calendarDays.map((day, idx) => {
-                      const isSelected = day.isStart || day.isEnd;
-
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => handleSelectCalendarDate(day.dateStr)}
-                          className={`h-8 sm:h-9 rounded-xl text-xs font-bold transition-all duration-150 flex items-center justify-center cursor-pointer relative ${
-                            isSelected
-                              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black shadow-sm scale-[1.04] z-10'
-                              : day.isInRange
-                              ? 'bg-emerald-50 text-emerald-900 font-extrabold'
-                              : day.isCurrentMonth
-                              ? 'hover:bg-stone-100 text-stone-800'
-                              : 'text-stone-300 hover:bg-stone-50'
-                          } ${day.isToday && !isSelected ? 'border border-emerald-400/80 font-black text-emerald-700' : ''}`}
-                        >
-                          {day.dayNum}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Quick Date Range Shortcut Chips */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pt-1 no-scrollbar text-xs">
-                  <span className="text-[11px] font-black text-stone-400 uppercase tracking-wider mr-1 whitespace-nowrap">
-                    {language === 'th' ? 'ทางลัด:' : 'Shortcuts:'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShortcutRange('last7')}
-                    className="px-3 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs active:scale-95"
-                  >
-                    {language === 'th' ? '7 วันที่แล้ว' : 'Last 7 Days'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShortcutRange('thisWeek')}
-                    className="px-3 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs active:scale-95"
-                  >
-                    {language === 'th' ? 'สัปดาห์นี้' : 'This Week'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShortcutRange('thisMonth')}
-                    className="px-3 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs active:scale-95"
-                  >
-                    {language === 'th' ? 'เดือนนี้' : 'This Month'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShortcutRange('lastMonth')}
-                    className="px-3 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs active:scale-95"
-                  >
-                    {language === 'th' ? 'เดือนที่แล้ว' : 'Last Month'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShortcutRange('last30')}
-                    className="px-3 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs active:scale-95"
-                  >
-                    {language === 'th' ? '30 วันที่แล้ว' : 'Last 30 Days'}
-                  </button>
                 </div>
               </div>
             )}
           </div>
 
-          {/* 4 Premium KPI Stat Cards Grid (Apple/Stripe Style) */}
+          {/* 4 Premium KPI Stat Cards Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             
             {/* KPI 1: Total Sales */}
@@ -1002,19 +972,16 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
 
         </div>
 
-        {/* 3. Footer with Clean Controls & Grand Total */}
-        <div className="px-6 py-4 bg-white border-t border-stone-200/80 flex items-center justify-between flex-shrink-0">
+        {/* 3. Footer with Grand Total Only (No duplicate close button) */}
+        <div className="px-6 py-3.5 bg-white border-t border-stone-200/80 flex items-center justify-between flex-shrink-0">
           <div className="text-xs sm:text-sm font-bold text-stone-600 flex items-center gap-2">
             <span>{language === 'th' ? 'สรุปยอดทั้งหมด:' : 'Grand Total:'}</span>
             <span className="text-lg font-black text-emerald-600">฿{formatPrice(metrics.totalSales)}</span>
             <span className="text-stone-400 text-xs font-bold">({metrics.totalBills} {language === 'th' ? 'บิล' : 'bills'})</span>
           </div>
-          <button
-            onClick={onClose}
-            className="px-6 py-2.5 rounded-2xl bg-stone-900 hover:bg-black text-white font-black text-xs sm:text-sm transition cursor-pointer active:scale-95 shadow-md shadow-stone-900/10"
-          >
-            {t('close', language)}
-          </button>
+          <div className="text-[11px] font-bold text-stone-400">
+            {language === 'th' ? 'บันทึกข้อมูลเรียลไทม์' : 'Realtime recorded'}
+          </div>
         </div>
       </div>
     </div>
