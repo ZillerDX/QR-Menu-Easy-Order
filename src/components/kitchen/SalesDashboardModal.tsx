@@ -4,7 +4,8 @@ import {
   X, Calendar, TrendingUp, Receipt, CreditCard, 
   Award, Clock, Printer, Download, BarChart3, 
   ArrowRight, CheckCircle2, Flame, ShoppingBag,
-  CalendarRange
+  CalendarRange, ChevronLeft, ChevronRight, Sparkles,
+  ArrowUpRight, DollarSign
 } from 'lucide-react';
 import { Order, Language } from '../../types';
 import { t } from '../../utils/i18n';
@@ -16,7 +17,7 @@ interface SalesDashboardModalProps {
   language: Language;
 }
 
-type TimePreset = 'today' | 'yesterday' | '7days' | '30days' | 'all' | 'custom';
+type TimePreset = 'today' | 'yesterday' | '7days' | '30days' | 'thisMonth' | 'all' | 'custom';
 
 export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
   isOpen,
@@ -28,10 +29,14 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
   const [preset, setPreset] = useState<TimePreset>('today');
   const [customStart, setCustomStart] = useState(() => {
     const d = new Date();
-    d.setDate(d.getDate() - 7);
+    d.setDate(d.getDate() - 6);
     return d.toISOString().split('T')[0];
   });
   const [customEnd, setCustomEnd] = useState(() => new Date().toISOString().split('T')[0]);
+  
+  // Interactive Custom Calendar State (Replaces ugly native browser date popup)
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const [activeDateTab, setActiveDateTab] = useState<'start' | 'end'>('start');
 
   // 2. All Effect Hooks
   useEffect(() => {
@@ -78,8 +83,11 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
     const yesterdayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
     const yesterdayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+    const thirtyDaysAgo = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
 
     return orders.filter((o) => {
       if (!o || o.status === 'cancelled') return false;
@@ -95,6 +103,8 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
           return orderDate >= sevenDaysAgo;
         case '30days':
           return orderDate >= thirtyDaysAgo;
+        case 'thisMonth':
+          return orderDate >= thisMonthStart;
         case 'custom': {
           const partsS = (customStart || '').split('-').map(Number);
           const partsE = (customEnd || '').split('-').map(Number);
@@ -121,10 +131,6 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     const cashSales = cashOrders.reduce((sum, o) => sum + (Number(o?.totalPrice) || 0), 0);
     const promptpayPercent = totalSales > 0 ? Math.round((promptpaySales / totalSales) * 100) : 0;
     const cashPercent = totalSales > 0 ? 100 - promptpayPercent : 0;
-
-    // Paid status
-    const paidSales = filteredOrders.filter((o) => o?.paymentStatus === 'paid').reduce((sum, o) => sum + (Number(o?.totalPrice) || 0), 0);
-    const unpaidSales = totalSales - paidSales;
 
     // Best Sellers Ranking
     const itemSalesMap: Record<string, { name: string; nameEn?: string; count: number; revenue: number; image?: string }> = {};
@@ -181,8 +187,6 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
       cashSales,
       cashCount: cashOrders.length,
       cashPercent,
-      paidSales,
-      unpaidSales,
       topItems,
       maxItemCount,
       hourlySales,
@@ -205,6 +209,64 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     }
   }, [customStart, customEnd]);
 
+  // Calendar Grid Generator
+  const calendarDays = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const firstDayIndex = new Date(year, month, 1).getDay(); // 0 is Sun
+    const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    const days: { dateStr: string; dayNum: number; isCurrentMonth: boolean; isToday: boolean; isStart: boolean; isEnd: boolean; isInRange: boolean }[] = [];
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // Previous month padding
+    const prevMonthDays = new Date(year, month, 0).getDate();
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      const d = prevMonthDays - i;
+      const dStr = new Date(year, month - 1, d).toISOString().split('T')[0];
+      days.push({
+        dateStr: dStr,
+        dayNum: d,
+        isCurrentMonth: false,
+        isToday: dStr === todayStr,
+        isStart: dStr === customStart,
+        isEnd: dStr === customEnd,
+        isInRange: dStr > customStart && dStr < customEnd,
+      });
+    }
+
+    // Current month days
+    for (let d = 1; d <= totalDaysInMonth; d++) {
+      const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      days.push({
+        dateStr: dStr,
+        dayNum: d,
+        isCurrentMonth: true,
+        isToday: dStr === todayStr,
+        isStart: dStr === customStart,
+        isEnd: dStr === customEnd,
+        isInRange: dStr > customStart && dStr < customEnd,
+      });
+    }
+
+    // Next month padding to fill 35 or 42 grid cells
+    const remaining = 35 - days.length > 0 ? 35 - days.length : 42 - days.length;
+    for (let d = 1; d <= remaining; d++) {
+      const dStr = new Date(year, month + 1, d).toISOString().split('T')[0];
+      days.push({
+        dateStr: dStr,
+        dayNum: d,
+        isCurrentMonth: false,
+        isToday: dStr === todayStr,
+        isStart: dStr === customStart,
+        isEnd: dStr === customEnd,
+        isInRange: dStr > customStart && dStr < customEnd,
+      });
+    }
+
+    return days;
+  }, [calendarMonth, customStart, customEnd]);
+
   // 4. Helper Handlers
   const handlePrint = () => {
     window.print();
@@ -215,14 +277,14 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
 
     const headers = ['Order Number', 'Table', 'Date Time', 'Items Count', 'Payment Method', 'Payment Status', 'Status', 'Total Price (THB)'];
     const rows = filteredOrders.map((o) => [
-      o.orderNumber,
-      o.tableNumber,
+      o.orderNumber || '-',
+      o.tableNumber === 'TAKEAWAY' ? 'Takeaway' : `Table ${o.tableNumber || '-'}`,
       new Date(o.createdAt).toLocaleString(language === 'th' ? 'th-TH' : 'en-US'),
       (o.items || []).reduce((s, i) => s + (Number(i.quantity) || 1), 0),
-      o.paymentMethod,
-      o.paymentStatus,
-      o.status,
-      o.totalPrice,
+      o.paymentMethod || '-',
+      o.paymentStatus || '-',
+      o.status || '-',
+      o.totalPrice || 0,
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
@@ -241,6 +303,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
       case 'yesterday': return language === 'th' ? 'เมื่อวานนี้' : 'Yesterday';
       case '7days': return language === 'th' ? '7 วันล่าสุด' : '7 Days';
       case '30days': return language === 'th' ? '30 วันล่าสุด' : '30 Days';
+      case 'thisMonth': return language === 'th' ? 'เดือนนี้' : 'This Month';
       case 'all': return language === 'th' ? 'ทั้งหมด' : 'All Time';
       case 'custom': return language === 'th' ? 'กำหนดช่วงเวลา' : 'Custom Range';
     }
@@ -257,6 +320,24 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
       });
     } catch {
       return dateStr;
+    }
+  };
+
+  const handleSelectCalendarDate = (dateStr: string) => {
+    if (activeDateTab === 'start') {
+      setCustomStart(dateStr);
+      // If start is greater than end, move end to start
+      if (dateStr > customEnd) {
+        setCustomEnd(dateStr);
+      }
+      setActiveDateTab('end');
+    } else {
+      if (dateStr < customStart) {
+        setCustomStart(dateStr);
+      } else {
+        setCustomEnd(dateStr);
+      }
+      setActiveDateTab('start');
     }
   };
 
@@ -295,29 +376,40 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
   // 5. Early return AFTER ALL HOOKS ARE CALLED
   if (!isOpen) return null;
 
+  const monthNamesTh = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+  const monthNamesEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const curMonthName = language === 'th' ? monthNamesTh[calendarMonth.getMonth()] : monthNamesEn[calendarMonth.getMonth()];
+  const curYearDisplay = language === 'th' ? calendarMonth.getFullYear() + 543 : calendarMonth.getFullYear();
+
   const modalContent = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5">
       {/* Full-Screen Glassmorphic Backdrop */}
       <div 
-        className="fixed inset-0 bg-stone-950/75 backdrop-blur-md transition-opacity animate-in fade-in duration-200"
+        className="fixed inset-0 bg-stone-950/80 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
         onClick={onClose}
       />
 
       {/* Main Modal Card Container */}
-      <div className="relative w-full max-w-5xl bg-[#fafaf9] rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 flex flex-col max-h-[92vh]">
+      <div className="relative w-full max-w-5xl bg-[#fcfbf9] rounded-[36px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 flex flex-col max-h-[92vh] selection:bg-emerald-500 selection:text-white">
         
-        {/* 1. Header (Premium Dark Slate Contrast with Rounded Top) */}
-        <div className="px-6 py-4 sm:py-5 bg-stone-900 border-b border-stone-800 flex items-center justify-between text-white flex-shrink-0 relative overflow-hidden">
+        {/* 1. Header (Premium Obsidian Glass with Emerald Accent) */}
+        <div className="px-6 py-4 sm:py-5 bg-gradient-to-r from-stone-900 via-stone-900 to-stone-950 border-b border-stone-800/80 flex items-center justify-between text-white flex-shrink-0 relative overflow-hidden">
           <div className="flex items-center gap-3.5 relative z-10">
-            <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/10 flex-shrink-0">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/10 flex-shrink-0">
               <BarChart3 className="w-5 h-5 stroke-[2.5]" />
             </div>
             <div>
-              <h3 className="font-black text-white text-base sm:text-lg tracking-tight">
-                {language === 'th' ? 'แดชบอร์ดสรุปยอดขาย' : 'Sales Analytics'}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-black text-white text-base sm:text-lg tracking-tight">
+                  {language === 'th' ? 'แดชบอร์ดสรุปยอดขาย' : 'Sales Analytics'}
+                </h3>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-black border border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  <span>LIVE</span>
+                </span>
+              </div>
               <p className="text-xs text-stone-400 font-medium mt-0.5">
-                {language === 'th' ? 'รายงานผลการขาย สินค้าขายดี และช่วงเวลาพีคของร้าน' : 'Revenue metrics, top selling dishes, and peak business hours'}
+                {language === 'th' ? 'สรุปผลประกอบการ สินค้าขายดี และช่วงเวลาพีคของร้าน' : 'Revenue metrics, best sellers, and peak hourly traffic'}
               </p>
             </div>
           </div>
@@ -326,7 +418,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
           <div className="flex items-center gap-2 relative z-10">
             <button
               onClick={handleExportCSV}
-              className="px-3.5 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-stone-200 hover:text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-white/10 shadow-2xs"
+              className="px-3.5 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-stone-200 hover:text-white text-xs font-black flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-white/10 shadow-2xs"
               title="Export CSV Data"
             >
               <Download className="w-3.5 h-3.5 text-emerald-400" />
@@ -334,7 +426,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
             </button>
             <button
               onClick={handlePrint}
-              className="px-3.5 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-stone-200 hover:text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-white/10 shadow-2xs"
+              className="px-3.5 py-2 rounded-2xl bg-white/10 hover:bg-white/15 text-stone-200 hover:text-white text-xs font-black flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-white/10 shadow-2xs"
               title="Print Summary Report"
             >
               <Printer className="w-3.5 h-3.5 text-amber-400" />
@@ -351,13 +443,14 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
         </div>
 
         {/* 2. Scrollable Body Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 min-h-0 bg-[#fafaf9]">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 min-h-0 bg-[#fcfbf9]">
           
-          {/* Time Range Filter Bar */}
-          <div className="bg-white rounded-3xl p-3 sm:p-4 border border-stone-200/80 shadow-2xs space-y-3">
+          {/* Top Segmented Navigation & Time Range Bar */}
+          <div className="bg-white rounded-3xl p-3.5 border border-stone-200/80 shadow-2xs space-y-3">
             <div className="flex items-center justify-between gap-2 flex-wrap">
+              {/* Preset Pills */}
               <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 no-scrollbar">
-                {(['today', 'yesterday', '7days', '30days', 'all', 'custom'] as TimePreset[]).map((p) => {
+                {(['today', 'yesterday', '7days', '30days', 'thisMonth', 'all', 'custom'] as TimePreset[]).map((p) => {
                   const isActive = preset === p;
                   return (
                     <button
@@ -375,59 +468,129 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                 })}
               </div>
 
-              {preset === 'custom' && (
+              {/* Status Tag */}
+              {preset === 'custom' ? (
                 <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-3 py-1 rounded-full flex items-center gap-1.5">
                   <CalendarRange className="w-3.5 h-3.5 text-emerald-600" />
                   <span>{daysSelectedCount} {language === 'th' ? 'วันที่เลือก' : 'days selected'}</span>
                 </span>
+              ) : (
+                <span className="text-[11px] font-bold text-stone-400">
+                  {language === 'th' ? `ข้อมูล ณ ${new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.` : `Updated ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`}
+                </span>
               )}
             </div>
 
-            {/* Redesigned Premium Custom Date Picker Drawer */}
+            {/* Custom Interactive In-Modal Calendar & Range Selector (NO UGLY BROWSER POPUP) */}
             {preset === 'custom' && (
-              <div className="p-4 bg-stone-50/80 rounded-2xl border border-stone-200/80 space-y-3.5 animate-in fade-in slide-in-from-top-2 duration-200">
-                {/* Date Inputs Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-center">
-                  
+              <div className="p-4 sm:p-5 bg-stone-50/90 rounded-3xl border border-stone-200/90 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                {/* Date Inputs Selector Tabs */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Start Date Card */}
-                  <div className="lg:col-span-2 bg-white rounded-2xl p-3 border border-stone-200/90 shadow-2xs hover:border-emerald-400 transition group">
-                    <label className="block text-[11px] font-black text-stone-500 uppercase tracking-wider mb-1 flex items-center justify-between">
-                      <span>{language === 'th' ? 'วันที่เริ่มต้น (Start Date)' : 'Start Date'}</span>
-                      <span className="text-emerald-700 font-black text-xs">{formatDisplayDate(customStart)}</span>
-                    </label>
-                    <div className="relative flex items-center mt-1">
-                      <Calendar className="w-4 h-4 text-stone-400 absolute left-3 pointer-events-none group-hover:text-emerald-600 transition" />
-                      <input
-                        type="date"
-                        value={customStart}
-                        onChange={(e) => setCustomStart(e.target.value)}
-                        className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-stone-200/80 bg-stone-50/50 text-xs font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition cursor-pointer"
-                      />
+                  <div
+                    onClick={() => setActiveDateTab('start')}
+                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                      activeDateTab === 'start'
+                        ? 'bg-white border-emerald-500 ring-2 ring-emerald-500/20 shadow-sm'
+                        : 'bg-white/80 border-stone-200 hover:border-stone-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider text-stone-400 mb-1">
+                      <span>{language === 'th' ? '1. วันที่เริ่มต้น (Start Date)' : '1. Start Date'}</span>
+                      {activeDateTab === 'start' && <span className="text-emerald-600 text-[10px]">● กำลังเลือก</span>}
                     </div>
-                  </div>
-
-                  {/* Middle Arrow Indicator */}
-                  <div className="hidden lg:flex items-center justify-center text-stone-400">
-                    <div className="w-8 h-8 rounded-full bg-white border border-stone-200 flex items-center justify-center text-stone-400 shadow-2xs">
-                      <ArrowRight className="w-4 h-4 text-emerald-600" />
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 font-black">
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                      <div className="text-sm font-black text-stone-900">
+                        {formatDisplayDate(customStart)}
+                      </div>
                     </div>
                   </div>
 
                   {/* End Date Card */}
-                  <div className="lg:col-span-2 bg-white rounded-2xl p-3 border border-stone-200/90 shadow-2xs hover:border-emerald-400 transition group">
-                    <label className="block text-[11px] font-black text-stone-500 uppercase tracking-wider mb-1 flex items-center justify-between">
-                      <span>{language === 'th' ? 'วันที่สิ้นสุด (End Date)' : 'End Date'}</span>
-                      <span className="text-emerald-700 font-black text-xs">{formatDisplayDate(customEnd)}</span>
-                    </label>
-                    <div className="relative flex items-center mt-1">
-                      <Calendar className="w-4 h-4 text-stone-400 absolute left-3 pointer-events-none group-hover:text-emerald-600 transition" />
-                      <input
-                        type="date"
-                        value={customEnd}
-                        onChange={(e) => setCustomEnd(e.target.value)}
-                        className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-stone-200/80 bg-stone-50/50 text-xs font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition cursor-pointer"
-                      />
+                  <div
+                    onClick={() => setActiveDateTab('end')}
+                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                      activeDateTab === 'end'
+                        ? 'bg-white border-emerald-500 ring-2 ring-emerald-500/20 shadow-sm'
+                        : 'bg-white/80 border-stone-200 hover:border-stone-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider text-stone-400 mb-1">
+                      <span>{language === 'th' ? '2. วันที่สิ้นสุด (End Date)' : '2. End Date'}</span>
+                      {activeDateTab === 'end' && <span className="text-emerald-600 text-[10px]">● กำลังเลือก</span>}
                     </div>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center flex-shrink-0 font-black">
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                      <div className="text-sm font-black text-stone-900">
+                        {formatDisplayDate(customEnd)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Built-in Clean Calendar Grid */}
+                <div className="bg-white rounded-2xl p-4 border border-stone-200/80 shadow-2xs">
+                  {/* Calendar Navigation */}
+                  <div className="flex items-center justify-between mb-3 pb-2 border-b border-stone-100">
+                    <button
+                      type="button"
+                      onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
+                      className="w-8 h-8 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center justify-center transition cursor-pointer active:scale-95"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <div className="text-xs sm:text-sm font-black text-stone-900">
+                      {curMonthName} {curYearDisplay}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
+                      className="w-8 h-8 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center justify-center transition cursor-pointer active:scale-95"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Day Headers (Sun - Sat) */}
+                  <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-black uppercase text-stone-400 mb-1.5">
+                    <span>{language === 'th' ? 'อา' : 'Su'}</span>
+                    <span>{language === 'th' ? 'จ' : 'Mo'}</span>
+                    <span>{language === 'th' ? 'อ' : 'Tu'}</span>
+                    <span>{language === 'th' ? 'พ' : 'We'}</span>
+                    <span>{language === 'th' ? 'พฤ' : 'Th'}</span>
+                    <span>{language === 'th' ? 'ศ' : 'Fr'}</span>
+                    <span>{language === 'th' ? 'ส' : 'Sa'}</span>
+                  </div>
+
+                  {/* Calendar Days Cells */}
+                  <div className="grid grid-cols-7 gap-1">
+                    {calendarDays.map((day, idx) => {
+                      const isSelected = day.isStart || day.isEnd;
+
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleSelectCalendarDate(day.dateStr)}
+                          className={`h-8 sm:h-9 rounded-xl text-xs font-bold transition-all duration-150 flex items-center justify-center cursor-pointer relative ${
+                            isSelected
+                              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black shadow-sm scale-[1.04] z-10'
+                              : day.isInRange
+                              ? 'bg-emerald-50 text-emerald-900 font-extrabold'
+                              : day.isCurrentMonth
+                              ? 'hover:bg-stone-100 text-stone-800'
+                              : 'text-stone-300 hover:bg-stone-50'
+                          } ${day.isToday && !isSelected ? 'border border-emerald-400/80 font-black text-emerald-700' : ''}`}
+                        >
+                          {day.dayNum}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -439,35 +602,35 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShortcutRange('last7')}
-                    className="px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs"
+                    className="px-3 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs active:scale-95"
                   >
                     {language === 'th' ? '7 วันที่แล้ว' : 'Last 7 Days'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShortcutRange('thisWeek')}
-                    className="px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs"
+                    className="px-3 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs active:scale-95"
                   >
                     {language === 'th' ? 'สัปดาห์นี้' : 'This Week'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShortcutRange('thisMonth')}
-                    className="px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs"
+                    className="px-3 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs active:scale-95"
                   >
                     {language === 'th' ? 'เดือนนี้' : 'This Month'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShortcutRange('lastMonth')}
-                    className="px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs"
+                    className="px-3 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs active:scale-95"
                   >
                     {language === 'th' ? 'เดือนที่แล้ว' : 'Last Month'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShortcutRange('last30')}
-                    className="px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs"
+                    className="px-3 py-1 rounded-xl bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-900 border border-stone-200/80 text-[11px] font-bold transition whitespace-nowrap cursor-pointer shadow-2xs active:scale-95"
                   >
                     {language === 'th' ? '30 วันที่แล้ว' : 'Last 30 Days'}
                   </button>
@@ -476,12 +639,12 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
             )}
           </div>
 
-          {/* 4 Premium KPI Stat Cards Grid */}
+          {/* 4 Premium KPI Stat Cards Grid (Apple/Stripe Style) */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             
             {/* KPI 1: Total Sales */}
-            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/80 shadow-2xs relative overflow-hidden flex flex-col justify-between group hover:border-emerald-300 hover:shadow-md transition duration-200">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-400" />
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/80 shadow-2xs relative overflow-hidden flex flex-col justify-between group hover:border-emerald-400 hover:shadow-lg hover:shadow-emerald-500/10 transition-all duration-300">
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-400" />
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black uppercase tracking-wider text-stone-400">
                   {language === 'th' ? 'ยอดขายรวม' : 'Total Revenue'}
@@ -491,19 +654,19 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                 </div>
               </div>
               <div className="mt-3">
-                <div className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
-                  ฿{formatPrice(metrics.totalSales)}
+                <div className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight flex items-baseline gap-1">
+                  <span>฿{formatPrice(metrics.totalSales)}</span>
                 </div>
-                <div className="text-[11px] text-emerald-700 font-bold flex items-center gap-1.5 mt-1 bg-emerald-50 px-2 py-0.5 rounded-lg w-fit border border-emerald-200/60">
+                <div className="text-[11px] text-emerald-700 font-black flex items-center gap-1 mt-1.5 bg-emerald-50/90 px-2.5 py-0.5 rounded-lg w-fit border border-emerald-200/60">
                   <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                  <span>{metrics.totalBills} {language === 'th' ? 'บิลเสร็จสมบูรณ์' : 'completed bills'}</span>
+                  <span>{metrics.totalBills} {language === 'th' ? 'บิลเสร็จสิ้น' : 'bills'}</span>
                 </div>
               </div>
             </div>
 
             {/* KPI 2: Total Orders */}
-            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/80 shadow-2xs relative overflow-hidden flex flex-col justify-between group hover:border-orange-300 hover:shadow-md transition duration-200">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-amber-400" />
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/80 shadow-2xs relative overflow-hidden flex flex-col justify-between group hover:border-orange-400 hover:shadow-lg hover:shadow-orange-500/10 transition-all duration-300">
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-500 to-amber-400" />
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black uppercase tracking-wider text-stone-400">
                   {language === 'th' ? 'จำนวนออเดอร์' : 'Total Orders'}
@@ -516,15 +679,15 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                 <div className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
                   {metrics.totalBills} <span className="text-xs font-bold text-stone-400">{language === 'th' ? 'บิล' : 'bills'}</span>
                 </div>
-                <div className="text-[11px] text-orange-800 font-bold flex items-center gap-1.5 mt-1 bg-orange-50 px-2 py-0.5 rounded-lg w-fit border border-orange-200/60">
+                <div className="text-[11px] text-orange-800 font-bold flex items-center gap-1 mt-1.5 bg-orange-50/90 px-2.5 py-0.5 rounded-lg w-fit border border-orange-200/60">
                   <span>{language === 'th' ? 'ในรอบเวลาที่เลือก' : 'in timeframe'}</span>
                 </div>
               </div>
             </div>
 
             {/* KPI 3: Average Ticket Size */}
-            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/80 shadow-2xs relative overflow-hidden flex flex-col justify-between group hover:border-blue-300 hover:shadow-md transition duration-200">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-400" />
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/80 shadow-2xs relative overflow-hidden flex flex-col justify-between group hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300">
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 to-indigo-400" />
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black uppercase tracking-wider text-stone-400">
                   {language === 'th' ? 'ยอดเฉลี่ย / บิล' : 'Avg. Ticket Size'}
@@ -537,15 +700,15 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                 <div className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
                   ฿{formatPrice(metrics.avgTicket)}
                 </div>
-                <div className="text-[11px] text-blue-700 font-bold flex items-center gap-1.5 mt-1 bg-blue-50 px-2 py-0.5 rounded-lg w-fit border border-blue-200/60">
-                  <span>{language === 'th' ? 'ค่าเฉลี่ยต่อใบเสร็จ' : 'per receipt'}</span>
+                <div className="text-[11px] text-blue-700 font-bold flex items-center gap-1 mt-1.5 bg-blue-50/90 px-2.5 py-0.5 rounded-lg w-fit border border-blue-200/60">
+                  <span>{language === 'th' ? 'เฉลี่ยต่อโต๊ะ' : 'per receipt'}</span>
                 </div>
               </div>
             </div>
 
             {/* KPI 4: Payment Split with Progress Visualizer */}
-            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/80 shadow-2xs relative overflow-hidden flex flex-col justify-between group hover:border-purple-300 hover:shadow-md transition duration-200">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-pink-400" />
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/80 shadow-2xs relative overflow-hidden flex flex-col justify-between group hover:border-purple-400 hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-300">
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-purple-500 to-pink-400" />
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-black uppercase tracking-wider text-stone-400">
                   {language === 'th' ? 'ช่องทางชำระเงิน' : 'Payment Split'}
@@ -556,8 +719,8 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
               </div>
 
               <div className="mt-2 space-y-2">
-                {/* Visual Segmented Progress Bar */}
-                <div className="w-full h-2 bg-stone-100 rounded-full overflow-hidden flex">
+                {/* Segmented Progress Bar */}
+                <div className="w-full h-2.5 bg-stone-100 rounded-full overflow-hidden flex shadow-inner">
                   <div
                     style={{ width: `${metrics.promptpayPercent}%` }}
                     className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full transition-all duration-500"
@@ -572,15 +735,15 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
 
                 <div className="space-y-1 text-[11px]">
                   <div className="flex items-center justify-between font-bold">
-                    <span className="flex items-center gap-1 text-blue-700">
-                      <span className="w-2 h-2 rounded-full bg-blue-500" />
+                    <span className="flex items-center gap-1.5 text-blue-700">
+                      <span className="w-2 h-2 rounded-full bg-blue-500 shadow-xs" />
                       {language === 'th' ? 'พร้อมเพย์' : 'PromptPay'} ({metrics.promptpayCount})
                     </span>
                     <span className="font-black text-stone-800">฿{formatPrice(metrics.promptpaySales)}</span>
                   </div>
                   <div className="flex items-center justify-between font-bold">
-                    <span className="flex items-center gap-1 text-emerald-700">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="flex items-center gap-1.5 text-emerald-700">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs" />
                       {language === 'th' ? 'เงินสด' : 'Cash'} ({metrics.cashCount})
                     </span>
                     <span className="font-black text-stone-800">฿{formatPrice(metrics.cashSales)}</span>
@@ -593,8 +756,8 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
           {/* Section: Best Sellers & Peak Hours Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             
-            {/* Left Column: Top 5 Best Sellers with Ranking Badges & Progress */}
-            <div className="bg-white rounded-3xl p-5 border border-stone-200/90 shadow-2xs space-y-3.5">
+            {/* Left Column: Top 5 Best Sellers */}
+            <div className="bg-white rounded-3xl p-5 border border-stone-200/90 shadow-2xs space-y-4">
               <div className="flex items-center justify-between border-b border-stone-100 pb-3">
                 <h4 className="font-black text-stone-900 text-sm sm:text-base flex items-center gap-2">
                   <Award className="w-5 h-5 text-amber-500" />
@@ -618,7 +781,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                     return (
                       <div
                         key={idx}
-                        className="p-3 rounded-2xl bg-stone-50/80 border border-stone-200/60 hover:bg-orange-50/40 hover:border-orange-200 transition group"
+                        className="p-3 rounded-2xl bg-stone-50/70 border border-stone-200/60 hover:bg-orange-50/40 hover:border-orange-200 transition-all duration-200 group"
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -642,7 +805,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                                 alt={item.name}
                                 loading="lazy"
                                 decoding="async"
-                                className="w-10 h-10 rounded-xl object-cover border border-stone-200/80 flex-shrink-0"
+                                className="w-10 h-10 rounded-xl object-cover border border-stone-200/80 flex-shrink-0 shadow-2xs"
                               />
                             ) : (
                               <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-black text-xs flex-shrink-0">
@@ -652,7 +815,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
 
                             {/* Name & Revenue */}
                             <div className="min-w-0 flex-1">
-                              <h5 className="font-black text-stone-900 text-xs sm:text-sm truncate">
+                              <h5 className="font-black text-stone-900 text-xs sm:text-sm truncate group-hover:text-orange-600 transition-colors">
                                 {language === 'en' && item.nameEn ? item.nameEn : item.name}
                               </h5>
                               <div className="text-[11px] text-stone-400 font-bold flex items-center gap-1.5 mt-0.5">
@@ -671,10 +834,10 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                         </div>
 
                         {/* Relative Volume Progress Bar */}
-                        <div className="w-full bg-stone-200/60 h-1.5 rounded-full overflow-hidden mt-2.5">
+                        <div className="w-full bg-stone-200/60 h-1.5 rounded-full overflow-hidden mt-2.5 shadow-inner">
                           <div
                             style={{ width: `${relativePercent}%` }}
-                            className={`h-full rounded-full ${
+                            className={`h-full rounded-full transition-all duration-500 ${
                               idx === 0 ? 'bg-amber-500' : 'bg-orange-400'
                             }`}
                           />
@@ -686,8 +849,8 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
               )}
             </div>
 
-            {/* Right Column: Peak Hours 24-Hour Graph with Visualizer */}
-            <div className="bg-white rounded-3xl p-5 border border-stone-200/90 shadow-2xs space-y-3.5 flex flex-col justify-between">
+            {/* Right Column: Peak Hours 24-Hour Graph */}
+            <div className="bg-white rounded-3xl p-5 border border-stone-200/90 shadow-2xs space-y-4 flex flex-col justify-between">
               <div className="flex items-center justify-between border-b border-stone-100 pb-3">
                 <h4 className="font-black text-stone-900 text-sm sm:text-base flex items-center gap-2">
                   <Clock className="w-5 h-5 text-blue-500" />
@@ -695,7 +858,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                 </h4>
                 {metrics.peakHourSales > 0 && (
                   <span className="text-[11px] font-black text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-orange-200/60">
-                    <Flame className="w-3 h-3 text-orange-500" />
+                    <Flame className="w-3 h-3 text-orange-500 animate-pulse" />
                     {language === 'th' ? `พีคสุด: ${metrics.peakHourIndex}:00 น.` : `Peak: ${metrics.peakHourIndex}:00`}
                   </span>
                 )}
@@ -745,7 +908,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
 
               {/* Peak Hour Smart Suggestion Banner */}
               <div className="p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200/80 text-xs text-amber-950 font-bold flex items-center gap-2.5">
-                <span className="w-7 h-7 rounded-xl bg-amber-200/80 text-amber-800 flex items-center justify-center flex-shrink-0 text-sm">
+                <span className="w-7 h-7 rounded-xl bg-amber-200/80 text-amber-800 flex items-center justify-center flex-shrink-0 text-sm shadow-2xs">
                   💡
                 </span>
                 <span className="leading-snug text-[11px] sm:text-xs">
@@ -839,12 +1002,12 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
 
         </div>
 
-        {/* 3. Footer with Clean Controls & Totals */}
+        {/* 3. Footer with Clean Controls & Grand Total */}
         <div className="px-6 py-4 bg-white border-t border-stone-200/80 flex items-center justify-between flex-shrink-0">
           <div className="text-xs sm:text-sm font-bold text-stone-600 flex items-center gap-2">
             <span>{language === 'th' ? 'สรุปยอดทั้งหมด:' : 'Grand Total:'}</span>
             <span className="text-lg font-black text-emerald-600">฿{formatPrice(metrics.totalSales)}</span>
-            <span className="text-stone-400 text-xs">({metrics.totalBills} {language === 'th' ? 'บิล' : 'bills'})</span>
+            <span className="text-stone-400 text-xs font-bold">({metrics.totalBills} {language === 'th' ? 'บิล' : 'bills'})</span>
           </div>
           <button
             onClick={onClose}
