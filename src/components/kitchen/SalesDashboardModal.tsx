@@ -266,32 +266,6 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     return days;
   }, [calendarMonth, customStart, customEnd]);
 
-  // 4. Helper Handlers
-  const handleExportCSV = () => {
-    if (filteredOrders.length === 0) return;
-
-    const headers = ['Order Number', 'Table', 'Date Time', 'Items Count', 'Payment Method', 'Payment Status', 'Status', 'Total Price (THB)'];
-    const rows = filteredOrders.map((o) => [
-      o.orderNumber || '-',
-      o.tableNumber === 'TAKEAWAY' ? 'Takeaway' : `Table ${o.tableNumber || '-'}`,
-      new Date(o.createdAt).toLocaleString(language === 'th' ? 'th-TH' : 'en-US'),
-      (o.items || []).reduce((s, i) => s + (Number(i.quantity) || 1), 0),
-      o.paymentMethod || '-',
-      o.paymentStatus || '-',
-      o.status || '-',
-      o.totalPrice || 0,
-    ]);
-
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Sales_Report_${preset}_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const getPresetLabel = (p: TimePreset) => {
     switch (p) {
       case 'today': return language === 'th' ? 'วันนี้' : 'Today';
@@ -316,6 +290,114 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     } catch {
       return dateStr;
     }
+  };
+
+  // 4. Infographic-Structured CSV Report Export
+  const handleExportCSV = () => {
+    if (filteredOrders.length === 0) return;
+
+    const isTh = language === 'th';
+    const now = new Date();
+    const generatedDate = now.toLocaleString(isTh ? 'th-TH' : 'en-US');
+    const rangeLabel = preset === 'custom'
+      ? `${formatDisplayDate(customStart)} - ${formatDisplayDate(customEnd)} (${daysSelectedCount} ${isTh ? 'วัน' : 'days'})`
+      : getPresetLabel(preset);
+
+    const escapeCsv = (str: string | number | undefined | null) => {
+      const s = String(str ?? '');
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    };
+
+    const lines: string[] = [];
+
+    // Header Banner
+    lines.push(escapeCsv('════════════════════════════════════════════════════════════════════════════════════════'));
+    lines.push(escapeCsv(isTh ? '📊 รายงานสรุปผลประกอบการ & สถิติยอดขาย (EXECUTIVE SALES & BUSINESS REPORT)' : '📊 EXECUTIVE SALES & BUSINESS ANALYTICS REPORT'));
+    lines.push(escapeCsv('════════════════════════════════════════════════════════════════════════════════════════'));
+    lines.push(`${escapeCsv(isTh ? 'วันที่ออกรายงาน (Generated Date)' : 'Generated Date')},${escapeCsv(generatedDate)}`);
+    lines.push(`${escapeCsv(isTh ? 'รอบเวลาที่วิเคราะห์ (Timeframe)' : 'Selected Timeframe')},${escapeCsv(rangeLabel)}`);
+    lines.push(`${escapeCsv(isTh ? 'สถานะรายงาน (Report Status)' : 'Report Status')},${escapeCsv(isTh ? 'เสร็จสมบูรณ์ (Verified Data)' : 'Verified Realtime Data')}`);
+    lines.push('');
+
+    // Section 1: KPI Summary
+    lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
+    lines.push(escapeCsv(isTh ? '📌 1. สรุปตัวชี้วัดประสิทธิภาพหลัก (KEY PERFORMANCE INDICATORS)' : '📌 1. KEY PERFORMANCE INDICATORS (KPIs)'));
+    lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
+    lines.push(`${escapeCsv(isTh ? 'ตัวชี้วัด (Metric)' : 'Metric')},${escapeCsv(isTh ? 'มูลค่า (Value)' : 'Value')},${escapeCsv(isTh ? 'หน่วย (Unit)' : 'Unit')},${escapeCsv(isTh ? 'คำอธิบาย (Notes)' : 'Notes')}`);
+    lines.push(`${escapeCsv(isTh ? 'ยอดขายรวมสุทธิ (Total Revenue)' : 'Total Revenue')},${metrics.totalSales},${escapeCsv(isTh ? 'บาท (THB)' : 'THB')},${escapeCsv(isTh ? 'ยอดบิลทั้งหมดที่เสร็จสิ้น' : 'Total completed sales')}`);
+    lines.push(`${escapeCsv(isTh ? 'จำนวนออเดอร์ทั้งหมด (Total Orders)' : 'Total Orders')},${metrics.totalBills},${escapeCsv(isTh ? 'บิล (Bills)' : 'Bills')},${escapeCsv(isTh ? 'ออเดอร์ที่ไม่ถูกยกเลิก' : 'Non-cancelled orders')}`);
+    lines.push(`${escapeCsv(isTh ? 'ยอดเฉลี่ยต่อบิล (Avg. Ticket Size)' : 'Average Ticket Size')},${metrics.avgTicket},${escapeCsv(isTh ? 'บาท / บิล (THB/Bill)' : 'THB/Bill')},${escapeCsv(isTh ? 'ค่าเฉลี่ยการใช้จ่ายต่อโต๊ะ' : 'Average spend per table')}`);
+    lines.push(`${escapeCsv(isTh ? 'ยอดชำระด้วยพร้อมเพย์ (PromptPay)' : 'PromptPay Revenue')},${metrics.promptpaySales},${escapeCsv(isTh ? 'บาท (THB)' : 'THB')},${escapeCsv(`${metrics.promptpayPercent}% (${metrics.promptpayCount} ${isTh ? 'บิล' : 'bills'})`)}`);
+    lines.push(`${escapeCsv(isTh ? 'ยอดชำระด้วยเงินสด (Cash)' : 'Cash Revenue')},${metrics.cashSales},${escapeCsv(isTh ? 'บาท (THB)' : 'THB')},${escapeCsv(`${metrics.cashPercent}% (${metrics.cashCount} ${isTh ? 'บิล' : 'bills'})`)}`);
+    lines.push('');
+
+    // Section 2: Top Best Sellers
+    lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
+    lines.push(escapeCsv(isTh ? '🏆 2. 5 อันดับเมนูขายดีที่สุด (TOP 5 BEST SELLING MENU ITEMS)' : '🏆 2. TOP 5 BEST SELLING DISHES'));
+    lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
+    lines.push(`${escapeCsv(isTh ? 'อันดับ (Rank)' : 'Rank')},${escapeCsv(isTh ? 'ชื่อเมนู (Menu Name)' : 'Menu Name (TH)')},${escapeCsv(isTh ? 'ชื่อภาษาอังกฤษ (English Name)' : 'English Name')},${escapeCsv(isTh ? 'จำนวนที่ขายได้ (Qty Sold)' : 'Qty Sold')},${escapeCsv(isTh ? 'ยอดขายรวม (Total Revenue THB)' : 'Total Revenue (THB)')},${escapeCsv(isTh ? 'สัดส่วนยอดขาย (% Share)' : '% Revenue Share')}`);
+    metrics.topItems.forEach((item, idx) => {
+      const share = metrics.totalSales > 0 ? ((item.revenue / metrics.totalSales) * 100).toFixed(1) : '0';
+      lines.push(`${escapeCsv(`#${idx + 1}`)},${escapeCsv(item.name)},${escapeCsv(item.nameEn || '-')},${item.count},${item.revenue},${escapeCsv(`${share}%`)}`);
+    });
+    lines.push('');
+
+    // Section 3: 24-Hour Hourly Peak Traffic
+    lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
+    lines.push(escapeCsv(isTh ? '⏰ 3. สถิติยอดขายรายชั่วโมง 24 ชม. (24-HOUR PEAK HOURLY TRAFFIC)' : '⏰ 3. 24-HOUR HOURLY TRAFFIC & REVENUE'));
+    lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
+    lines.push(`${escapeCsv(isTh ? 'ช่วงเวลา (Time Window)' : 'Time Window')},${escapeCsv(isTh ? 'จำนวนบิล (Orders)' : 'Orders Count')},${escapeCsv(isTh ? 'ยอดขาย (Revenue THB)' : 'Revenue (THB)')},${escapeCsv(isTh ? 'ระดับความหนาแน่น (Traffic Level)' : 'Traffic Level')}`);
+    metrics.hourlySales.forEach((sales, hr) => {
+      if (sales > 0 || metrics.hourlyCounts[hr] > 0) {
+        const hrStart = String(hr).padStart(2, '0') + ':00';
+        const hrEnd = String(hr).padStart(2, '0') + ':59';
+        const isPeak = sales === metrics.maxHourlySales && sales > 0;
+        const level = isPeak ? (isTh ? '🔥 ช่วงพีคสูงสุด (Peak Traffic)' : '🔥 PEAK TRAFFIC') : (isTh ? 'ปกติ (Normal)' : 'Normal');
+        lines.push(`${escapeCsv(`${hrStart} - ${hrEnd}`)},${metrics.hourlyCounts[hr]},${sales},${escapeCsv(level)}`);
+      }
+    });
+    lines.push('');
+
+    // Section 4: Detailed Order Receipts Log
+    lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
+    lines.push(escapeCsv(isTh ? '🧾 4. รายการบิลออเดอร์ทั้งหมด (DETAILED ORDER RECEIPTS LOG)' : '🧾 4. DETAILED ORDER RECEIPTS LOG'));
+    lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
+    lines.push(`${escapeCsv(isTh ? 'เลขออเดอร์ (Order #)' : 'Order #')},${escapeCsv(isTh ? 'โต๊ะ/ประเภท (Table/Type)' : 'Table/Type')},${escapeCsv(isTh ? 'วันและเวลา (Date & Time)' : 'Date & Time')},${escapeCsv(isTh ? 'รายการอาหาร (Items Ordered)' : 'Items Ordered')},${escapeCsv(isTh ? 'วิธีชำระเงิน (Payment Method)' : 'Payment Method')},${escapeCsv(isTh ? 'สถานะ (Status)' : 'Status')},${escapeCsv(isTh ? 'ยอดสุทธิ (Total THB)' : 'Total (THB)')}`);
+
+    filteredOrders.forEach((o) => {
+      const itemsList = (o.items || [])
+        .map((i) => `${(isTh ? i.menuItem?.name : (i.menuItem?.nameEn || i.menuItem?.name)) || 'Item'} (x${i.quantity || 1})`)
+        .join('; ');
+      
+      const payMethodLabel = o.paymentMethod === 'promptpay' ? (isTh ? 'พร้อมเพย์ (PromptPay)' : 'PromptPay') : (isTh ? 'เงินสด (Cash)' : 'Cash');
+      const statusLabel = o.status === 'completed' ? (isTh ? 'เสร็จสิ้น' : 'Completed') : o.status === 'ready' ? (isTh ? 'พร้อมเสิร์ฟ' : 'Ready') : (isTh ? 'กำลังทำ' : 'Cooking');
+      const tableLabel = o.tableNumber === 'TAKEAWAY' ? (isTh ? 'สั่งกลับบ้าน (Takeaway)' : 'Takeaway') : `${isTh ? 'โต๊ะ' : 'Table'} ${o.tableNumber || '-'}`;
+
+      lines.push([
+        escapeCsv(o.orderNumber || '-'),
+        escapeCsv(tableLabel),
+        escapeCsv(new Date(o.createdAt).toLocaleString(isTh ? 'th-TH' : 'en-US')),
+        escapeCsv(itemsList),
+        escapeCsv(payMethodLabel),
+        escapeCsv(statusLabel),
+        o.totalPrice || 0,
+      ].join(','));
+    });
+
+    // Generate Downloadable CSV with UTF-8 BOM
+    const csvContent = '\uFEFF' + lines.join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Sales_Analytics_Infographic_${preset}_${now.toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleSelectCalendarDate = (dateStr: string) => {
@@ -479,7 +561,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                     >
                       <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-stone-400 mb-0.5">
                         <span>{language === 'th' ? '1. วันที่เริ่มต้น' : '1. Start Date'}</span>
-                        {activeDateTab === 'start' && <span className="text-emerald-600 font-bold">● กำลังเลือก</span>}
+                        {activeDateTab === 'start' && <span className="text-emerald-600 font-bold">● {language === 'th' ? 'กำลังเลือก' : 'Selecting'}</span>}
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="w-3.5 h-3.5 text-emerald-600" />
@@ -500,7 +582,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                     >
                       <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-stone-400 mb-0.5">
                         <span>{language === 'th' ? '2. วันที่สิ้นสุด' : '2. End Date'}</span>
-                        {activeDateTab === 'end' && <span className="text-emerald-600 font-bold">● กำลังเลือก</span>}
+                        {activeDateTab === 'end' && <span className="text-emerald-600 font-bold">● {language === 'th' ? 'กำลังเลือก' : 'Selecting'}</span>}
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="w-3.5 h-3.5 text-teal-600" />
