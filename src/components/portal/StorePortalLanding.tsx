@@ -7,16 +7,12 @@ import { Lock, Mail, KeyRound, AlertCircle, CheckCircle2, ArrowRight, Sparkles, 
 interface StorePortalLandingProps {
   storeConfig: StoreConfig;
   language: Language;
-  onEnterSimulator: (tableNum?: string) => void;
-  onEnterStaffDemo?: () => void;
   onLoginSuccess?: () => void;
 }
 
 export const StorePortalLanding: React.FC<StorePortalLandingProps> = ({
   storeConfig,
   language,
-  onEnterSimulator,
-  onEnterStaffDemo,
   onLoginSuccess,
 }) => {
   const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
@@ -368,29 +364,6 @@ export const StorePortalLanding: React.FC<StorePortalLandingProps> = ({
             </button>
           </form>
         )}
-
-        {/* Clean subtle simulator links at bottom */}
-        <div className="pt-3 border-t border-stone-100 flex flex-col sm:flex-row items-center justify-center gap-2 text-center">
-          <button
-            type="button"
-            onClick={() => onEnterSimulator('01')}
-            className="text-xs font-bold text-stone-600 hover:text-orange-600 transition inline-flex items-center gap-1.5 cursor-pointer py-1.5 px-3 rounded-xl hover:bg-orange-50 active:scale-95"
-          >
-            <span>🧪 {language === 'th' ? 'ทดสอบสั่งอาหาร (โต๊ะ 01)' : 'Test Customer (Table 01)'}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-          
-          <span className="hidden sm:inline text-stone-300">•</span>
-
-          <button
-            type="button"
-            onClick={() => onEnterStaffDemo ? onEnterStaffDemo() : onEnterSimulator('01')}
-            className="text-xs font-bold text-emerald-700 hover:text-emerald-800 transition inline-flex items-center gap-1.5 cursor-pointer py-1.5 px-3 rounded-xl bg-emerald-50/80 hover:bg-emerald-100/80 active:scale-95"
-          >
-            <span>🧑‍🍳 {language === 'th' ? 'ทดลองเข้าจอครัว (Demo Staff)' : 'Demo Kitchen & Staff'}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
       </div>
 
       {/* Security Note */}

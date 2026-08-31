@@ -1109,11 +1109,6 @@ function AppContent() {
               onLoginSuccess={() => {
                 setActiveRole('kitchen');
               }}
-              onEnterSimulator={(tbl) => {
-                if (tbl) setTableNumber(tbl);
-                setIsSimulatorMode(true);
-                setActiveRole('customer');
-              }}
             />
           )}
 
