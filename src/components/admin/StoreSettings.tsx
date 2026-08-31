@@ -268,7 +268,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
                 value={formData.companyLegalName || ''}
                 onChange={(e) => setFormData({ ...formData, companyLegalName: e.target.value })}
                 className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm placeholder:text-stone-400 placeholder:font-normal"
-                placeholder="เช่น บริษัท ตัวอย่าง จำกัด หรือ นายสมชาย ใจดี"
+                placeholder="เช่น บริษัท ตัวอย่าง จำกัด"
               />
             </div>
 

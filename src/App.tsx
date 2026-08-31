@@ -165,6 +165,11 @@ function AppContent() {
         .maybeSingle();
 
       if (!error && existing) {
+        const isDefaultMockAddress = existing.address === '123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110';
+        const isDefaultMockTaxId = existing.tax_id === '0105566012345';
+        const isDefaultMockPhone = existing.phone === '02-123-4567';
+        const isDefaultMockLegal = existing.company_legal_name === 'บริษัท คาเฟ่ ออเดอร์ (ไทยแลนด์) จำกัด';
+
         const mappedConfig: StoreConfig = {
           ...initialStoreConfig,
           id: existing.id,
@@ -173,16 +178,16 @@ function AppContent() {
           nameEn: existing.name_en,
           tagline: existing.tagline,
           taglineEn: existing.tagline_en,
-          logoUrl: existing.logo_url,
+          logoUrl: existing.logo_url || CAFE_ORDER_LOGO_DATA_URI,
           promptpayNumber: existing.promptpay_number,
           promptpayName: existing.promptpay_name,
           openTime: existing.open_time,
           tableCount: existing.table_count,
-          taxId: existing.tax_id || initialStoreConfig.taxId,
-          address: existing.address || initialStoreConfig.address,
-          branchNumber: existing.branch_number || initialStoreConfig.branchNumber,
-          phone: existing.phone || initialStoreConfig.phone,
-          companyLegalName: existing.company_legal_name || initialStoreConfig.companyLegalName,
+          taxId: isDefaultMockTaxId ? '' : (existing.tax_id || ''),
+          address: isDefaultMockAddress ? '' : (existing.address || ''),
+          branchNumber: existing.branch_number || '00000 (สำนักงานใหญ่)',
+          phone: isDefaultMockPhone ? '' : (existing.phone || ''),
+          companyLegalName: isDefaultMockLegal ? '' : (existing.company_legal_name || ''),
         };
         return { shopId: existing.id, config: mappedConfig };
       }
@@ -200,8 +205,11 @@ function AppContent() {
         name: `ร้าน ${userPrefix}`,
         nameEn: `${userPrefix}'s Cafe`,
         promptpayName: `${userPrefix}`,
-        companyLegalName: `บริษัท ${userPrefix} จำกัด`,
-        phone: initialStoreConfig.phone,
+        companyLegalName: '',
+        phone: '',
+        taxId: '',
+        address: '',
+        branchNumber: '00000 (สำนักงานใหญ่)',
       };
 
       // 3. Insert store_config
@@ -319,21 +327,29 @@ function AppContent() {
         .maybeSingle();
 
       if (configData) {
+        const isDefaultMockAddress = configData.address === '123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110';
+        const isDefaultMockTaxId = configData.tax_id === '0105566012345';
+        const isDefaultMockPhone = configData.phone === '02-123-4567';
+        const isDefaultMockLegal = configData.company_legal_name === 'บริษัท คาเฟ่ ออเดอร์ (ไทยแลนด์) จำกัด';
+
         const mappedConfig: StoreConfig = {
+          ...initialStoreConfig,
           id: configData.id,
           userId: configData.user_id,
           name: configData.name,
           nameEn: configData.name_en,
           tagline: configData.tagline,
           taglineEn: configData.tagline_en,
-          logoUrl: configData.logo_url,
+          logoUrl: configData.logo_url || CAFE_ORDER_LOGO_DATA_URI,
           promptpayNumber: configData.promptpay_number,
           promptpayName: configData.promptpay_name,
           openTime: configData.open_time,
           tableCount: configData.table_count,
-          taxId: configData.tax_id,
-          address: configData.address,
-          branchNumber: configData.branch_number,
+          taxId: isDefaultMockTaxId ? '' : (configData.tax_id || ''),
+          address: isDefaultMockAddress ? '' : (configData.address || ''),
+          branchNumber: configData.branch_number || '00000 (สำนักงานใหญ่)',
+          phone: isDefaultMockPhone ? '' : (configData.phone || ''),
+          companyLegalName: isDefaultMockLegal ? '' : (configData.company_legal_name || ''),
         };
         setStoreConfig(mappedConfig);
         syncManager.saveStoreConfig(mappedConfig, targetShopId);
@@ -673,6 +689,8 @@ function AppContent() {
         tax_id: config.taxId,
         address: config.address,
         branch_number: config.branchNumber,
+        phone: config.phone,
+        company_legal_name: config.companyLegalName,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'id' });
       if (error) throw error;
