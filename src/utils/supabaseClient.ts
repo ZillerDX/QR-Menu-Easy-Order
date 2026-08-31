@@ -43,6 +43,25 @@ export const authService = {
     return data;
   },
 
+  // Request Password Reset Link via Email
+  async resetPasswordForEmail(email: string) {
+    const redirectUrl = window.location.origin + window.location.pathname;
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl,
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  // Update / Set New Password
+  async updatePassword(password: string) {
+    const { data, error } = await supabase.auth.updateUser({
+      password,
+    });
+    if (error) throw error;
+    return data;
+  },
+
   // Sign Out
   async signOut() {
     const { error } = await supabase.auth.signOut();
@@ -56,9 +75,9 @@ export const authService = {
   },
 
   // Listen to Auth State Changes
-  onAuthStateChange(callback: (user: User | null, session: Session | null) => void) {
-    return supabase.auth.onAuthStateChange((_event, session) => {
-      callback(session?.user ?? null, session);
+  onAuthStateChange(callback: (user: User | null, session: Session | null, event?: string) => void) {
+    return supabase.auth.onAuthStateChange((event, session) => {
+      callback(session?.user ?? null, session, event);
     });
   },
 };

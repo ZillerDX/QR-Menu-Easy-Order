@@ -23,6 +23,7 @@ const QRGenerator = React.lazy(() => import('./components/table-qr/QRGenerator')
 const StorePortalLanding = React.lazy(() => import('./components/portal/StorePortalLanding').then((m) => ({ default: m.StorePortalLanding })));
 const ReceiptModal = React.lazy(() => import('./components/common/ReceiptModal').then((m) => ({ default: m.ReceiptModal })));
 const OrderCountdownModal = React.lazy(() => import('./components/customer/OrderCountdownModal').then((m) => ({ default: m.OrderCountdownModal })));
+const UpdatePasswordModal = React.lazy(() => import('./components/portal/UpdatePasswordModal').then((m) => ({ default: m.UpdatePasswordModal })));
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -153,6 +154,7 @@ function AppContent() {
   const [isOrderTrackerOpen, setIsOrderTrackerOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [isUpdatePasswordOpen, setIsUpdatePasswordOpen] = useState(false);
   const [errorToast, setErrorToast] = useState<string | null>(null);
 
   // Dynamically update document title based on language & store config
@@ -434,6 +436,10 @@ function AppContent() {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       
+      if (typeof window !== 'undefined' && window.location.hash.includes('type=recovery')) {
+        setIsUpdatePasswordOpen(true);
+      }
+
       const params = new URLSearchParams(window.location.search);
       const tableParam = params.get('table');
       const roleParam = params.get('role');
@@ -462,7 +468,10 @@ function AppContent() {
       setIsAuthReady(true);
     });
 
-    const { data: authListener } = authService.onAuthStateChange(async (newUser) => {
+    const { data: authListener } = authService.onAuthStateChange(async (newUser, _session, event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsUpdatePasswordOpen(true);
+      }
       setUser(newUser);
       if (newUser && !hasTableParam) {
         setActiveRole('kitchen');
@@ -1373,6 +1382,24 @@ function AppContent() {
           order={receiptOrder}
           storeConfig={storeConfig}
           language={language}
+        />
+
+        {/* Set New Password Modal upon Password Recovery */}
+        <UpdatePasswordModal
+          isOpen={isUpdatePasswordOpen}
+          language={language}
+          onClose={() => {
+            setIsUpdatePasswordOpen(false);
+            if (typeof window !== 'undefined' && window.location.hash.includes('type=recovery')) {
+              window.history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
+          }}
+          onSuccess={() => {
+            setIsUpdatePasswordOpen(false);
+            if (typeof window !== 'undefined' && window.location.hash.includes('type=recovery')) {
+              window.history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
+          }}
         />
       </React.Suspense>
 
