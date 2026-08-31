@@ -11,7 +11,7 @@ export const initialStoreConfig: StoreConfig = {
   promptpayNumber: "",
   promptpayName: "คาเฟ่ ออเดอร์ (Cafe Order)",
   openTime: "08:00 - 22:00 น.",
-  tableCount: 15,
+  tableCount: 50,
   taxId: "",
   address: "",
   branchNumber: "00000 (สำนักงานใหญ่)",

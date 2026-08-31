@@ -1294,7 +1294,11 @@ function AppContent() {
 
           {/* VIEW 5: TABLE QR GENERATOR */}
           {activeRole === 'qr' && user && (
-            <QRGenerator storeConfig={storeConfig} language={language} />
+            <QRGenerator
+              storeConfig={storeConfig}
+              language={language}
+              onUpdateTableCount={(newCount) => handleSaveStoreConfig({ ...storeConfig, tableCount: newCount })}
+            />
           )}
         </React.Suspense>
       </main>

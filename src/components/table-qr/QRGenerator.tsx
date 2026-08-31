@@ -7,9 +7,10 @@ import { t } from '../../utils/i18n';
 interface QRGeneratorProps {
   storeConfig: StoreConfig;
   language: Language;
+  onUpdateTableCount?: (count: number) => void;
 }
 
-export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language }) => {
+export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language, onUpdateTableCount }) => {
   const [selectedTable, setSelectedTable] = useState('01');
   const [viewMode, setViewMode] = useState<'single' | 'all'>('single');
   const [selectedRange, setSelectedRange] = useState<string>('all');
@@ -19,7 +20,23 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [batchQrUrls, setBatchQrUrls] = useState<{ [table: string]: string }>({});
 
-  const tableCount = Math.min(50, Math.max(1, storeConfig.tableCount || 15));
+  const [activeTableCount, setActiveTableCount] = useState<number>(() => {
+    return Math.min(50, Math.max(1, storeConfig.tableCount || 50));
+  });
+
+  useEffect(() => {
+    if (storeConfig.tableCount && storeConfig.tableCount !== activeTableCount) {
+      setActiveTableCount(Math.min(50, Math.max(1, storeConfig.tableCount)));
+    }
+  }, [storeConfig.tableCount]);
+
+  const handleSetTableCount = (count: number) => {
+    const clamped = Math.min(50, Math.max(1, count));
+    setActiveTableCount(clamped);
+    onUpdateTableCount?.(clamped);
+  };
+
+  const tableCount = activeTableCount;
   const shopSlug = storeConfig.id || 'cafe-order';
 
   // Build list of all tables: 01 to tableCount + TAKEAWAY
@@ -167,10 +184,10 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
         <div>
           <h2 className="text-xl font-black text-stone-900 flex items-center gap-2">
             <QrCode className="w-6 h-6 text-orange-500 flex-shrink-0" />
-            <span>{t('qrTitle', language)} (1 - {tableCount} {language === 'th' ? 'โต๊ะ' : 'Tables'})</span>
+            <span>{t('qrTitle', language)} ({language === 'th' ? `รองรับ 1 - 50 โต๊ะ` : `1 - 50 Tables`})</span>
           </h2>
           <p className="text-xs text-stone-500 mt-1">
-            {t('qrSubtitle', language)} • {language === 'th' ? `รองรับสูงสุด 50 โต๊ะ พร้อมรหัสป้องกันการสั่งข้ามร้าน` : `Supports up to 50 tables with isolated store routing`}
+            {t('qrSubtitle', language)} • {language === 'th' ? `ปัจจุบันเปิดใช้งาน ${tableCount} โต๊ะ` : `Currently active: ${tableCount} tables`}
           </p>
         </div>
 
@@ -198,6 +215,45 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
               <span>{language === 'th' ? `ดูทั้งหมด (${tableCount} โต๊ะ)` : `All Tables (${tableCount})`}</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Table Capacity Quick Selector (Hidden on Print) */}
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/90 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 print:hidden no-print">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center flex-shrink-0 font-black text-base shadow-sm">
+            {activeTableCount}
+          </div>
+          <div>
+            <h3 className="font-black text-stone-900 text-xs sm:text-sm flex items-center gap-2">
+              <span>{language === 'th' ? 'จำนวนโต๊ะที่ต้องการสร้างในร้าน:' : 'Store Table Capacity:'}</span>
+              <span className="text-orange-600 font-extrabold bg-orange-50 px-2 py-0.5 rounded-lg border border-orange-200">
+                {activeTableCount} {language === 'th' ? 'โต๊ะ' : 'Tables'}
+              </span>
+            </h3>
+            <p className="text-[11px] text-stone-500 mt-0.5">
+              {language === 'th' ? 'กดเลือกจำนวนโต๊ะด้านขวาเพื่อขยายสร้าง QR Code สูงสุด 50 โต๊ะได้ทันที' : 'Click preset to expand or adjust table QR codes up to 50 tables'}
+            </p>
+          </div>
+        </div>
+
+        {/* Presets */}
+        <div className="flex items-center gap-1.5 flex-wrap w-full md:w-auto justify-start md:justify-end">
+          <span className="text-[11px] font-bold text-stone-400 mr-1">{language === 'th' ? 'เปลี่ยนเป็น:' : 'Set to:'}</span>
+          {[10, 15, 20, 30, 40, 50].map((num) => (
+            <button
+              key={num}
+              type="button"
+              onClick={() => handleSetTableCount(num)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
+                activeTableCount === num
+                  ? 'bg-orange-500 text-white shadow-sm shadow-orange-500/20'
+                  : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+              }`}
+            >
+              {num} {language === 'th' ? 'โต๊ะ' : 'T'}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -272,7 +328,22 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
 
                 {/* Custom Dropdown Menu Items */}
                 {isDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-xl border border-stone-200/90 p-1.5 z-50 max-h-72 w-52 overflow-y-auto no-scrollbar animate-in zoom-in-95 duration-150 space-y-0.5">
+                  <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-xl border border-stone-200/90 p-1.5 z-50 max-h-72 w-60 overflow-y-auto no-scrollbar animate-in zoom-in-95 duration-150 space-y-0.5">
+                    {activeTableCount < 50 && (
+                      <div className="p-1 mb-1 border-b border-stone-100">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleSetTableCount(50);
+                          }}
+                          className="w-full py-2 px-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-xs cursor-pointer hover:opacity-95 transition"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>{language === 'th' ? '⚡ ขยายเป็น 50 โต๊ะทันที' : '⚡ Expand to 50 Tables'}</span>
+                        </button>
+                      </div>
+                    )}
+
                     {allTableList.map((tbl) => {
                       const isSelected = selectedTable === tbl;
                       return (
@@ -311,20 +382,28 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language 
 
             {/* Quick table jump pills */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              {['01', '05', '10', '15', '20', '30', '40', '50'].filter((num) => parseInt(num, 10) <= tableCount).map((num) => (
-                <button
-                  key={num}
-                  type="button"
-                  onClick={() => setSelectedTable(num)}
-                  className={`px-2.5 py-1 rounded-xl text-[11px] font-black transition cursor-pointer ${
-                    selectedTable === num
-                      ? 'bg-stone-900 text-white'
-                      : 'bg-stone-100 hover:bg-stone-200 text-stone-600'
-                  }`}
-                >
-                  {language === 'th' ? 'โต๊ะ' : 'T'}{num}
-                </button>
-              ))}
+              {['01', '05', '10', '15', '20', '30', '40', '50'].map((num) => {
+                const numVal = parseInt(num, 10);
+                return (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => {
+                      if (numVal > activeTableCount) {
+                        handleSetTableCount(numVal);
+                      }
+                      setSelectedTable(num);
+                    }}
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-black transition cursor-pointer ${
+                      selectedTable === num
+                        ? 'bg-stone-900 text-white'
+                        : 'bg-stone-100 hover:bg-stone-200 text-stone-600'
+                    }`}
+                  >
+                    {language === 'th' ? 'โต๊ะ' : 'T'}{num}
+                  </button>
+                );
+              })}
               <button
                 type="button"
                 onClick={() => setSelectedTable('TAKEAWAY')}
