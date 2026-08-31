@@ -117,7 +117,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         {cartItem.selectedOptions.map((opt, i) => (
                           <div key={i} className="flex items-center gap-1">
                             <span className="text-stone-400">•</span>
-                            <span className="leading-tight">{opt.choiceName}</span>
+                            <span className="leading-tight">
+                              {opt.choiceName === 'หวาน 25%' ? 'หวาน (25%)' : opt.choiceName}
+                            </span>
                             {opt.priceDelta > 0 && (
                               <span className="text-orange-600 font-bold whitespace-nowrap flex-shrink-0 ml-1">
                                 (+฿{opt.priceDelta})

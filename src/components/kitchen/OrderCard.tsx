@@ -239,7 +239,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                       key={i}
                       className="text-[11px] bg-stone-100 text-stone-700 border border-stone-200/70 px-2 py-0.5 rounded-md font-bold"
                     >
-                      {opt.choiceName}
+                      {opt.choiceName === 'หวาน 25%' ? 'หวาน (25%)' : opt.choiceName}
                     </span>
                   ))}
                 </div>

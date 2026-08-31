@@ -220,23 +220,46 @@ class RealtimeSyncManager {
     return updated;
   }
 
+  private sanitizeMenuItems(items: MenuItem[], shopId: string): MenuItem[] {
+    return items.map((item) => ({
+      ...item,
+      storeId: item.storeId || shopId,
+      optionGroups: item.optionGroups?.map((group) => ({
+        ...group,
+        choices: group.choices?.map((choice) => {
+          if (choice.name === 'หวาน 25%' || (choice.id === 's-25' && choice.name === 'หวาน 25%')) {
+            return { ...choice, name: 'หวาน (25%)' };
+          }
+          return choice;
+        }),
+      })),
+    }));
+  }
+
   // --- Menu Items ---
   getMenuItems(shopId = DEFAULT_SHOP_ID): MenuItem[] {
     try {
       const data = safeStorage.getItem(getMenuKey(shopId));
       if (data) {
         const parsed: MenuItem[] = JSON.parse(data);
-        return parsed.map((item) => ({ ...item, storeId: item.storeId || shopId }));
+        const sanitized = this.sanitizeMenuItems(parsed, shopId);
+        if (data.includes('หวาน 25%')) {
+          safeStorage.setItem(getMenuKey(shopId), JSON.stringify(sanitized));
+        }
+        return sanitized;
       }
-      return initialMenuItems.map((item) => ({ ...item, storeId: shopId }));
+      const initial = initialMenuItems.map((item) => ({ ...item, storeId: shopId }));
+      const sanitized = this.sanitizeMenuItems(initial, shopId);
+      return sanitized;
     } catch {
-      return initialMenuItems.map((item) => ({ ...item, storeId: shopId }));
+      return this.sanitizeMenuItems(initialMenuItems.map((item) => ({ ...item, storeId: shopId })), shopId);
     }
   }
 
   setMenuItems(items: MenuItem[], shopId = DEFAULT_SHOP_ID): void {
-    safeStorage.setItem(getMenuKey(shopId), JSON.stringify(items));
-    this.broadcast({ type: 'MENU_UPDATED', payload: items, storeId: shopId });
+    const sanitized = this.sanitizeMenuItems(items, shopId);
+    safeStorage.setItem(getMenuKey(shopId), JSON.stringify(sanitized));
+    this.broadcast({ type: 'MENU_UPDATED', payload: sanitized, storeId: shopId });
   }
 
   saveMenuItem(item: MenuItem, shopId = DEFAULT_SHOP_ID): MenuItem[] {

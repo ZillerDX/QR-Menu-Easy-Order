@@ -248,7 +248,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
                     </div>
                     {item.selectedOptions && item.selectedOptions.length > 0 && (
                       <p className="text-[11px] text-stone-400 font-medium pl-7">
-                        {item.selectedOptions.map((o) => o.choiceName).join(', ')}
+                        {item.selectedOptions.map((o) => (o.choiceName === 'หวาน 25%' ? 'หวาน (25%)' : o.choiceName)).join(', ')}
                       </p>
                     )}
                     {item.specialNote && (

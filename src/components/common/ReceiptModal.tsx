@@ -427,7 +427,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                       <div className="pl-4 text-[10px] text-stone-500 print:text-black space-y-0.5">
                         {item.selectedOptions.map((opt, i) => (
                           <div key={i} className="flex justify-between">
-                            <span>• {opt.choiceName}</span>
+                            <span>• {opt.choiceName === 'หวาน 25%' ? 'หวาน (25%)' : opt.choiceName}</span>
                             {opt.priceDelta > 0 && <span>+฿{opt.priceDelta * item.quantity}</span>}
                           </div>
                         ))}
@@ -613,7 +613,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                           {item.menuItem.nameEn && <p className="text-[10px] text-stone-500">{item.menuItem.nameEn}</p>}
                           {item.selectedOptions && item.selectedOptions.length > 0 && (
                             <p className="text-[10.5px] text-stone-600 pt-0.5">
-                              {item.selectedOptions.map((o) => o.choiceName).join(', ')}
+                              {item.selectedOptions.map((o) => (o.choiceName === 'หวาน 25%' ? 'หวาน (25%)' : o.choiceName)).join(', ')}
                             </p>
                           )}
                         </td>

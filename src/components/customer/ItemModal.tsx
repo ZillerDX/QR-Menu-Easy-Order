@@ -227,7 +227,9 @@ export const ItemModal: React.FC<ItemModalProps> = ({
                             )}
                           </div>
                           <span className="leading-snug">
-                            {language === 'en' && choice.nameEn ? choice.nameEn : choice.name}
+                            {language === 'en' && choice.nameEn 
+                              ? choice.nameEn 
+                              : (choice.name === 'หวาน 25%' ? 'หวาน (25%)' : choice.name)}
                           </span>
                         </div>
 
