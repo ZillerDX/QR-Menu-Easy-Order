@@ -154,6 +154,13 @@ function AppContent() {
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [errorToast, setErrorToast] = useState<string | null>(null);
 
+  // Dynamically update document title based on language & store config
+  useEffect(() => {
+    const shopName = language === 'en' ? (storeConfig.nameEn || storeConfig.name) : storeConfig.name;
+    const shopTagline = language === 'en' ? (storeConfig.taglineEn || storeConfig.tagline) : storeConfig.tagline;
+    document.title = `${shopName} - ${shopTagline || (language === 'en' ? 'Smart Ordering System' : 'ระบบสั่งอาหาร')}`;
+  }, [language, storeConfig.name, storeConfig.nameEn, storeConfig.tagline, storeConfig.taglineEn]);
+
   // Auto-provision or resolve user's store from Supabase
   const resolveUserStore = useCallback(async (currentUser: User): Promise<{ shopId: string; config: StoreConfig }> => {
     try {

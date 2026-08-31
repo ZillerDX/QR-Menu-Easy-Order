@@ -400,7 +400,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
                         : 'bg-stone-100 hover:bg-stone-200 text-stone-600'
                     }`}
                   >
-                    {language === 'th' ? 'โต๊ะ' : 'T'}{num}
+                    {language === 'th' ? `โต๊ะ ${num}` : `Table ${num}`}
                   </button>
                 );
               })}
@@ -450,7 +450,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
               {/* Verified Store Security Stamp on Card */}
               <div className="w-full pt-2 border-t border-stone-100 print:border-stone-400 flex items-center justify-center gap-1.5 text-[10.5px] font-bold text-stone-500 print:text-black">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 print:text-black" />
-                <span>รหัสร้านค้า: <span className="font-mono font-black">{shopSlug}</span> • ออเดอร์ตรงสู่ร้าน</span>
+                <span>{language === 'th' ? 'รหัสร้านค้า:' : 'Store ID:'} <span className="font-mono font-black">{shopSlug}</span> • {language === 'th' ? 'ออเดอร์ตรงสู่ร้าน' : 'Direct Kitchen Routing'}</span>
               </div>
 
               <div className="text-xs text-stone-600 print:text-black max-w-xs leading-relaxed bg-stone-50 print:bg-white p-3 rounded-2xl border border-stone-100 print:border-none font-medium">
@@ -472,7 +472,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
                     className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] text-white font-black text-xs sm:text-sm shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2 transition cursor-pointer"
                   >
                     <Download className="w-4 h-4" />
-                    <span>{t('qrDownloadBtn', language)} {selectedTable === 'TAKEAWAY' ? 'Takeaway' : selectedTable}</span>
+                    <span>{t('qrDownloadBtn', language)} ({selectedTable === 'TAKEAWAY' ? t('takeaway', language) : `${t('table', language)} ${selectedTable}`})</span>
                   </button>
 
                   <button
@@ -491,7 +491,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
                     className="w-full py-3 px-4 rounded-2xl border border-stone-200 bg-stone-50 hover:bg-orange-50/60 hover:border-orange-200 text-stone-700 hover:text-orange-950 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition"
                   >
                     <ExternalLink className="w-4 h-4 text-orange-500" />
-                    <span>{t('qrOpenTestBtn', language)} ({selectedTable === 'TAKEAWAY' ? 'Takeaway' : selectedTable})</span>
+                    <span>{t('qrOpenTestBtn', language)} ({selectedTable === 'TAKEAWAY' ? t('takeaway', language) : `${t('table', language)} ${selectedTable}`})</span>
                   </a>
                 </div>
               </div>
@@ -505,15 +505,15 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
                 <ul className="text-[11px] text-stone-600 space-y-1.5 font-medium pl-1">
                   <li className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    <span>URL มีพารามิเตอร์ <code className="bg-stone-100 text-orange-600 px-1 py-0.5 rounded font-mono font-bold">?shop={shopSlug}</code> ป้องกันการปนเปื้อน</span>
+                    <span>{language === 'th' ? <>URL มีพารามิเตอร์ <code className="bg-stone-100 text-orange-600 px-1 py-0.5 rounded font-mono font-bold">?shop={shopSlug}</code> ป้องกันการปนเปื้อน</> : <>URL parameter <code className="bg-stone-100 text-orange-600 px-1 py-0.5 rounded font-mono font-bold">?shop={shopSlug}</code> guarantees zero cross-store bleed</>}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    <span>จอครัว (KDS) ดึงและแสดงผลเฉพาะออเดอร์ที่ถูกส่งเข้า Store ID นี้เท่านั้น</span>
+                    <span>{language === 'th' ? 'จอครัว (KDS) ดึงและแสดงผลเฉพาะออเดอร์ที่ถูกส่งเข้า Store ID นี้เท่านั้น' : 'Kitchen display (KDS) displays only orders placed strictly to this Store ID'}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    <span>รองรับการพิมพ์การ์ดพร้อมกันสูงสุด 50 โต๊ะ</span>
+                    <span>{language === 'th' ? 'รองรับการพิมพ์การ์ดพร้อมกันสูงสุด 50 โต๊ะ' : 'Supports batch card printing for up to 50 tables'}</span>
                   </li>
                 </ul>
               </div>
@@ -548,7 +548,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
                     selectedRange === '1-10' ? 'bg-orange-500 text-white shadow-2xs' : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                   }`}
                 >
-                  โต๊ะ 01 - 10
+                  {language === 'th' ? 'โต๊ะ 01 - 10' : 'Table 01 - 10'}
                 </button>
               )}
 
@@ -560,7 +560,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
                     selectedRange === '11-20' ? 'bg-orange-500 text-white shadow-2xs' : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                   }`}
                 >
-                  โต๊ะ 11 - 20
+                  {language === 'th' ? 'โต๊ะ 11 - 20' : 'Table 11 - 20'}
                 </button>
               )}
 
@@ -572,7 +572,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
                     selectedRange === '21-30' ? 'bg-orange-500 text-white shadow-2xs' : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                   }`}
                 >
-                  โต๊ะ 21 - 30
+                  {language === 'th' ? 'โต๊ะ 21 - 30' : 'Table 21 - 30'}
                 </button>
               )}
 
@@ -584,7 +584,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
                     selectedRange === '31-40' ? 'bg-orange-500 text-white shadow-2xs' : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                   }`}
                 >
-                  โต๊ะ 31 - 40
+                  {language === 'th' ? 'โต๊ะ 31 - 40' : 'Table 31 - 40'}
                 </button>
               )}
 
@@ -596,7 +596,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
                     selectedRange === '41-50' ? 'bg-orange-500 text-white shadow-2xs' : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                   }`}
                 >
-                  โต๊ะ 41 - 50
+                  {language === 'th' ? 'โต๊ะ 41 - 50' : 'Table 41 - 50'}
                 </button>
               )}
 
@@ -668,7 +668,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
                   {/* Security Verification Stamp on Each Card */}
                   <div className="w-full pt-2 border-t border-stone-100 print:border-stone-400 flex items-center justify-center gap-1 text-[9.5px] font-bold text-stone-500 print:text-black">
                     <ShieldCheck className="w-3 h-3 text-emerald-600 print:text-black" />
-                    <span>รหัสร้าน: <span className="font-mono font-black">{shopSlug}</span></span>
+                    <span>{language === 'th' ? 'รหัสร้าน:' : 'Store ID:'} <span className="font-mono font-black">{shopSlug}</span></span>
                   </div>
 
                   {/* Scan Instruction */}
