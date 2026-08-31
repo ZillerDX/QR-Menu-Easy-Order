@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import { 
   X, Printer, QrCode, Building2, User, 
   FileText, ShieldCheck, ChevronDown, ChevronUp,
-  Phone, MapPin, Receipt, CheckCircle2
+  AlertTriangle, CheckCircle2
 } from 'lucide-react';
 import { Order, StoreConfig, Language } from '../../types';
 import { CAFE_ORDER_LOGO_DATA_URI } from '../../data/logoData';
@@ -38,6 +38,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 }) => {
   const [docType, setDocType] = useState<'abbreviated' | 'fullTax'>('abbreviated');
   const [showTaxForm, setShowTaxForm] = useState(false);
+  const [taxValidationError, setTaxValidationError] = useState<string | null>(null);
+
   const [taxInfo, setTaxInfo] = useState<CustomerTaxInfo>({
     customerType: 'individual',
     name: '',
@@ -84,12 +86,25 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   if (!isOpen || !order) return null;
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const isTh = language === 'th';
   const now = new Date(order.createdAt || new Date());
+
+  const handlePrint = () => {
+    if (docType === 'fullTax') {
+      if (!taxInfo.name.trim()) {
+        setTaxValidationError(isTh ? '⚠️ กรุณาระบุชื่อผู้ซื้อจริง (ห้ามเว้นว่าง หรือไม่ประสงค์ออกนาม)' : '⚠️ Please enter actual buyer name');
+        setShowTaxForm(true);
+        return;
+      }
+      if (!taxInfo.address.trim()) {
+        setTaxValidationError(isTh ? '⚠️ กรุณาระบุที่อยู่ผู้ซื้อจริงให้ครบถ้วน' : '⚠️ Please enter actual buyer address');
+        setShowTaxForm(true);
+        return;
+      }
+    }
+    setTaxValidationError(null);
+    window.print();
+  };
   
   const formattedDateThai = now.toLocaleDateString('th-TH', {
     year: 'numeric',
@@ -133,7 +148,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         onClick={onClose}
       />
 
-      {/* Main Document Container */}
+      {/* Main Document Container (Modal View) */}
       <div className="relative w-full max-w-2xl bg-white rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-stone-200/90 z-10 flex flex-col max-h-[94vh] print:max-h-none print:shadow-none print:border-none print:w-full print:max-w-none print:rounded-none print:static print:p-0 print:m-0 print:overflow-visible">
         
         {/* Modal Top Bar (Hidden on Print) */}
@@ -170,6 +185,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               onClick={() => {
                 setDocType('abbreviated');
                 setShowTaxForm(false);
+                setTaxValidationError(null);
               }}
               className={`py-2 px-3 rounded-xl transition flex items-center justify-center gap-2 cursor-pointer ${
                 docType === 'abbreviated' 
@@ -198,7 +214,15 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             </button>
           </div>
 
-          {/* Customer Tax Info Form Toggle (Visible in Full Tax Mode) */}
+          {/* Validation Alert Message */}
+          {taxValidationError && docType === 'fullTax' && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
+              <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
+              <span>{taxValidationError}</span>
+            </div>
+          )}
+
+          {/* Customer Tax Info Form (Visible in Full Tax Mode) */}
           {docType === 'fullTax' && (
             <div className="bg-white rounded-2xl p-3.5 border border-stone-200 shadow-2xs space-y-3">
               <div 
@@ -210,10 +234,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   <span className="text-xs font-black text-stone-900">
                     {isTh ? 'กรอกข้อมูลผู้ซื้อสำหรับออกใบกำกับภาษีเต็มรูป' : 'Customer Tax Details for Full Invoice'}
                   </span>
-                  {taxInfo.name && (
+                  {taxInfo.name && taxInfo.address ? (
                     <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-md flex items-center gap-1 border border-emerald-200/60">
                       <CheckCircle2 className="w-3 h-3" />
-                      {isTh ? 'ระบุแล้ว' : 'Saved'}
+                      {isTh ? 'ระบุครบแล้ว' : 'Complete'}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-50 text-amber-800 font-bold px-2 py-0.5 rounded-md border border-amber-200/60">
+                      {isTh ? '* จำเป็นต้องระบุชื่อและที่อยู่จริง' : '* Required name & address'}
                     </span>
                   )}
                 </div>
@@ -228,7 +256,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                         type="radio"
                         name="custType"
                         checked={taxInfo.customerType === 'individual'}
-                        onChange={() => setTaxInfo({ ...taxInfo, customerType: 'individual' })}
+                        onChange={() => {
+                          setTaxInfo({ ...taxInfo, customerType: 'individual' });
+                          setTaxValidationError(null);
+                        }}
                       />
                       <span>{isTh ? 'บุคคลธรรมดา' : 'Individual'}</span>
                     </label>
@@ -237,7 +268,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                         type="radio"
                         name="custType"
                         checked={taxInfo.customerType === 'corporate'}
-                        onChange={() => setTaxInfo({ ...taxInfo, customerType: 'corporate' })}
+                        onChange={() => {
+                          setTaxInfo({ ...taxInfo, customerType: 'corporate' });
+                          setTaxValidationError(null);
+                        }}
                       />
                       <span>{isTh ? 'นิติบุคคล / บริษัท' : 'Corporate / Company'}</span>
                     </label>
@@ -245,30 +279,31 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div>
-                      <label className="block text-[11px] font-bold text-stone-600 mb-1">
+                      <label className="block text-[11px] font-bold text-stone-700 mb-1">
                         {taxInfo.customerType === 'corporate' 
-                          ? (isTh ? 'ชื่อบริษัท / นิติบุคคล *' : 'Company Name *') 
-                          : (isTh ? 'ชื่อ-นามสกุล ผู้ซื้อ *' : 'Customer Full Name *')}
+                          ? (isTh ? 'ชื่อบริษัท / นิติบุคคลผู้ซื้อจริง *' : 'Company Full Name *') 
+                          : (isTh ? 'ชื่อ-นามสกุล ผู้ซื้อจริง *' : 'Customer Full Name *')}
                       </label>
                       <input
                         type="text"
                         value={taxInfo.name}
-                        onChange={(e) => setTaxInfo({ ...taxInfo, name: e.target.value })}
-                        placeholder={taxInfo.customerType === 'corporate' ? (isTh ? 'บริษัท ไอแท็กซ์ อินคอร์เปอร์เรชั่น จำกัด' : 'Company Name Ltd.') : (isTh ? 'นายสมชาย ใจดี' : 'John Doe')}
+                        onChange={(e) => {
+                          setTaxInfo({ ...taxInfo, name: e.target.value });
+                          if (e.target.value.trim()) setTaxValidationError(null);
+                        }}
                         className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-bold focus:bg-white focus:outline-none focus:border-orange-500"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-stone-600 mb-1">
-                        {isTh ? 'เลขประจำตัวผู้เสียภาษี / เลขบัตร ปชช. (13 หลัก) *' : 'Tax ID / ID Card No. (13 digits) *'}
+                      <label className="block text-[11px] font-bold text-stone-700 mb-1">
+                        {isTh ? 'เลขประจำตัวผู้เสียภาษี / เลขบัตร ปชช. (13 หลัก)' : 'Tax ID / ID Card No. (13 digits)'}
                       </label>
                       <input
                         type="text"
                         maxLength={13}
                         value={taxInfo.taxId}
                         onChange={(e) => setTaxInfo({ ...taxInfo, taxId: e.target.value.replace(/[^0-9]/g, '') })}
-                        placeholder="1234567890123"
                         className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono font-bold focus:bg-white focus:outline-none focus:border-orange-500"
                       />
                     </div>
@@ -276,40 +311,41 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <div>
-                      <label className="block text-[11px] font-bold text-stone-600 mb-1">
+                      <label className="block text-[11px] font-bold text-stone-700 mb-1">
                         {isTh ? 'สาขา (Branch)' : 'Branch Info'}
                       </label>
                       <input
                         type="text"
                         value={taxInfo.branch}
                         onChange={(e) => setTaxInfo({ ...taxInfo, branch: e.target.value })}
-                        placeholder={isTh ? '00000 (สำนักงานใหญ่)' : 'Head Office'}
+                        placeholder="00000 (สำนักงานใหญ่)"
                         className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:border-orange-500"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-stone-600 mb-1">
+                      <label className="block text-[11px] font-bold text-stone-700 mb-1">
                         {isTh ? 'เบอร์โทรศัพท์ (Phone)' : 'Phone Number'}
                       </label>
                       <input
                         type="text"
                         value={taxInfo.phone || ''}
                         onChange={(e) => setTaxInfo({ ...taxInfo, phone: e.target.value })}
-                        placeholder="0812322222"
                         className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:border-orange-500"
                       />
                     </div>
 
                     <div className="sm:col-span-3">
-                      <label className="block text-[11px] font-bold text-stone-600 mb-1">
-                        {isTh ? 'ที่อยู่ตามทะเบียนภาษีมูลค่าเพิ่ม / บัตรประชาชน *' : 'Registered Tax Address *'}
+                      <label className="block text-[11px] font-bold text-stone-700 mb-1">
+                        {isTh ? 'ที่อยู่ตามทะเบียนภาษีมูลค่าเพิ่ม / บัตรประชาชนผู้ซื้อจริง *' : 'Registered Tax Address *'}
                       </label>
                       <input
                         type="text"
                         value={taxInfo.address}
-                        onChange={(e) => setTaxInfo({ ...taxInfo, address: e.target.value })}
-                        placeholder={isTh ? 'เลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์' : 'Address, Street, District, Province, Postal Code'}
+                        onChange={(e) => {
+                          setTaxInfo({ ...taxInfo, address: e.target.value });
+                          if (e.target.value.trim()) setTaxValidationError(null);
+                        }}
                         className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:border-orange-500"
                       />
                     </div>
@@ -327,17 +363,17 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           
           {/* OPTION 1: ABBREVIATED TAX INVOICE (ใบกำกับภาษีอย่างย่อ - มาตรา 86/6) */}
           {docType === 'abbreviated' && (
-            <div className="pos-receipt-print-container space-y-3 max-w-sm mx-auto bg-white p-4 rounded-2xl border border-stone-200/80 shadow-2xs print:border-none print:shadow-none print:p-0">
+            <div className="pos-receipt-print-container space-y-3 max-w-sm mx-auto bg-white p-4 border border-stone-200/80 shadow-2xs print:border-none print:shadow-none print:p-0">
               
               {/* POS Header */}
               <div className="text-center space-y-1 pb-2.5 border-b border-dashed border-stone-300 print:border-black">
-                <div className="w-12 h-12 mx-auto rounded-xl overflow-hidden p-0.5 border border-stone-200 print:border-none">
-                  <img src={CAFE_ORDER_LOGO_DATA_URI} alt="Logo" className="w-full h-full object-cover rounded-lg" />
+                <div className="w-12 h-12 mx-auto overflow-hidden p-0.5 border border-stone-200 print:border-none">
+                  <img src={CAFE_ORDER_LOGO_DATA_URI} alt="Logo" className="w-full h-full object-cover" />
                 </div>
                 <h2 className="font-black text-base tracking-tight text-stone-950 print:text-black">
                   {sellerLegalName}
                 </h2>
-                <div className="inline-block bg-stone-900 text-white font-black px-2.5 py-0.5 rounded text-[11px] tracking-wide print:bg-transparent print:text-black print:border print:border-black">
+                <div className="inline-block bg-stone-900 text-white font-black px-2.5 py-0.5 text-[11px] tracking-wide print:bg-transparent print:text-black print:border print:border-black">
                   ใบเสร็จรับเงิน / ใบกำกับภาษีอย่างย่อ
                 </div>
                 <p className="text-[9.5px] font-bold text-stone-500 print:text-black uppercase">
@@ -421,14 +457,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               </div>
 
               {/* Payment & PromptPay QR Box */}
-              <div className="p-3 rounded-xl bg-stone-50 print:bg-white border border-stone-200 print:border-black text-center space-y-1.5 shadow-2xs print:shadow-none">
+              <div className="p-3 bg-stone-50 print:bg-white border border-stone-200 print:border-black text-center space-y-1.5 shadow-2xs print:shadow-none">
                 <div className="flex items-center justify-center gap-1.5 text-stone-900 print:text-black font-black text-[11px]">
                   <QrCode className="w-3.5 h-3.5 text-blue-700 print:text-black" />
                   <span>สแกนจ่ายผ่านพร้อมเพย์ (PromptPay QR)</span>
                 </div>
 
-                <div className="p-1 bg-white rounded-lg inline-block border border-stone-200 print:border-black">
-                  <canvas ref={qrCanvasRef} className="mx-auto rounded" />
+                <div className="p-1 bg-white inline-block border border-stone-200 print:border-black">
+                  <canvas ref={qrCanvasRef} className="mx-auto" />
                 </div>
 
                 <div className="space-y-0.5 text-[10px] text-stone-700 print:text-black">
@@ -448,15 +484,15 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             </div>
           )}
 
-          {/* OPTION 2: FULL TAX INVOICE (ใบกำกับภาษีแบบเต็มรูป - มาตรา 86/4 ตามแบบกรมสรรพากร / iTAX) */}
+          {/* OPTION 2: FULL TAX INVOICE (ใบกำกับภาษีแบบเต็มรูป - มาตรา 86/4 แบบไม่มีขอบมน สะอาด คมชัด ถูกต้อง 100%) */}
           {docType === 'fullTax' && (
-            <div className="a4-tax-invoice-container space-y-4 text-xs bg-white p-4 sm:p-6 rounded-2xl border border-stone-300 print:border-black print:p-0 shadow-2xs print:shadow-none">
+            <div className="a4-tax-invoice-container space-y-4 text-xs bg-white p-4 sm:p-6 border border-stone-800 print:border-black print:p-0 shadow-none">
               
               {/* Top Row: Store Logo & Date (Left) | Document Title & Serial/No (Right) */}
               <div className="flex items-start justify-between gap-4 border-b-2 border-stone-900 pb-3.5">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl overflow-hidden p-0.5 border border-stone-200 print:border-none flex-shrink-0">
-                    <img src={CAFE_ORDER_LOGO_DATA_URI} alt="Logo" className="w-full h-full object-cover rounded-lg" />
+                  <div className="w-12 h-12 overflow-hidden p-0.5 border border-stone-300 print:border-none flex-shrink-0">
+                    <img src={CAFE_ORDER_LOGO_DATA_URI} alt="Logo" className="w-full h-full object-cover" />
                   </div>
                   <div>
                     <h1 className="text-lg font-black text-stone-950 tracking-tight">
@@ -485,12 +521,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 </div>
               </div>
 
-              {/* Seller & Buyer 2-Column Info Grid (Exactly matching Revenue Department & iTAX specimen) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-1">
+              {/* Seller & Buyer Info Section (Clean Formal Straight Grid - No Rounded Corners) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 py-1">
                 
                 {/* 1. Seller Information (ข้อมูลผู้ขาย) */}
-                <div className="p-3 bg-stone-50/90 print:bg-white rounded-xl border border-stone-200 print:border-stone-400 space-y-1.5 text-[11px]">
-                  <div className="font-black text-stone-900 border-b border-stone-200 print:border-stone-300 pb-1 flex items-center gap-1.5">
+                <div className="p-3 bg-white border border-stone-800 print:border-stone-900 space-y-1.5 text-[11px]">
+                  <div className="font-black text-stone-900 border-b border-stone-300 pb-1 flex items-center gap-1.5">
                     <Building2 className="w-3.5 h-3.5 text-stone-700" />
                     <span>ข้อมูลผู้ขาย (Seller Information):</span>
                   </div>
@@ -519,22 +555,24 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   </div>
                 </div>
 
-                {/* 2. Buyer Information (ข้อมูลผู้ซื้อ) */}
-                <div className="p-3 bg-stone-50/90 print:bg-white rounded-xl border border-stone-200 print:border-stone-400 space-y-1.5 text-[11px]">
-                  <div className="font-black text-stone-900 border-b border-stone-200 print:border-stone-300 pb-1 flex items-center gap-1.5">
+                {/* 2. Buyer Information (ข้อมูลผู้ซื้อจริง - บังคับระบุชื่อและที่อยู่จริง) */}
+                <div className="p-3 bg-white border border-stone-800 print:border-stone-900 space-y-1.5 text-[11px]">
+                  <div className="font-black text-stone-900 border-b border-stone-300 pb-1 flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-stone-700" />
                     <span>ข้อมูลผู้ซื้อ (Buyer Information):</span>
                   </div>
                   <div className="space-y-1 text-stone-800 leading-snug">
                     <p>
                       <span className="font-bold text-stone-600">ชื่อผู้ซื้อ: </span>
-                      <span className="font-black text-stone-950">
-                        {taxInfo.name || (isTh ? '(ลูกค้าทั่วไป / ไม่ประสงค์ออกนาม)' : 'General Customer')}
+                      <span className={`font-black ${!taxInfo.name.trim() ? 'text-red-600 bg-red-50 px-1.5 py-0.5 border border-red-200 print:border-none print:text-black' : 'text-stone-950'}`}>
+                        {taxInfo.name.trim() || (isTh ? '* กรุณากรอกชื่อผู้ซื้อจริง' : '* Actual buyer name required')}
                       </span>
                     </p>
                     <p>
                       <span className="font-bold text-stone-600">ที่อยู่: </span>
-                      <span>{taxInfo.address || '-'}</span>
+                      <span className={!taxInfo.address.trim() ? 'text-red-600 bg-red-50 px-1.5 py-0.5 border border-red-200 print:border-none print:text-black font-bold' : ''}>
+                        {taxInfo.address.trim() || (isTh ? '* กรุณากรอกที่อยู่ผู้ซื้อจริง' : '* Actual buyer address required')}
+                      </span>
                     </p>
                     <div className="grid grid-cols-2 gap-2 pt-0.5">
                       <p>
@@ -547,15 +585,15 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                       </p>
                     </div>
                     <p className="text-[10.5px] text-stone-600 font-bold">
-                      สาขา: {taxInfo.branch || 'สำนักงานใหญ่'} • {order.tableNumber === 'TAKEAWAY' ? 'สั่งกลับบ้าน' : `โต๊ะ ${order.tableNumber}`}
+                      สาขา: {taxInfo.branch || '00000 (สำนักงานใหญ่)'} • {order.tableNumber === 'TAKEAWAY' ? 'สั่งกลับบ้าน' : `โต๊ะ ${order.tableNumber}`}
                     </p>
                   </div>
                 </div>
 
               </div>
 
-              {/* Items Table with Standard Legal Borders */}
-              <div className="border border-stone-900 rounded-lg overflow-hidden">
+              {/* Items Table with Crisp Sharp Borders (No Rounded Corners) */}
+              <div className="border border-stone-900 overflow-hidden">
                 <table className="w-full border-collapse text-xs">
                   <thead>
                     <tr className="bg-stone-100 print:bg-stone-200 border-b border-stone-900 font-black text-stone-950 text-[11px]">
@@ -566,7 +604,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                       <th className="py-2.5 px-3 text-right w-28">จำนวนเงิน</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-stone-200 print:divide-stone-300">
+                  <tbody className="divide-y divide-stone-300">
                     {order.items.map((item, idx) => (
                       <tr key={idx} className="align-top">
                         <td className="py-2 px-3 text-center text-stone-600 font-mono border-r border-stone-900">{idx + 1}</td>
@@ -588,12 +626,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 </table>
               </div>
 
-              {/* Summary and Legal VAT Calculation Block */}
+              {/* Summary and Legal VAT Calculation Block (Sharp Borders) */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start pt-1">
                 
                 {/* Left Column: Baht Text and Payment Meta */}
                 <div className="md:col-span-7 space-y-2 text-xs">
-                  <div className="p-3 bg-stone-50 print:bg-white rounded-xl border border-stone-300 space-y-1">
+                  <div className="p-2.5 bg-white border border-stone-800 space-y-1">
                     <p className="text-[11px] font-bold text-stone-600">
                       จำนวนเงินตัวอักษร (Amount in Words):
                     </p>
@@ -605,25 +643,25 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   <div className="text-[10.5px] text-stone-600 space-y-0.5 pt-1">
                     <p><span className="font-bold">วิธีชำระเงิน:</span> {order.paymentMethod === 'promptpay' ? 'พร้อมเพย์ (PromptPay)' : 'เงินสด (Cash)'}</p>
                     <p><span className="font-bold">สถานะ:</span> {order.paymentStatus === 'paid' ? 'ชำระเงินเรียบร้อยแล้ว (PAID)' : 'ค้างชำระ'}</p>
-                    <p className="text-[10px] text-stone-400 font-medium pt-0.5">
+                    <p className="text-[10px] text-stone-500 font-medium pt-0.5">
                       เอกสารนี้ออกตามมาตรา 86/4 แห่งประมวลรัษฎากร กรมสรรพากร
                     </p>
                   </div>
                 </div>
 
                 {/* Right Column: Pre-VAT, VAT 7%, Grand Total Table */}
-                <div className="md:col-span-5 border border-stone-900 rounded-xl overflow-hidden text-xs">
-                  <div className="flex justify-between p-2.5 bg-stone-50 print:bg-white border-b border-stone-200">
+                <div className="md:col-span-5 border border-stone-900 overflow-hidden text-xs">
+                  <div className="flex justify-between p-2.5 bg-white border-b border-stone-300">
                     <span className="font-bold text-stone-700">มูลค่ารวมก่อนเสียภาษี:</span>
                     <span className="font-mono font-bold text-stone-950">{vat.formattedTaxBase}</span>
                   </div>
-                  <div className="flex justify-between p-2.5 bg-stone-50 print:bg-white border-b border-stone-900">
+                  <div className="flex justify-between p-2.5 bg-white border-b border-stone-900">
                     <span className="font-bold text-stone-700">ภาษีมูลค่าเพิ่ม (VAT 7%):</span>
                     <span className="font-mono font-bold text-stone-950">{vat.formattedVat}</span>
                   </div>
                   <div className="flex justify-between p-2.5 bg-stone-100 print:bg-stone-200 font-black text-sm text-stone-950">
                     <span>ยอดรวมสุทธิ:</span>
-                    <span className="font-mono text-base text-orange-600 print:text-black">฿{vat.formattedTotal}</span>
+                    <span className="font-mono text-base text-stone-950 print:text-black">฿{vat.formattedTotal}</span>
                   </div>
                 </div>
 
