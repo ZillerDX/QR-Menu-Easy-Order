@@ -19,7 +19,26 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
   user,
   onLogout,
 }) => {
-  const [formData, setFormData] = useState<StoreConfig>({ ...storeConfig });
+  const [formData, setFormData] = useState<StoreConfig>(() => ({
+    ...storeConfig,
+    companyLegalName: storeConfig.companyLegalName || storeConfig.name || 'บริษัท คาเฟ่ ออเดอร์ (ไทยแลนด์) จำกัด',
+    phone: storeConfig.phone || '02-123-4567',
+    taxId: storeConfig.taxId || '0105566012345',
+    branchNumber: storeConfig.branchNumber || '00000 (สำนักงานใหญ่)',
+    address: storeConfig.address || '123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110',
+  }));
+
+  React.useEffect(() => {
+    setFormData({
+      ...storeConfig,
+      companyLegalName: storeConfig.companyLegalName || storeConfig.name || 'บริษัท คาเฟ่ ออเดอร์ (ไทยแลนด์) จำกัด',
+      phone: storeConfig.phone || '02-123-4567',
+      taxId: storeConfig.taxId || '0105566012345',
+      branchNumber: storeConfig.branchNumber || '00000 (สำนักงานใหญ่)',
+      address: storeConfig.address || '123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110',
+    });
+  }, [storeConfig]);
+
   const [isSaved, setIsSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -266,7 +285,6 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
                 value={formData.companyLegalName || ''}
                 onChange={(e) => setFormData({ ...formData, companyLegalName: e.target.value })}
                 className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm"
-                placeholder="เช่น บริษัท คาเฟ่ ออเดอร์ (ไทยแลนด์) จำกัด"
               />
             </div>
 
@@ -279,7 +297,6 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
                 value={formData.phone || ''}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm"
-                placeholder="เช่น 02-123-4567 หรือ 081-234-5678"
               />
             </div>
           </div>
@@ -295,7 +312,6 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
                 value={formData.taxId || ''}
                 onChange={(e) => setFormData({ ...formData, taxId: e.target.value.replace(/[^0-9]/g, '') })}
                 className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-mono font-bold text-sm"
-                placeholder="0105566012345"
               />
             </div>
 
@@ -322,7 +338,6 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
               value={formData.address || ''}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 text-sm font-medium"
-              placeholder="123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110"
             />
           </div>
         </div>

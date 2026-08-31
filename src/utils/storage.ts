@@ -327,8 +327,14 @@ class RealtimeSyncManager {
       }
       const parsed: StoreConfig = JSON.parse(data);
       return {
+        ...initialStoreConfig,
         ...parsed,
         id: parsed.id || shopId,
+        companyLegalName: parsed.companyLegalName || initialStoreConfig.companyLegalName || parsed.name || 'บริษัท คาเฟ่ ออเดอร์ (ไทยแลนด์) จำกัด',
+        phone: parsed.phone || initialStoreConfig.phone || '02-123-4567',
+        taxId: parsed.taxId || initialStoreConfig.taxId || '0105566012345',
+        branchNumber: parsed.branchNumber || initialStoreConfig.branchNumber || '00000 (สำนักงานใหญ่)',
+        address: parsed.address || initialStoreConfig.address || '123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110',
       };
     } catch {
       return {

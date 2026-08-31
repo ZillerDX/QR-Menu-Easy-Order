@@ -165,6 +165,7 @@ function AppContent() {
 
       if (!error && existing) {
         const mappedConfig: StoreConfig = {
+          ...initialStoreConfig,
           id: existing.id,
           userId: existing.user_id,
           name: existing.name,
@@ -176,9 +177,11 @@ function AppContent() {
           promptpayName: existing.promptpay_name,
           openTime: existing.open_time,
           tableCount: existing.table_count,
-          taxId: existing.tax_id,
-          address: existing.address,
-          branchNumber: existing.branch_number,
+          taxId: existing.tax_id || initialStoreConfig.taxId,
+          address: existing.address || initialStoreConfig.address,
+          branchNumber: existing.branch_number || initialStoreConfig.branchNumber,
+          phone: existing.phone || initialStoreConfig.phone,
+          companyLegalName: existing.company_legal_name || initialStoreConfig.companyLegalName,
         };
         return { shopId: existing.id, config: mappedConfig };
       }
@@ -196,6 +199,8 @@ function AppContent() {
         name: `ร้าน ${userPrefix}`,
         nameEn: `${userPrefix}'s Cafe`,
         promptpayName: `${userPrefix}`,
+        companyLegalName: `บริษัท ${userPrefix} จำกัด`,
+        phone: initialStoreConfig.phone,
       };
 
       // 3. Insert store_config
@@ -214,6 +219,8 @@ function AppContent() {
         tax_id: newStoreConfig.taxId,
         address: newStoreConfig.address,
         branch_number: newStoreConfig.branchNumber,
+        phone: newStoreConfig.phone,
+        company_legal_name: newStoreConfig.companyLegalName,
         updated_at: new Date().toISOString(),
       });
 
