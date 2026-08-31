@@ -23,9 +23,11 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
 }) => {
   const [formData, setFormData] = useState<StoreConfig>({ ...storeConfig });
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [tableInputText, setTableInputText] = useState<string>(() => String(storeConfig.tableCount || 10));
 
   React.useEffect(() => {
     setFormData({ ...storeConfig });
+    setTableInputText(String(storeConfig.tableCount || 10));
   }, [storeConfig]);
 
   const [isSaved, setIsSaved] = useState(false);
@@ -46,7 +48,12 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    const parsed = parseInt(tableInputText, 10);
+    const validCount = isNaN(parsed) || parsed < 1 ? 1 : Math.min(50, parsed);
+    const updated = { ...formData, tableCount: validCount };
+    setFormData(updated);
+    setTableInputText(String(validCount));
+    onSave(updated);
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };
@@ -232,22 +239,34 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
               </span>
             </label>
             <input
-              type="number"
-              min="1"
-              max="50"
-              value={formData.tableCount}
+              type="text"
+              inputMode="numeric"
+              value={tableInputText}
               onChange={(e) => {
-                const rawVal = e.target.value;
-                if (rawVal === '') {
-                  setFormData({ ...formData, tableCount: 1 });
-                  return;
-                }
+                const rawVal = e.target.value.replace(/[^0-9]/g, '');
+                setTableInputText(rawVal);
+                if (rawVal === '') return;
                 const val = parseInt(rawVal, 10);
                 if (val > 50) {
-                  setFormData({ ...formData, tableCount: 50 });
+                  setTableInputText('50');
+                  setFormData((prev) => ({ ...prev, tableCount: 50 }));
+                  setIsContactModalOpen(true);
+                } else if (!isNaN(val) && val >= 1) {
+                  setFormData((prev) => ({ ...prev, tableCount: val }));
+                }
+              }}
+              onBlur={() => {
+                const val = parseInt(tableInputText, 10);
+                if (isNaN(val) || val < 1) {
+                  setTableInputText('1');
+                  setFormData((prev) => ({ ...prev, tableCount: 1 }));
+                } else if (val > 50) {
+                  setTableInputText('50');
+                  setFormData((prev) => ({ ...prev, tableCount: 50 }));
                   setIsContactModalOpen(true);
                 } else {
-                  setFormData({ ...formData, tableCount: Math.max(1, isNaN(val) ? 1 : val) });
+                  setTableInputText(String(val));
+                  setFormData((prev) => ({ ...prev, tableCount: val }));
                 }
               }}
               className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm"

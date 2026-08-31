@@ -25,16 +25,22 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
   const [activeTableCount, setActiveTableCount] = useState<number>(() => {
     return Math.min(50, Math.max(1, storeConfig.tableCount || 50));
   });
+  const [tableInputText, setTableInputText] = useState<string>(() => {
+    return String(Math.min(50, Math.max(1, storeConfig.tableCount || 50)));
+  });
 
   useEffect(() => {
     if (storeConfig.tableCount && storeConfig.tableCount !== activeTableCount) {
-      setActiveTableCount(Math.min(50, Math.max(1, storeConfig.tableCount)));
+      const valid = Math.min(50, Math.max(1, storeConfig.tableCount));
+      setActiveTableCount(valid);
+      setTableInputText(String(valid));
     }
   }, [storeConfig.tableCount]);
 
   const handleSetTableCount = (count: number) => {
     const clamped = Math.min(50, Math.max(1, count));
     setActiveTableCount(clamped);
+    setTableInputText(String(clamped));
     onUpdateTableCount?.(clamped);
   };
 
@@ -245,22 +251,35 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
             <Sliders className="w-3.5 h-3.5 text-stone-400" />
             <span className="text-xs font-bold text-stone-600">{language === 'th' ? 'ใส่จำนวนโต๊ะ:' : 'Set Count:'}</span>
             <input
-              type="number"
-              min="1"
-              max="50"
-              value={activeTableCount}
+              type="text"
+              inputMode="numeric"
+              value={tableInputText}
               onChange={(e) => {
-                const rawVal = e.target.value;
+                const rawVal = e.target.value.replace(/[^0-9]/g, '');
+                setTableInputText(rawVal);
                 if (rawVal === '') return;
                 const val = parseInt(rawVal, 10);
                 if (val > 50) {
                   handleSetTableCount(50);
                   setIsContactModalOpen(true);
+                } else if (!isNaN(val) && val >= 1) {
+                  setActiveTableCount(val);
+                  onUpdateTableCount?.(val);
+                }
+              }}
+              onBlur={() => {
+                const val = parseInt(tableInputText, 10);
+                if (isNaN(val) || val < 1) {
+                  handleSetTableCount(1);
+                } else if (val > 50) {
+                  handleSetTableCount(50);
+                  setIsContactModalOpen(true);
                 } else {
-                  handleSetTableCount(Math.max(1, isNaN(val) ? 1 : val));
+                  handleSetTableCount(val);
                 }
               }}
               className="w-16 px-2.5 py-1 text-center bg-white rounded-xl border border-stone-200 font-black text-sm text-stone-900 focus:outline-none focus:border-orange-500 shadow-2xs"
+              placeholder="1-50"
             />
             <span className="text-xs font-bold text-stone-600">{language === 'th' ? 'โต๊ะ' : 'Tables'}</span>
           </div>
