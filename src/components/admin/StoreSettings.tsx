@@ -220,18 +220,44 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block font-black text-stone-800 text-xs sm:text-sm mb-1.5 flex items-center gap-1.5">
-              <Hash className="w-4 h-4 text-orange-600" />
-              <span>{t('settingsTableCount', language)}</span>
+            <label className="block font-black text-stone-800 text-xs sm:text-sm mb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Hash className="w-4 h-4 text-orange-600" />
+                <span>{t('settingsTableCount', language)} (1 - 50 {language === 'th' ? 'โต๊ะ' : 'Tables'})</span>
+              </span>
+              <span className="text-[11px] font-bold text-orange-600">
+                {formData.tableCount || 15} {language === 'th' ? 'โต๊ะ' : 'Tables'}
+              </span>
             </label>
             <input
               type="number"
               min="1"
               max="50"
               value={formData.tableCount}
-              onChange={(e) => setFormData({ ...formData, tableCount: Number(e.target.value) })}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                setFormData({ ...formData, tableCount: isNaN(val) ? 1 : Math.min(50, Math.max(1, val)) });
+              }}
               className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm"
             />
+            {/* Quick table presets */}
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              <span className="text-[10px] font-bold text-stone-400">Presets:</span>
+              {[10, 15, 20, 30, 40, 50].map((count) => (
+                <button
+                  key={count}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, tableCount: count })}
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-black transition cursor-pointer ${
+                    formData.tableCount === count
+                      ? 'bg-orange-500 text-white shadow-2xs'
+                      : 'bg-stone-100 hover:bg-stone-200 text-stone-600'
+                  }`}
+                >
+                  {count}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>

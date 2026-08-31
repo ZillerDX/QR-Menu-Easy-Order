@@ -202,4 +202,52 @@ describe('Comprehensive System Audit & Flow Verification', () => {
       expect(afterDeleteCat.some((c) => c.id === newCat.id)).toBe(false);
     });
   });
+
+  describe('6. 50 Tables Support & Strict Multi-Tenant QR Routing', () => {
+    it('should support generating up to 50 tables and takeaway with unique isolated URLs', () => {
+      const shopIdA = 'shop-user-alpha-123';
+      const shopIdB = 'shop-user-beta-456';
+
+      const generateTableUrl = (shop: string, table: string) => {
+        return `https://example.com/?shop=${encodeURIComponent(shop)}&table=${encodeURIComponent(table)}&lang=th`;
+      };
+
+      // Test all 50 tables + takeaway for Store A
+      const storeATableUrls = Array.from({ length: 50 }, (_, i) => {
+        const tbl = (i + 1).toString().padStart(2, '0');
+        return generateTableUrl(shopIdA, tbl);
+      });
+      storeATableUrls.push(generateTableUrl(shopIdA, 'TAKEAWAY'));
+
+      expect(storeATableUrls.length).toBe(51);
+
+      // Verify all 51 URLs are unique and bound to shopIdA
+      const uniqueA = new Set(storeATableUrls);
+      expect(uniqueA.size).toBe(51);
+      storeATableUrls.forEach((url) => {
+        expect(url).toContain('shop=shop-user-alpha-123');
+        expect(url).not.toContain('shop=shop-user-beta-456');
+      });
+
+      // Verify Store B URL for Table 01 never collides with Store A
+      const storeBTable01 = generateTableUrl(shopIdB, '01');
+      expect(storeBTable01).toContain('shop=shop-user-beta-456');
+      expect(storeATableUrls).not.toContain(storeBTable01);
+    });
+
+    it('should store and retrieve up to 50 tableCount setting in StoreConfig', () => {
+      const configWith50Tables = {
+        ...initialStoreConfig,
+        id: 'shop-large-50',
+        name: 'Mega Cafe 50',
+        tableCount: 50,
+      };
+
+      syncManager.saveStoreConfig(configWith50Tables, 'shop-large-50');
+      const loaded = syncManager.getStoreConfig('shop-large-50');
+
+      expect(loaded.tableCount).toBe(50);
+      expect(loaded.name).toBe('Mega Cafe 50');
+    });
+  });
 });

@@ -191,6 +191,26 @@
     break-inside: avoid !important;
   }
 
+  /* Batch Print Grid for all tables (up to 50 tables) */
+  .all-tables-qr-print-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 6mm !important;
+    padding: 6mm !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+  }
+
+  .table-qr-card-item {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    border: 1.5px solid #000000 !important;
+    border-radius: 12px !important;
+    padding: 5mm !important;
+    text-align: center !important;
+    background: #ffffff !important;
+  }
+
   /* QR Codes & Images High Contrast */
   canvas, img {
     max-width: 100% !important;
@@ -202,7 +222,7 @@
   }
 
   @page {
-    margin: 0mm;
+    margin: 4mm;
     size: auto;
   }
 }
