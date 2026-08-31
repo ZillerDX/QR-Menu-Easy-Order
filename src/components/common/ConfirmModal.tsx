@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, Trash2, X, Check } from 'lucide-react';
+import { AlertTriangle, Trash2, X, Check, LogOut } from 'lucide-react';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -9,7 +9,7 @@ interface ConfirmModalProps {
   confirmText?: string;
   cancelText?: string;
   isDestructive?: boolean;
-  icon?: 'trash' | 'warning';
+  icon?: 'trash' | 'warning' | 'logout';
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -60,10 +60,12 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <X className="w-4 h-4" />
         </button>
 
-        {/* Warning Icon Badge */}
+        {/* Icon Badge */}
         <div className="w-16 h-16 rounded-3xl bg-red-50 text-red-600 border border-red-100 flex items-center justify-center mx-auto shadow-sm">
           {icon === 'trash' ? (
             <Trash2 className="w-8 h-8 text-red-500" />
+          ) : icon === 'logout' ? (
+            <LogOut className="w-8 h-8 text-red-500" />
           ) : (
             <AlertTriangle className="w-8 h-8 text-amber-500" />
           )}

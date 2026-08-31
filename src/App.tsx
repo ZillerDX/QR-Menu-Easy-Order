@@ -152,6 +152,7 @@ function AppContent() {
 
   const [isOrderTrackerOpen, setIsOrderTrackerOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [errorToast, setErrorToast] = useState<string | null>(null);
 
   // Dynamically update document title based on language & store config
@@ -663,6 +664,7 @@ function AppContent() {
   };
 
   const handleLogout = async () => {
+    setIsLogoutConfirmOpen(false);
     try {
       await authService.signOut();
       setUser(null);
@@ -1078,7 +1080,7 @@ function AppContent() {
         language={language}
         onToggleLanguage={handleToggleLanguage}
         user={user}
-        onLogout={handleLogout}
+        onLogout={() => setIsLogoutConfirmOpen(true)}
         isCustomerView={isCustomerDining && !user}
       />
 
@@ -1295,7 +1297,7 @@ function AppContent() {
               language={language}
               onSave={handleSaveStoreConfig}
               user={user}
-              onLogout={handleLogout}
+              onLogout={() => setIsLogoutConfirmOpen(true)}
             />
           )}
 
@@ -1390,6 +1392,24 @@ function AppContent() {
         onConfirm={handleExecuteResetData}
         onCancel={() => setIsResetConfirmOpen(false)}
       />
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isLogoutConfirmOpen}
+        title={language === 'th' ? 'ยืนยันการออกจากระบบ' : 'Confirm Log Out'}
+        message={
+          language === 'th'
+            ? `คุณต้องการออกจากระบบสำหรับทางร้าน (${user?.email || 'Staff'}) ใช่หรือไม่?`
+            : `Are you sure you want to log out of (${user?.email || 'Staff'})?`
+        }
+        confirmText={language === 'th' ? 'ออกจากระบบ' : 'Log Out'}
+        cancelText={language === 'th' ? 'ยกเลิก' : 'Cancel'}
+        isDestructive={true}
+        icon="logout"
+        onConfirm={handleLogout}
+        onCancel={() => setIsLogoutConfirmOpen(false)}
+      />
+
       {/* Error Toast Notification */}
       {errorToast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[99999] max-w-md w-[92vw] bg-red-600 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 animate-in slide-in-from-top-3 duration-300 font-bold text-xs sm:text-sm">
@@ -1399,4 +1419,4 @@ function AppContent() {
       )}
     </div>
   );
-}
+};
