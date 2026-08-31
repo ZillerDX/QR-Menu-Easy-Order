@@ -8,7 +8,9 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 export const authService = {
   // Google OAuth Login
   async signInWithGoogle() {
-    const redirectUrl = window.location.origin + window.location.pathname;
+    const redirectUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}${window.location.pathname}`
+      : 'https://zillerdx.github.io/QR-Menu-Easy-Order/';
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -45,7 +47,9 @@ export const authService = {
 
   // Request Password Reset Link via Email
   async resetPasswordForEmail(email: string) {
-    const redirectUrl = window.location.origin + window.location.pathname;
+    const redirectUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}${window.location.pathname}`
+      : 'https://zillerdx.github.io/QR-Menu-Easy-Order/';
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
     });
