@@ -32,7 +32,7 @@ const PRESET_TEMPLATES: { label: string; icon: string; group: () => OptionGroup 
       choices: [
         { id: `c-${Date.now()}-1`, name: 'หวานปกติ (100%)', nameEn: 'Regular (100%)', priceDelta: 0, isDefault: true },
         { id: `c-${Date.now()}-2`, name: 'หวานน้อย (50%)', nameEn: 'Less Sweet (50%)', priceDelta: 0 },
-        { id: `c-${Date.now()}-3`, name: 'หวาน 25%', nameEn: 'Slightly Sweet (25%)', priceDelta: 0 },
+        { id: `c-${Date.now()}-3`, name: 'หวาน (25%)', nameEn: 'Slightly Sweet (25%)', priceDelta: 0 },
         { id: `c-${Date.now()}-4`, name: 'ไม่หวานเลย (0%)', nameEn: 'No Sugar (0%)', priceDelta: 0 },
       ],
     }),

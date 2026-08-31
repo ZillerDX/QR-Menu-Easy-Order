@@ -37,7 +37,7 @@ const sweetnessGroup = {
   choices: [
     { id: "s-100", name: "หวานปกติ (100%)", nameEn: "Regular (100%)", priceDelta: 0, isDefault: true },
     { id: "s-50", name: "หวานน้อย (50%)", nameEn: "Less Sweet (50%)", priceDelta: 0 },
-    { id: "s-25", name: "หวาน 25%", nameEn: "Slightly Sweet (25%)", priceDelta: 0 },
+    { id: "s-25", name: "หวาน (25%)", nameEn: "Slightly Sweet (25%)", priceDelta: 0 },
     { id: "s-0", name: "ไม่หวานเลย (0%)", nameEn: "No Sugar (0%)", priceDelta: 0 },
   ],
 };
