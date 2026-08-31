@@ -197,10 +197,10 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
             </label>
             <input
               type="text"
-              value={formData.promptpayNumber}
-              onChange={(e) => setFormData({ ...formData, promptpayNumber: e.target.value })}
-              className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm"
-              placeholder="เช่น 0812345678"
+              value={formData.promptpayNumber || ''}
+              onChange={(e) => setFormData({ ...formData, promptpayNumber: e.target.value.replace(/[^0-9]/g, '') })}
+              className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm placeholder:text-stone-400 placeholder:font-normal"
+              placeholder="เช่น 0812345678 หรือ 0105566012345"
             />
           </div>
 
@@ -210,9 +210,9 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
             </label>
             <input
               type="text"
-              value={formData.promptpayName}
+              value={formData.promptpayName || ''}
               onChange={(e) => setFormData({ ...formData, promptpayName: e.target.value })}
-              className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm"
+              className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm placeholder:text-stone-400 placeholder:font-normal"
               placeholder="เช่น คาเฟ่ ออเดอร์ (Cafe Order)"
             />
           </div>

@@ -169,6 +169,7 @@ function AppContent() {
         const isDefaultMockTaxId = existing.tax_id === '0105566012345';
         const isDefaultMockPhone = existing.phone === '02-123-4567';
         const isDefaultMockLegal = existing.company_legal_name === 'บริษัท คาเฟ่ ออเดอร์ (ไทยแลนด์) จำกัด';
+        const isDefaultMockPromptPay = existing.promptpay_number === '0812345678';
 
         const mappedConfig: StoreConfig = {
           ...initialStoreConfig,
@@ -179,8 +180,8 @@ function AppContent() {
           tagline: existing.tagline,
           taglineEn: existing.tagline_en,
           logoUrl: existing.logo_url || CAFE_ORDER_LOGO_DATA_URI,
-          promptpayNumber: existing.promptpay_number,
-          promptpayName: existing.promptpay_name,
+          promptpayNumber: isDefaultMockPromptPay ? '' : (existing.promptpay_number || ''),
+          promptpayName: existing.promptpay_name || '',
           openTime: existing.open_time,
           tableCount: existing.table_count,
           taxId: isDefaultMockTaxId ? '' : (existing.tax_id || ''),
@@ -205,6 +206,7 @@ function AppContent() {
         name: `ร้าน ${userPrefix}`,
         nameEn: `${userPrefix}'s Cafe`,
         promptpayName: `${userPrefix}`,
+        promptpayNumber: '',
         companyLegalName: '',
         phone: '',
         taxId: '',
@@ -331,6 +333,7 @@ function AppContent() {
         const isDefaultMockTaxId = configData.tax_id === '0105566012345';
         const isDefaultMockPhone = configData.phone === '02-123-4567';
         const isDefaultMockLegal = configData.company_legal_name === 'บริษัท คาเฟ่ ออเดอร์ (ไทยแลนด์) จำกัด';
+        const isDefaultMockPromptPay = configData.promptpay_number === '0812345678';
 
         const mappedConfig: StoreConfig = {
           ...initialStoreConfig,
@@ -341,8 +344,8 @@ function AppContent() {
           tagline: configData.tagline,
           taglineEn: configData.tagline_en,
           logoUrl: configData.logo_url || CAFE_ORDER_LOGO_DATA_URI,
-          promptpayNumber: configData.promptpay_number,
-          promptpayName: configData.promptpay_name,
+          promptpayNumber: isDefaultMockPromptPay ? '' : (configData.promptpay_number || ''),
+          promptpayName: configData.promptpay_name || '',
           openTime: configData.open_time,
           tableCount: configData.table_count,
           taxId: isDefaultMockTaxId ? '' : (configData.tax_id || ''),

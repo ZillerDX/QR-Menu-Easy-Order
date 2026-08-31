@@ -331,12 +331,14 @@ class RealtimeSyncManager {
       const isDefaultMockTaxId = parsed.taxId === '0105566012345';
       const isDefaultMockPhone = parsed.phone === '02-123-4567';
       const isDefaultMockLegalName = parsed.companyLegalName === 'บริษัท คาเฟ่ ออเดอร์ (ไทยแลนด์) จำกัด';
+      const isDefaultMockPromptPay = parsed.promptpayNumber === '0812345678';
 
       return {
         ...initialStoreConfig,
         ...parsed,
         id: parsed.id || shopId,
         logoUrl: parsed.logoUrl || CAFE_ORDER_LOGO_DATA_URI,
+        promptpayNumber: isDefaultMockPromptPay ? '' : (parsed.promptpayNumber || ''),
         companyLegalName: isDefaultMockLegalName ? '' : (parsed.companyLegalName || ''),
         phone: isDefaultMockPhone ? '' : (parsed.phone || ''),
         taxId: isDefaultMockTaxId ? '' : (parsed.taxId || ''),

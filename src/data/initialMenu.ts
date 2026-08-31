@@ -8,7 +8,7 @@ export const initialStoreConfig: StoreConfig = {
   tagline: "Order Easy • Enjoy More",
   taglineEn: "Order Easy • Enjoy More",
   logoUrl: CAFE_ORDER_LOGO_DATA_URI,
-  promptpayNumber: "0812345678",
+  promptpayNumber: "",
   promptpayName: "คาเฟ่ ออเดอร์ (Cafe Order)",
   openTime: "08:00 - 22:00 น.",
   tableCount: 15,
