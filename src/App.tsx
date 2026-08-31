@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { MenuItem, MenuCategory, CartItem, Order, OrderStatus, SelectedOption, Language, StoreConfig } from './types';
 import { initialMenuItems, initialCategories, initialStoreConfig } from './data/initialMenu';
+import { CAFE_ORDER_LOGO_DATA_URI } from './data/logoData';
 import { syncManager } from './utils/storage';
 import { soundService, SoundPreset } from './utils/sound';
 import { t, getInitialLanguage, saveLanguagePreference } from './utils/i18n';
@@ -1015,11 +1016,21 @@ function AppContent() {
   // Zero-Flash Initial Splash Loader (Clean & Instant)
   if (!isAuthReady) {
     return (
-      <div className="min-h-screen bg-[#fafaf9] flex flex-col items-center justify-center space-y-3">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 p-0.5 shadow-md flex items-center justify-center animate-pulse">
-          <img src={storeConfig.logoUrl} alt="Logo" className="w-full h-full object-cover rounded-[14px]" />
+      <div className="min-h-screen bg-[#fafaf9] flex flex-col items-center justify-center space-y-4">
+        <div className="relative w-16 h-16 flex items-center justify-center">
+          <div className="absolute inset-0 rounded-3xl border-2 border-orange-500 border-t-transparent animate-spin" />
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 p-0.5 shadow-md flex items-center justify-center overflow-hidden">
+            <img
+              src={storeConfig.logoUrl || CAFE_ORDER_LOGO_DATA_URI}
+              alt="Logo"
+              onError={(e) => {
+                e.currentTarget.src = CAFE_ORDER_LOGO_DATA_URI;
+              }}
+              className="w-full h-full object-cover rounded-[14px]"
+            />
+          </div>
         </div>
-        <span className="text-xs font-bold text-stone-400">Loading Cafe Order...</span>
+        <span className="text-xs font-bold text-stone-400 animate-pulse">Loading Cafe Order...</span>
       </div>
     );
   }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StoreConfig, Language } from '../../types';
+import { CAFE_ORDER_LOGO_DATA_URI } from '../../data/logoData';
 import { authService } from '../../utils/supabaseClient';
 import { Lock, Mail, KeyRound, AlertCircle, CheckCircle2, ArrowRight, Sparkles, ShieldCheck } from 'lucide-react';
 
@@ -87,8 +88,11 @@ export const StorePortalLanding: React.FC<StorePortalLandingProps> = ({
         <div className="text-center space-y-2">
           <div className="w-14 h-14 rounded-2xl mx-auto overflow-hidden shadow-md border border-orange-200 p-0.5 bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center">
             <img
-              src={storeConfig.logoUrl}
+              src={storeConfig.logoUrl || CAFE_ORDER_LOGO_DATA_URI}
               alt={storeConfig.name}
+              onError={(e) => {
+                e.currentTarget.src = CAFE_ORDER_LOGO_DATA_URI;
+              }}
               loading="lazy"
               decoding="async"
               className="w-full h-full object-cover rounded-[14px]"

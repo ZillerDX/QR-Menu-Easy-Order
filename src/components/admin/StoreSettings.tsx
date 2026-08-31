@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Store, Upload, CheckCircle2, QrCode, Clock, Hash, LogOut, ShieldCheck } from 'lucide-react';
 import { StoreConfig, Language } from '../../types';
+import { CAFE_ORDER_LOGO_DATA_URI } from '../../data/logoData';
 import { t } from '../../utils/i18n';
 import { User } from '@supabase/supabase-js';
 
@@ -19,24 +20,10 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
   user,
   onLogout,
 }) => {
-  const [formData, setFormData] = useState<StoreConfig>(() => ({
-    ...storeConfig,
-    companyLegalName: storeConfig.companyLegalName || storeConfig.name || 'บริษัท คาเฟ่ ออเดอร์ (ไทยแลนด์) จำกัด',
-    phone: storeConfig.phone || '02-123-4567',
-    taxId: storeConfig.taxId || '0105566012345',
-    branchNumber: storeConfig.branchNumber || '00000 (สำนักงานใหญ่)',
-    address: storeConfig.address || '123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110',
-  }));
+  const [formData, setFormData] = useState<StoreConfig>({ ...storeConfig });
 
   React.useEffect(() => {
-    setFormData({
-      ...storeConfig,
-      companyLegalName: storeConfig.companyLegalName || storeConfig.name || 'บริษัท คาเฟ่ ออเดอร์ (ไทยแลนด์) จำกัด',
-      phone: storeConfig.phone || '02-123-4567',
-      taxId: storeConfig.taxId || '0105566012345',
-      branchNumber: storeConfig.branchNumber || '00000 (สำนักงานใหญ่)',
-      address: storeConfig.address || '123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110',
-    });
+    setFormData({ ...storeConfig });
   }, [storeConfig]);
 
   const [isSaved, setIsSaved] = useState(false);
@@ -93,20 +80,16 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
             {/* Logo Preview Avatar */}
             <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-tr from-amber-500 to-orange-500 p-1 flex-shrink-0 shadow-md shadow-orange-500/20 overflow-hidden relative group">
-              {formData.logoUrl ? (
-                <img
-                  src={formData.logoUrl}
-                  alt="Store Logo"
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover rounded-[22px]"
-                />
-              ) : (
-                <div className="w-full h-full bg-white rounded-[22px] flex flex-col items-center justify-center text-orange-600">
-                  <Store className="w-8 h-8 mb-1" />
-                  <span className="text-[10px] font-black">Cafe Order</span>
-                </div>
-              )}
+              <img
+                src={formData.logoUrl || CAFE_ORDER_LOGO_DATA_URI}
+                alt="Store Logo"
+                onError={(e) => {
+                  e.currentTarget.src = CAFE_ORDER_LOGO_DATA_URI;
+                }}
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover rounded-[22px]"
+              />
             </div>
 
             {/* Upload Controls */}
@@ -284,7 +267,8 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
                 type="text"
                 value={formData.companyLegalName || ''}
                 onChange={(e) => setFormData({ ...formData, companyLegalName: e.target.value })}
-                className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm"
+                className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm placeholder:text-stone-400 placeholder:font-normal"
+                placeholder="เช่น บริษัท ตัวอย่าง จำกัด หรือ นายสมชาย ใจดี"
               />
             </div>
 
@@ -296,7 +280,8 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
                 type="text"
                 value={formData.phone || ''}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm"
+                className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm placeholder:text-stone-400 placeholder:font-normal"
+                placeholder="เช่น 02-123-4567 หรือ 081-234-5678"
               />
             </div>
           </div>
@@ -311,7 +296,8 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
                 maxLength={13}
                 value={formData.taxId || ''}
                 onChange={(e) => setFormData({ ...formData, taxId: e.target.value.replace(/[^0-9]/g, '') })}
-                className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-mono font-bold text-sm"
+                className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-mono font-bold text-sm placeholder:text-stone-400 placeholder:font-normal"
+                placeholder="เลขประจำตัวผู้เสียภาษี 13 หลัก"
               />
             </div>
 
@@ -323,7 +309,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
                 type="text"
                 value={formData.branchNumber || ''}
                 onChange={(e) => setFormData({ ...formData, branchNumber: e.target.value })}
-                className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm"
+                className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm placeholder:text-stone-400 placeholder:font-normal"
                 placeholder="00000 (สำนักงานใหญ่)"
               />
             </div>
@@ -337,7 +323,8 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
               rows={2}
               value={formData.address || ''}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 text-sm font-medium"
+              className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 text-sm font-medium placeholder:text-stone-400 placeholder:font-normal"
+              placeholder="เลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์"
             />
           </div>
         </div>

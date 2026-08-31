@@ -1,5 +1,6 @@
 import { Order, MenuItem, MenuCategory, StoreConfig } from '../types';
 import { initialMenuItems, initialCategories, initialStoreConfig } from '../data/initialMenu';
+import { CAFE_ORDER_LOGO_DATA_URI } from '../data/logoData';
 
 const DEFAULT_SHOP_ID = 'cafe-order';
 
@@ -326,15 +327,21 @@ class RealtimeSyncManager {
         };
       }
       const parsed: StoreConfig = JSON.parse(data);
+      const isDefaultMockAddress = parsed.address === '123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110';
+      const isDefaultMockTaxId = parsed.taxId === '0105566012345';
+      const isDefaultMockPhone = parsed.phone === '02-123-4567';
+      const isDefaultMockLegalName = parsed.companyLegalName === 'บริษัท คาเฟ่ ออเดอร์ (ไทยแลนด์) จำกัด';
+
       return {
         ...initialStoreConfig,
         ...parsed,
         id: parsed.id || shopId,
-        companyLegalName: parsed.companyLegalName || initialStoreConfig.companyLegalName || parsed.name || 'บริษัท คาเฟ่ ออเดอร์ (ไทยแลนด์) จำกัด',
-        phone: parsed.phone || initialStoreConfig.phone || '02-123-4567',
-        taxId: parsed.taxId || initialStoreConfig.taxId || '0105566012345',
-        branchNumber: parsed.branchNumber || initialStoreConfig.branchNumber || '00000 (สำนักงานใหญ่)',
-        address: parsed.address || initialStoreConfig.address || '123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110',
+        logoUrl: parsed.logoUrl || CAFE_ORDER_LOGO_DATA_URI,
+        companyLegalName: isDefaultMockLegalName ? '' : (parsed.companyLegalName || ''),
+        phone: isDefaultMockPhone ? '' : (parsed.phone || ''),
+        taxId: isDefaultMockTaxId ? '' : (parsed.taxId || ''),
+        branchNumber: parsed.branchNumber || '00000 (สำนักงานใหญ่)',
+        address: isDefaultMockAddress ? '' : (parsed.address || ''),
       };
     } catch {
       return {

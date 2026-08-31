@@ -1,6 +1,7 @@
 import React from 'react';
 import { ShoppingBag, Store, LogOut } from 'lucide-react';
 import { StoreConfig, Language } from '../../types';
+import { CAFE_ORDER_LOGO_DATA_URI } from '../../data/logoData';
 import { t } from '../../utils/i18n';
 import { AppRole } from './RoleSwitcher';
 import { User } from '@supabase/supabase-js';
@@ -47,8 +48,11 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl overflow-hidden shadow-xs border border-orange-200/80 p-0.5 bg-gradient-to-tr from-amber-500 to-orange-500 flex-shrink-0 group-hover:scale-105 transition-transform duration-200">
             <img
-              src={storeConfig.logoUrl}
+              src={storeConfig.logoUrl || CAFE_ORDER_LOGO_DATA_URI}
               alt={storeConfig.name}
+              onError={(e) => {
+                e.currentTarget.src = CAFE_ORDER_LOGO_DATA_URI;
+              }}
               loading="lazy"
               decoding="async"
               className="w-full h-full object-cover rounded-[14px]"

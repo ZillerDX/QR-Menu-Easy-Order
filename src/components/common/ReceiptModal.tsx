@@ -128,10 +128,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   // Seller info
   const sellerLegalName = storeConfig.companyLegalName || (isTh ? storeConfig.name : (storeConfig.nameEn || storeConfig.name));
-  const sellerTaxId = storeConfig.taxId || '0105566012345';
+  const sellerTaxId = storeConfig.taxId || '-';
   const sellerBranch = storeConfig.branchNumber || '00000 (สำนักงานใหญ่)';
-  const sellerAddress = storeConfig.address || '123/45 ถนนสุขุมวิท แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110';
-  const sellerPhone = storeConfig.phone || '02-123-4567';
+  const sellerAddress = storeConfig.address || '-';
+  const sellerPhone = storeConfig.phone || storeConfig.promptpayNumber || '';
 
   // Invoice & Book Number (Revenue Dept standard formatting)
   const bookNo = '001';
@@ -368,7 +368,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               {/* POS Header */}
               <div className="text-center space-y-1 pb-2.5 border-b border-dashed border-stone-300 print:border-black">
                 <div className="w-12 h-12 mx-auto overflow-hidden p-0.5 border border-stone-200 print:border-none">
-                  <img src={CAFE_ORDER_LOGO_DATA_URI} alt="Logo" className="w-full h-full object-cover" />
+                  <img
+                    src={storeConfig.logoUrl || CAFE_ORDER_LOGO_DATA_URI}
+                    alt="Logo"
+                    onError={(e) => {
+                      e.currentTarget.src = CAFE_ORDER_LOGO_DATA_URI;
+                    }}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <h2 className="font-black text-base tracking-tight text-stone-950 print:text-black">
                   {sellerLegalName}
@@ -492,7 +499,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               <div className="flex items-start justify-between gap-4 border-b-2 border-stone-900 pb-3.5">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 overflow-hidden p-0.5 border border-stone-300 print:border-none flex-shrink-0">
-                    <img src={CAFE_ORDER_LOGO_DATA_URI} alt="Logo" className="w-full h-full object-cover" />
+                    <img
+                      src={storeConfig.logoUrl || CAFE_ORDER_LOGO_DATA_URI}
+                      alt="Logo"
+                      onError={(e) => {
+                        e.currentTarget.src = CAFE_ORDER_LOGO_DATA_URI;
+                      }}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <div>
                     <h1 className="text-lg font-black text-stone-950 tracking-tight">
