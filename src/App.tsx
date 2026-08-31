@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MenuItem, MenuCategory, CartItem, Order, OrderStatus, SelectedOption, Language, StoreConfig } from './types';
+import { MenuItem, MenuCategory, CartItem, Order, OrderStatus, SelectedOption, Language, StoreConfig, PaymentMethod } from './types';
 import { initialMenuItems, initialCategories, initialStoreConfig } from './data/initialMenu';
 import { CAFE_ORDER_LOGO_DATA_URI } from './data/logoData';
 import { syncManager } from './utils/storage';
@@ -138,6 +138,7 @@ function AppContent() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCountdownOpen, setIsCountdownOpen] = useState(false);
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('promptpay');
   
   // Tracked order strictly scoped to THIS CUSTOMER'S ACTIVE BROWSER SESSION ONLY!
   const [trackedOrder, setTrackedOrder] = useState<Order | null>(() => {
@@ -786,7 +787,7 @@ function AppContent() {
       items: [...cart],
       subtotal,
       totalPrice: subtotal,
-      paymentMethod: 'promptpay',
+      paymentMethod: selectedPaymentMethod,
       paymentStatus: 'unpaid',
       status: 'pending',
       createdAt: new Date().toISOString(),
@@ -823,14 +824,20 @@ function AppContent() {
   const handleUpdateOrderStatus = async (
     orderId: string,
     status: OrderStatus,
-    paymentStatus?: Order['paymentStatus']
+    paymentStatus?: Order['paymentStatus'],
+    paymentMethod?: PaymentMethod
   ) => {
-    const updated = syncManager.updateOrderStatus(orderId, status, paymentStatus, shopId);
+    const updated = syncManager.updateOrderStatus(orderId, status, paymentStatus, paymentMethod, shopId);
     setOrders(updated);
 
     const myOrderId = sessionStorage.getItem('my_active_order_id');
     if (myOrderId && orderId === myOrderId) {
-      setTrackedOrder((prev) => (prev ? { ...prev, status, ...(paymentStatus ? { paymentStatus } : {}) } : null));
+      setTrackedOrder((prev) => (prev ? { 
+        ...prev, 
+        status, 
+        ...(paymentStatus ? { paymentStatus } : {}),
+        ...(paymentMethod ? { paymentMethod } : {})
+      } : null));
     }
 
     try {
@@ -839,6 +846,7 @@ function AppContent() {
         .update({
           status,
           ...(paymentStatus ? { payment_status: paymentStatus } : {}),
+          ...(paymentMethod ? { payment_method: paymentMethod } : {}),
           updated_at: new Date().toISOString(),
         })
         .eq('id', orderId);
@@ -850,7 +858,7 @@ function AppContent() {
   };
 
   const handleCancelOrder = async (orderId: string, reason: string) => {
-    const updated = syncManager.updateOrderStatus(orderId, 'cancelled', undefined, shopId);
+    const updated = syncManager.updateOrderStatus(orderId, 'cancelled', undefined, undefined, shopId);
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status: 'cancelled', cancelReason: reason } : o))
     );
@@ -1342,6 +1350,8 @@ function AppContent() {
         items={cart}
         tableNumber={tableNumber}
         language={language}
+        selectedPaymentMethod={selectedPaymentMethod}
+        onSelectPaymentMethod={setSelectedPaymentMethod}
         onUpdateQuantity={handleUpdateCartQuantity}
         onRemoveItem={handleRemoveCartItem}
         onCheckout={handleStartCheckout}

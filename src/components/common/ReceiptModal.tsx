@@ -411,6 +411,16 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   <span>วันและเวลา (Date & Time):</span>
                   <span>{formattedDateShort} {formattedTime} {isTh ? 'น.' : ''}</span>
                 </div>
+                <div className="flex justify-between text-stone-600 print:text-black text-[10.5px]">
+                  <span>วิธีชำระเงิน (Payment):</span>
+                  <span className="font-bold text-stone-900 print:text-black">
+                    {order.paymentMethod === 'promptpay'
+                      ? (isTh ? 'พร้อมเพย์ (PromptPay)' : 'PromptPay')
+                      : order.paymentMethod === 'credit_card'
+                      ? (isTh ? 'บัตรเครดิต (Credit Card)' : 'Credit Card')
+                      : (isTh ? 'เงินสด (Cash)' : 'Cash')}
+                  </span>
+                </div>
               </div>
 
               {/* Items List */}
@@ -655,7 +665,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   </div>
 
                   <div className="text-[10.5px] text-stone-600 space-y-0.5 pt-1">
-                    <p><span className="font-bold">วิธีชำระเงิน:</span> {order.paymentMethod === 'promptpay' ? 'พร้อมเพย์ (PromptPay)' : 'เงินสด (Cash)'}</p>
+                    <p><span className="font-bold">วิธีชำระเงิน:</span> {order.paymentMethod === 'promptpay' ? 'พร้อมเพย์ (PromptPay)' : order.paymentMethod === 'credit_card' ? 'บัตรเครดิต / เดบิต (Credit Card)' : 'เงินสด (Cash)'}</p>
                     <p><span className="font-bold">สถานะ:</span> {order.paymentStatus === 'paid' ? 'ชำระเงินเรียบร้อยแล้ว (PAID)' : 'ค้างชำระ'}</p>
                     <p className="text-[10px] text-stone-500 font-medium pt-0.5">
                       เอกสารนี้ออกตามมาตรา 86/4 แห่งประมวลรัษฎากร กรมสรรพากร

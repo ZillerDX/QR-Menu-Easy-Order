@@ -62,7 +62,7 @@ export interface CartItem {
 }
 
 export type OrderStatus = 'pending' | 'cooking' | 'ready' | 'completed' | 'cancelled';
-export type PaymentMethod = 'promptpay' | 'cash';
+export type PaymentMethod = 'promptpay' | 'cash' | 'credit_card';
 export type PaymentStatus = 'unpaid' | 'paid';
 
 export interface Order {

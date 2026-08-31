@@ -146,7 +146,13 @@ class RealtimeSyncManager {
     return updated;
   }
 
-  updateOrderStatus(orderId: string, status: Order['status'], paymentStatus?: Order['paymentStatus'], shopId = DEFAULT_SHOP_ID): Order[] {
+  updateOrderStatus(
+    orderId: string, 
+    status: Order['status'], 
+    paymentStatus?: Order['paymentStatus'], 
+    paymentMethod?: Order['paymentMethod'],
+    shopId = DEFAULT_SHOP_ID
+  ): Order[] {
     const orders = this.getOrders(shopId);
     let targetOrder: Order | undefined;
     const updated = orders.map((o) => {
@@ -155,6 +161,7 @@ class RealtimeSyncManager {
           ...o,
           status,
           ...(paymentStatus ? { paymentStatus } : {}),
+          ...(paymentMethod ? { paymentMethod } : {}),
         };
         return targetOrder;
       }

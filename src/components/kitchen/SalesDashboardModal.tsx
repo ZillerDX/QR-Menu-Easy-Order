@@ -126,10 +126,13 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     // Payment methods
     const promptpayOrders = filteredOrders.filter((o) => o?.paymentMethod === 'promptpay');
     const cashOrders = filteredOrders.filter((o) => o?.paymentMethod === 'cash');
+    const cardOrders = filteredOrders.filter((o) => o?.paymentMethod === 'credit_card');
     const promptpaySales = promptpayOrders.reduce((sum, o) => sum + (Number(o?.totalPrice) || 0), 0);
     const cashSales = cashOrders.reduce((sum, o) => sum + (Number(o?.totalPrice) || 0), 0);
+    const cardSales = cardOrders.reduce((sum, o) => sum + (Number(o?.totalPrice) || 0), 0);
     const promptpayPercent = totalSales > 0 ? Math.round((promptpaySales / totalSales) * 100) : 0;
-    const cashPercent = totalSales > 0 ? 100 - promptpayPercent : 0;
+    const cashPercent = totalSales > 0 ? Math.round((cashSales / totalSales) * 100) : 0;
+    const cardPercent = totalSales > 0 ? Math.max(0, 100 - promptpayPercent - cashPercent) : 0;
 
     // Best Sellers Ranking
     const itemSalesMap: Record<string, { name: string; nameEn?: string; count: number; revenue: number; image?: string }> = {};
@@ -186,6 +189,9 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
       cashSales,
       cashCount: cashOrders.length,
       cashPercent,
+      cardSales,
+      cardCount: cardOrders.length,
+      cardPercent,
       topItems,
       maxItemCount,
       hourlySales,
@@ -372,7 +378,11 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
         .map((i) => `${(isTh ? i.menuItem?.name : (i.menuItem?.nameEn || i.menuItem?.name)) || 'Item'} (x${i.quantity || 1})`)
         .join('; ');
       
-      const payMethodLabel = o.paymentMethod === 'promptpay' ? (isTh ? 'พร้อมเพย์ (PromptPay)' : 'PromptPay') : (isTh ? 'เงินสด (Cash)' : 'Cash');
+      const payMethodLabel = o.paymentMethod === 'promptpay' 
+        ? (isTh ? 'พร้อมเพย์ (PromptPay)' : 'PromptPay') 
+        : o.paymentMethod === 'credit_card'
+        ? (isTh ? 'บัตรเครดิต (Credit Card)' : 'Credit Card')
+        : (isTh ? 'เงินสด (Cash)' : 'Cash');
       const statusLabel = o.status === 'completed' ? (isTh ? 'เสร็จสิ้น' : 'Completed') : o.status === 'ready' ? (isTh ? 'พร้อมเสิร์ฟ' : 'Ready') : (isTh ? 'กำลังทำ' : 'Cooking');
       const tableLabel = o.tableNumber === 'TAKEAWAY' ? (isTh ? 'สั่งกลับบ้าน (Takeaway)' : 'Takeaway') : `${isTh ? 'โต๊ะ' : 'Table'} ${o.tableNumber || '-'}`;
 
@@ -783,6 +793,11 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                     className="bg-gradient-to-r from-emerald-500 to-teal-500 h-full transition-all duration-500"
                     title={`Cash: ${metrics.cashPercent}%`}
                   />
+                  <div
+                    style={{ width: `${metrics.cardPercent}%` }}
+                    className="bg-gradient-to-r from-purple-500 to-indigo-500 h-full transition-all duration-500"
+                    title={`Credit Card: ${metrics.cardPercent}%`}
+                  />
                 </div>
 
                 <div className="space-y-1 text-[11px]">
@@ -799,6 +814,13 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                       {language === 'th' ? 'เงินสด' : 'Cash'} ({metrics.cashCount})
                     </span>
                     <span className="font-black text-stone-800">฿{formatPrice(metrics.cashSales)}</span>
+                  </div>
+                  <div className="flex items-center justify-between font-bold">
+                    <span className="flex items-center gap-1.5 text-purple-700">
+                      <span className="w-2 h-2 rounded-full bg-purple-500 shadow-xs" />
+                      {language === 'th' ? 'บัตรเครดิต' : 'Credit Card'} ({metrics.cardCount})
+                    </span>
+                    <span className="font-black text-stone-800">฿{formatPrice(metrics.cardSales)}</span>
                   </div>
                 </div>
               </div>
@@ -1025,9 +1047,17 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                         </td>
                         <td className="py-3">
                           <span className={`px-2.5 py-0.5 rounded-lg font-black text-[10px] inline-flex items-center gap-1 ${
-                            o.paymentMethod === 'promptpay' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'
+                            o.paymentMethod === 'promptpay'
+                              ? 'bg-blue-50 text-blue-700'
+                              : o.paymentMethod === 'credit_card'
+                              ? 'bg-purple-50 text-purple-700'
+                              : 'bg-emerald-50 text-emerald-700'
                           }`}>
-                            {o.paymentMethod === 'promptpay' ? (language === 'th' ? 'พร้อมเพย์' : 'PromptPay') : (language === 'th' ? 'เงินสด' : 'Cash')}
+                            {o.paymentMethod === 'promptpay'
+                              ? (language === 'th' ? 'พร้อมเพย์' : 'PromptPay')
+                              : o.paymentMethod === 'credit_card'
+                              ? (language === 'th' ? 'บัตรเครดิต' : 'Credit Card')
+                              : (language === 'th' ? 'เงินสด' : 'Cash')}
                           </span>
                         </td>
                         <td className="py-3">

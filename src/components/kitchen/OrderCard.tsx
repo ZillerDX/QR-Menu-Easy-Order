@@ -5,6 +5,7 @@ import {
   CheckCircle2, 
   Banknote, 
   QrCode, 
+  CreditCard,
   Flame, 
   Hourglass, 
   Printer, 
@@ -15,13 +16,13 @@ import {
   AlertTriangle,
   Receipt
 } from 'lucide-react';
-import { Order, OrderStatus, Language } from '../../types';
+import { Order, OrderStatus, Language, PaymentMethod } from '../../types';
 import { t } from '../../utils/i18n';
 
 interface OrderCardProps {
   order: Order;
   language: Language;
-  onUpdateStatus: (orderId: string, status: OrderStatus, paymentStatus?: Order['paymentStatus']) => Promise<void> | void;
+  onUpdateStatus: (orderId: string, status: OrderStatus, paymentStatus?: Order['paymentStatus'], paymentMethod?: PaymentMethod) => Promise<void> | void;
   onPrintReceipt?: (order: Order) => void;
   onRejectOrder?: (order: Order) => void;
 }
@@ -35,7 +36,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [updatingLabel, setUpdatingLabel] = useState('');
+  const [activePayMethod, setActivePayMethod] = useState<PaymentMethod>(order.paymentMethod || 'promptpay');
   const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    setActivePayMethod(order.paymentMethod || 'promptpay');
+  }, [order.paymentMethod]);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 30000);
@@ -111,14 +117,19 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
   const theme = getCardTheme();
 
-  const handleStepUpdate = async (nextStatus: OrderStatus, nextPaymentStatus?: Order['paymentStatus'], label = '') => {
+  const handleStepUpdate = async (
+    nextStatus: OrderStatus, 
+    nextPaymentStatus?: Order['paymentStatus'], 
+    nextPaymentMethod?: PaymentMethod,
+    label = ''
+  ) => {
     if (isUpdating) return;
     setIsUpdating(true);
     setUpdatingLabel(label);
     
     await new Promise((resolve) => setTimeout(resolve, 400));
     try {
-      await onUpdateStatus(order.id, nextStatus, nextPaymentStatus);
+      await onUpdateStatus(order.id, nextStatus, nextPaymentStatus, nextPaymentMethod || activePayMethod);
     } finally {
       setTimeout(() => {
         setIsUpdating(false);
@@ -198,15 +209,22 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           </span>
           
           <div className="flex items-center gap-1.5 text-xs">
-            {order.paymentMethod === 'promptpay' ? (
+            {order.paymentMethod === 'promptpay' && (
               <span className="flex items-center gap-1 text-blue-700 bg-blue-50 border border-blue-200/60 px-2.5 py-0.5 rounded-lg font-bold">
                 <QrCode className="w-3 h-3 text-blue-600" />
                 <span>{t('promptpayQR', language)}</span>
               </span>
-            ) : (
+            )}
+            {order.paymentMethod === 'cash' && (
               <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2.5 py-0.5 rounded-lg font-bold">
                 <Banknote className="w-3 h-3 text-emerald-600" />
                 <span>{t('cashAtCounter', language)}</span>
+              </span>
+            )}
+            {order.paymentMethod === 'credit_card' && (
+              <span className="flex items-center gap-1 text-purple-700 bg-purple-50 border border-purple-200/60 px-2.5 py-0.5 rounded-lg font-bold">
+                <CreditCard className="w-3 h-3 text-purple-600" />
+                <span>{language === 'th' ? 'บัตรเครดิต' : 'Credit Card'}</span>
               </span>
             )}
             <span className={`text-[10px] px-2 py-0.5 rounded-md font-black ${
@@ -281,7 +299,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             <button
               type="button"
               disabled={isUpdating}
-              onClick={() => handleStepUpdate('cooking', undefined, language === 'th' ? 'กำลังเริ่มปรุงอาหาร...' : 'Starting cooking...')}
+              onClick={() => handleStepUpdate('cooking', undefined, undefined, language === 'th' ? 'กำลังเริ่มปรุงอาหาร...' : 'Starting cooking...')}
               className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-orange-500/30 active:scale-95 transition cursor-pointer disabled:opacity-50"
             >
               {isUpdating ? (
@@ -297,7 +315,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             <button
               type="button"
               disabled={isUpdating}
-              onClick={() => handleStepUpdate('ready', undefined, language === 'th' ? 'กำลังนำส่งพร้อมเสิร์ฟ...' : 'Marking ready to serve...')}
+              onClick={() => handleStepUpdate('ready', undefined, undefined, language === 'th' ? 'กำลังนำส่งพร้อมเสิร์ฟ...' : 'Marking ready to serve...')}
               className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-600/30 active:scale-95 transition cursor-pointer disabled:opacity-50"
             >
               {isUpdating ? (
@@ -310,31 +328,108 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           )}
 
           {order.status === 'ready' && (
-            <button
-              type="button"
-              disabled={isUpdating}
-              onClick={() => handleStepUpdate('completed', 'paid', language === 'th' ? 'กำลังปิดบิลชำระเงิน...' : 'Closing bill...')}
-              className="w-full py-3.5 px-4 rounded-2xl bg-stone-900 hover:bg-black text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md active:scale-95 transition cursor-pointer disabled:opacity-50 ring-1 ring-white/10"
-            >
-              {isUpdating ? (
-                <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
-              ) : (
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              )}
-              <span>{isUpdating ? updatingLabel : (language === 'th' ? 'ปิดบิล (ชำระเงินแล้ว)' : 'Close Bill (Paid)')}</span>
-            </button>
+            <div className="space-y-2">
+              {/* Payment Method Selector Pills */}
+              <div className="flex items-center justify-between gap-1.5 p-1 bg-stone-100 rounded-xl border border-stone-200/60">
+                <button
+                  type="button"
+                  onClick={() => setActivePayMethod('promptpay')}
+                  className={`flex-1 py-1.5 px-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
+                    activePayMethod === 'promptpay'
+                      ? 'bg-white text-blue-700 shadow-xs border border-blue-200 font-black'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <QrCode className="w-3 h-3 text-blue-600" />
+                  <span>QR Code</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePayMethod('cash')}
+                  className={`flex-1 py-1.5 px-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
+                    activePayMethod === 'cash'
+                      ? 'bg-white text-emerald-700 shadow-xs border border-emerald-200 font-black'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <Banknote className="w-3 h-3 text-emerald-600" />
+                  <span>{language === 'th' ? 'เงินสด' : 'Cash'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePayMethod('credit_card')}
+                  className={`flex-1 py-1.5 px-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition cursor-pointer ${
+                    activePayMethod === 'credit_card'
+                      ? 'bg-white text-purple-700 shadow-xs border border-purple-200 font-black'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <CreditCard className="w-3 h-3 text-purple-600" />
+                  <span>{language === 'th' ? 'บัตรเครดิต' : 'Card'}</span>
+                </button>
+              </div>
+
+              {/* Dynamic Close Bill CTA */}
+              <button
+                type="button"
+                disabled={isUpdating}
+                onClick={() => handleStepUpdate('completed', 'paid', activePayMethod, language === 'th' ? `กำลังปิดบิล (${activePayMethod === 'promptpay' ? 'QR พร้อมเพย์' : activePayMethod === 'credit_card' ? 'บัตรเครดิต' : 'เงินสด'})...` : 'Closing bill...')}
+                className={`w-full py-3.5 px-4 rounded-2xl text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md active:scale-95 transition cursor-pointer disabled:opacity-50 ring-1 ring-white/10 ${
+                  activePayMethod === 'promptpay'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-500/20'
+                    : activePayMethod === 'credit_card'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 shadow-purple-500/20'
+                    : 'bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 shadow-emerald-500/20'
+                }`}
+              >
+                {isUpdating ? (
+                  <Loader2 className="w-4 h-4 text-white animate-spin" />
+                ) : activePayMethod === 'promptpay' ? (
+                  <QrCode className="w-4 h-4 text-white" />
+                ) : activePayMethod === 'credit_card' ? (
+                  <CreditCard className="w-4 h-4 text-white" />
+                ) : (
+                  <Banknote className="w-4 h-4 text-white" />
+                )}
+                <span>
+                  {isUpdating 
+                    ? updatingLabel 
+                    : activePayMethod === 'promptpay'
+                    ? (language === 'th' ? `ปิดบิล • ลูกค้าชำระด้วย QR พร้อมเพย์ (฿${order.totalPrice.toLocaleString()})` : `Close Bill • Paid via QR PromptPay (฿${order.totalPrice.toLocaleString()})`)
+                    : activePayMethod === 'credit_card'
+                    ? (language === 'th' ? `ปิดบิล • ลูกค้าชำระด้วย บัตรเครดิต (฿${order.totalPrice.toLocaleString()})` : `Close Bill • Paid with Credit Card (฿${order.totalPrice.toLocaleString()})`)
+                    : (language === 'th' ? `ปิดบิล • ลูกค้าชำระด้วย เงินสด (฿${order.totalPrice.toLocaleString()})` : `Close Bill • Paid with Cash (฿${order.totalPrice.toLocaleString()})`)}
+                </span>
+              </button>
+            </div>
           )}
 
           {order.status === 'completed' && (
             <div className="flex items-center gap-2">
-              <div className="flex-1 py-2.5 px-3 rounded-2xl bg-stone-100 text-stone-600 font-bold text-xs flex items-center justify-center gap-1.5 border border-stone-200/80">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{language === 'th' ? 'ปิดบิลเรียบร้อยแล้ว' : 'Bill Closed'}</span>
+              <div className={`flex-1 py-2.5 px-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 border ${
+                order.paymentMethod === 'promptpay'
+                  ? 'bg-blue-50/80 border-blue-200 text-blue-800'
+                  : order.paymentMethod === 'credit_card'
+                  ? 'bg-purple-50/80 border-purple-200 text-purple-800'
+                  : 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
+              }`}>
+                {order.paymentMethod === 'promptpay' ? (
+                  <QrCode className="w-3.5 h-3.5 text-blue-600" />
+                ) : order.paymentMethod === 'credit_card' ? (
+                  <CreditCard className="w-3.5 h-3.5 text-purple-600" />
+                ) : (
+                  <Banknote className="w-3.5 h-3.5 text-emerald-600" />
+                )}
+                <span>
+                  {language === 'th'
+                    ? `ปิดบิลแล้ว • ชำระด้วย ${order.paymentMethod === 'promptpay' ? 'QR พร้อมเพย์' : order.paymentMethod === 'credit_card' ? 'บัตรเครดิต' : 'เงินสด'}`
+                    : `Bill Closed • Paid via ${order.paymentMethod === 'promptpay' ? 'QR PromptPay' : order.paymentMethod === 'credit_card' ? 'Credit Card' : 'Cash'}`}
+                </span>
               </div>
               <button
                 type="button"
                 disabled={isUpdating}
-                onClick={() => handleStepUpdate('ready', 'paid', language === 'th' ? 'เปิดบิลใหม่...' : 'Reopening bill...')}
+                onClick={() => handleStepUpdate('ready', 'paid', order.paymentMethod, language === 'th' ? 'เปิดบิลใหม่...' : 'Reopening bill...')}
                 className="px-3 py-2.5 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs transition cursor-pointer flex items-center gap-1 active:scale-95 border border-stone-200/80"
                 title={language === 'th' ? 'ย้อนกลับไปพร้อมเสิร์ฟ' : 'Reopen Bill'}
               >

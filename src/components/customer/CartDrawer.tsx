@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Trash2, Plus, Minus, Store, ArrowRight, Utensils } from 'lucide-react';
-import { CartItem, Language } from '../../types';
+import { X, Trash2, Plus, Minus, Store, ArrowRight, Utensils, QrCode, Banknote, CreditCard } from 'lucide-react';
+import { CartItem, Language, PaymentMethod } from '../../types';
 import { t } from '../../utils/i18n';
 
 interface CartDrawerProps {
@@ -10,6 +10,8 @@ interface CartDrawerProps {
   items: CartItem[];
   tableNumber: string;
   language: Language;
+  selectedPaymentMethod?: PaymentMethod;
+  onSelectPaymentMethod?: (method: PaymentMethod) => void;
   onUpdateQuantity: (cartItemId: string, delta: number) => void;
   onRemoveItem: (cartItemId: string) => void;
   onCheckout: () => void;
@@ -21,6 +23,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   items,
   tableNumber,
   language,
+  selectedPaymentMethod = 'promptpay',
+  onSelectPaymentMethod,
   onUpdateQuantity,
   onRemoveItem,
   onCheckout,
@@ -182,7 +186,54 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         {/* Checkout Footer */}
         {items.length > 0 && (
           <div className="p-4 bg-stone-50 border-t border-stone-200 space-y-3 flex-shrink-0">
-            <div className="space-y-1">
+            {/* Payment Method Selection */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-black text-stone-700 uppercase tracking-wider block">
+                {t('selectPayment', language)}
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSelectPaymentMethod?.('promptpay')}
+                  className={`py-2 px-1.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition cursor-pointer text-center ${
+                    selectedPaymentMethod === 'promptpay'
+                      ? 'bg-blue-50 border-blue-500 text-blue-700 font-black shadow-xs ring-1 ring-blue-500/30'
+                      : 'bg-white border-stone-200 text-stone-600 hover:border-stone-300 font-bold'
+                  }`}
+                >
+                  <QrCode className="w-4 h-4 text-blue-600" />
+                  <span className="text-[10.5px] leading-tight">{language === 'th' ? 'QR พร้อมเพย์' : 'PromptPay'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onSelectPaymentMethod?.('cash')}
+                  className={`py-2 px-1.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition cursor-pointer text-center ${
+                    selectedPaymentMethod === 'cash'
+                      ? 'bg-emerald-50 border-emerald-500 text-emerald-700 font-black shadow-xs ring-1 ring-emerald-500/30'
+                      : 'bg-white border-stone-200 text-stone-600 hover:border-stone-300 font-bold'
+                  }`}
+                >
+                  <Banknote className="w-4 h-4 text-emerald-600" />
+                  <span className="text-[10.5px] leading-tight">{language === 'th' ? 'เงินสด' : 'Cash'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onSelectPaymentMethod?.('credit_card')}
+                  className={`py-2 px-1.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition cursor-pointer text-center ${
+                    selectedPaymentMethod === 'credit_card'
+                      ? 'bg-purple-50 border-purple-500 text-purple-700 font-black shadow-xs ring-1 ring-purple-500/30'
+                      : 'bg-white border-stone-200 text-stone-600 hover:border-stone-300 font-bold'
+                  }`}
+                >
+                  <CreditCard className="w-4 h-4 text-purple-600" />
+                  <span className="text-[10.5px] leading-tight">{language === 'th' ? 'บัตรเครดิต' : 'Credit Card'}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-1 pt-1 border-t border-stone-200">
               <div className="flex justify-between text-xs text-stone-500">
                 <span>{t('total', language)}</span>
                 <span>฿{subtotal.toLocaleString()}</span>
