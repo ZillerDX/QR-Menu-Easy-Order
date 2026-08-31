@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   X, Sparkles, Flame, Upload, Image as ImageIcon, ChevronDown, Check, Link2, 
-  Utensils, Coffee, CupSoda, Cake, Pizza, Heart, Plus, Trash2, Sliders, Layers 
+  Utensils, Plus, Trash2, Sliders, Layers 
 } from 'lucide-react';
 import { MenuItem, MenuCategory, Language, OptionGroup, OptionChoice } from '../../types';
 import { t } from '../../utils/i18n';
+import { renderCategoryIcon } from '../../utils/categoryIcons';
 
 interface ItemEditorModalProps {
   isOpen: boolean;
@@ -311,19 +312,6 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
     onClose();
   };
 
-  const getCategoryIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'Sparkles': return <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0" />;
-      case 'Coffee': return <Coffee className="w-4 h-4 text-orange-500 flex-shrink-0" />;
-      case 'CupSoda': return <CupSoda className="w-4 h-4 text-emerald-500 flex-shrink-0" />;
-      case 'Utensils': return <Utensils className="w-4 h-4 text-blue-500 flex-shrink-0" />;
-      case 'Cake': return <Cake className="w-4 h-4 text-pink-500 flex-shrink-0" />;
-      case 'Pizza': return <Pizza className="w-4 h-4 text-red-500 flex-shrink-0" />;
-      case 'Heart': return <Heart className="w-4 h-4 text-rose-500 flex-shrink-0" />;
-      default: return <Coffee className="w-4 h-4 text-stone-500 flex-shrink-0" />;
-    }
-  };
-
   const selectableCategories = categories.filter((c) => c.id !== 'popular');
   const selectedCat = categories.find((c) => c.id === formData.categoryId) || selectableCategories[0];
   const optionGroups = formData.optionGroups || [];
@@ -499,7 +487,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
-                    {selectedCat && getCategoryIcon(selectedCat.icon)}
+                    {selectedCat && renderCategoryIcon(selectedCat.icon, 'w-4 h-4')}
                     <span className="truncate">
                       {selectedCat
                         ? (language === 'en' ? (selectedCat.nameEn || selectedCat.name) : selectedCat.name)
@@ -533,7 +521,7 @@ export const ItemEditorModal: React.FC<ItemEditorModalProps> = ({
                           }`}
                         >
                           <div className="flex items-center gap-2">
-                            {getCategoryIcon(cat.icon)}
+                            {renderCategoryIcon(cat.icon, 'w-4 h-4')}
                             <span>{language === 'en' ? (cat.nameEn || cat.name) : cat.name}</span>
                           </div>
                           {isSelected && <Check className="w-4 h-4 text-white stroke-[3]" />}

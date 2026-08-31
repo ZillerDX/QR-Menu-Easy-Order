@@ -14,7 +14,8 @@ import { OrderTracker } from './components/customer/OrderTracker';
 import { ConfirmModal } from './components/common/ConfirmModal';
 import { supabase, authService } from './utils/supabaseClient';
 import { User } from '@supabase/supabase-js';
-import { Search, Sparkles, Coffee, CupSoda, Utensils, Cake, Pizza, Heart, ArrowRight, Hourglass, Flame, CheckCircle2, ShoppingBag, Ban, Loader2, RotateCcw } from 'lucide-react';
+import { Search, Sparkles, Utensils, ArrowRight, Hourglass, Flame, CheckCircle2, ShoppingBag, Ban, Loader2, RotateCcw } from 'lucide-react';
+import { renderCategoryIcon } from './utils/categoryIcons';
 
 const KitchenDashboard = React.lazy(() => import('./components/kitchen/KitchenDashboard').then((m) => ({ default: m.KitchenDashboard })));
 const MenuAdmin = React.lazy(() => import('./components/admin/MenuAdmin').then((m) => ({ default: m.MenuAdmin })));
@@ -1038,19 +1039,6 @@ function AppContent() {
     return item.categoryId === selectedCategory;
   });
 
-  const getCategoryIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'Sparkles': return <Sparkles className="w-4 h-4 flex-shrink-0" />;
-      case 'Coffee': return <Coffee className="w-4 h-4 flex-shrink-0" />;
-      case 'CupSoda': return <CupSoda className="w-4 h-4 flex-shrink-0" />;
-      case 'Utensils': return <Utensils className="w-4 h-4 flex-shrink-0" />;
-      case 'Cake': return <Cake className="w-4 h-4 flex-shrink-0" />;
-      case 'Pizza': return <Pizza className="w-4 h-4 flex-shrink-0" />;
-      case 'Heart': return <Heart className="w-4 h-4 flex-shrink-0" />;
-      default: return <Coffee className="w-4 h-4 flex-shrink-0" />;
-    }
-  };
-
   const pendingCount = orders.filter((o) => o.status === 'pending' || o.status === 'cooking').length;
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const cartSubtotal = cart.reduce((sum, item) => sum + item.totalItemPrice, 0);
@@ -1207,7 +1195,7 @@ function AppContent() {
                           : 'bg-white text-stone-700 hover:bg-orange-50 hover:text-orange-600 border border-stone-200/80 shadow-2xs'
                       }`}
                     >
-                      {getCategoryIcon(category.icon)}
+                      {renderCategoryIcon(category.icon, 'w-4 h-4', isSelected ? 'text-white' : undefined)}
                       <span>{language === 'en' && category.nameEn ? category.nameEn : category.name}</span>
                     </button>
                   );

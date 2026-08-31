@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Search, Coffee, Utensils, Check, X, Layers, Sparkles, Flame, Tag, ChevronDown, CupSoda, Cake, Pizza, Heart } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Utensils, Check, X, Layers, Sparkles, Flame, Tag, ChevronDown } from 'lucide-react';
 import { MenuItem, MenuCategory, Language } from '../../types';
 import { t } from '../../utils/i18n';
+import { renderCategoryIcon, getCategoryIconDefinition } from '../../utils/categoryIcons';
 import { ItemEditorModal } from './ItemEditorModal';
 import { CategoryModal } from './CategoryModal';
 import { ConfirmModal } from '../common/ConfirmModal';
@@ -122,19 +123,6 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
     setConfirmDelete({ isOpen: false, type: 'item', id: '', name: '' });
   };
 
-  const getCategoryIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'Sparkles': return <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />;
-      case 'Coffee': return <Coffee className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />;
-      case 'CupSoda': return <CupSoda className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />;
-      case 'Utensils': return <Utensils className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />;
-      case 'Cake': return <Cake className="w-3.5 h-3.5 text-pink-500 flex-shrink-0" />;
-      case 'Pizza': return <Pizza className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />;
-      case 'Heart': return <Heart className="w-3.5 h-3.5 text-rose-500 flex-shrink-0" />;
-      default: return <Coffee className="w-3.5 h-3.5 text-stone-500 flex-shrink-0" />;
-    }
-  };
-
   const activeFilterCat = categories.find((c) => c.id === selectedCatFilter);
 
   return (
@@ -237,7 +225,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
                   {selectedCatFilter === 'all' ? (
                     <Layers className="w-3.5 h-3.5 text-stone-400 flex-shrink-0" />
                   ) : (
-                    activeFilterCat && getCategoryIcon(activeFilterCat.icon)
+                    activeFilterCat && renderCategoryIcon(activeFilterCat.icon, 'w-3.5 h-3.5')
                   )}
                   <span className="truncate">
                     {selectedCatFilter === 'all'
@@ -293,7 +281,7 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          {getCategoryIcon(c.icon)}
+                          {renderCategoryIcon(c.icon, 'w-3.5 h-3.5')}
                           <span>{language === 'en' ? (c.nameEn || c.name) : c.name}</span>
                         </div>
                         {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
@@ -417,15 +405,16 @@ export const MenuAdmin: React.FC<MenuAdminProps> = ({
           {categories.map((cat) => {
             const count = menuItems.filter((i) => i.categoryId === cat.id).length;
             const isProtected = cat.id === 'popular';
+            const iconDef = getCategoryIconDefinition(cat.icon);
 
             return (
               <div
                 key={cat.id}
-                className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200 shadow-xs flex items-center justify-between"
+                className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200 shadow-xs flex items-center justify-between hover:border-orange-300 hover:shadow-md transition-all group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-orange-50 text-orange-600 border border-orange-200 flex items-center justify-center font-black">
-                    <Coffee className="w-5 h-5" />
+                  <div className={`w-11 h-11 rounded-2xl ${iconDef.bgLight} ${iconDef.borderLight} border flex items-center justify-center font-black shadow-2xs`}>
+                    {renderCategoryIcon(cat.icon, 'w-5 h-5')}
                   </div>
                   <div>
                     <h4 className="font-black text-stone-900 text-sm">
