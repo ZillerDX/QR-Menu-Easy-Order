@@ -4,6 +4,7 @@ import { StoreConfig, Language } from '../../types';
 import { CAFE_ORDER_LOGO_DATA_URI } from '../../data/logoData';
 import { t } from '../../utils/i18n';
 import { User } from '@supabase/supabase-js';
+import { CustomContactModal } from '../common/CustomContactModal';
 
 interface StoreSettingsProps {
   storeConfig: StoreConfig;
@@ -21,6 +22,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
   onLogout,
 }) => {
   const [formData, setFormData] = useState<StoreConfig>({ ...storeConfig });
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
   React.useEffect(() => {
     setFormData({ ...storeConfig });
@@ -226,7 +228,7 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
                 <span>{t('settingsTableCount', language)} (1 - 50 {language === 'th' ? 'โต๊ะ' : 'Tables'})</span>
               </span>
               <span className="text-[11px] font-bold text-orange-600">
-                {formData.tableCount || 15} {language === 'th' ? 'โต๊ะ' : 'Tables'}
+                {formData.tableCount || 10} {language === 'th' ? 'โต๊ะ' : 'Tables'}
               </span>
             </label>
             <input
@@ -235,28 +237,33 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
               max="50"
               value={formData.tableCount}
               onChange={(e) => {
-                const val = parseInt(e.target.value, 10);
-                setFormData({ ...formData, tableCount: isNaN(val) ? 1 : Math.min(50, Math.max(1, val)) });
+                const rawVal = e.target.value;
+                if (rawVal === '') {
+                  setFormData({ ...formData, tableCount: 1 });
+                  return;
+                }
+                const val = parseInt(rawVal, 10);
+                if (val > 50) {
+                  setFormData({ ...formData, tableCount: 50 });
+                  setIsContactModalOpen(true);
+                } else {
+                  setFormData({ ...formData, tableCount: Math.max(1, isNaN(val) ? 1 : val) });
+                }
               }}
               className="w-full px-4 py-3 rounded-2xl border border-stone-200 focus:outline-none focus:border-orange-500 font-bold text-sm"
+              placeholder="1 - 50"
             />
-            {/* Quick table presets */}
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              <span className="text-[10px] font-bold text-stone-400">Presets:</span>
-              {[10, 15, 20, 30, 40, 50].map((count) => (
-                <button
-                  key={count}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, tableCount: count })}
-                  className={`px-2.5 py-1 rounded-xl text-[11px] font-black transition cursor-pointer ${
-                    formData.tableCount === count
-                      ? 'bg-orange-500 text-white shadow-2xs'
-                      : 'bg-stone-100 hover:bg-stone-200 text-stone-600'
-                  }`}
-                >
-                  {count}
-                </button>
-              ))}
+            <div className="flex items-center justify-between mt-1.5 px-0.5">
+              <span className="text-[11px] text-stone-400 font-medium">
+                {language === 'th' ? 'กรอกตัวเลขจำนวนโต๊ะที่ต้องการ (1 - 50)' : 'Enter table count (1 - 50)'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsContactModalOpen(true)}
+                className="text-[11px] font-bold text-orange-600 hover:text-orange-700 underline cursor-pointer"
+              >
+                {language === 'th' ? 'ต้องการ > 50 โต๊ะ?' : 'Need > 50 tables?'}
+              </button>
             </div>
           </div>
 
@@ -378,11 +385,14 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
                 <span className="font-black text-stone-900 text-sm sm:text-base">
                   {user.email || 'Staff User'}
                 </span>
-                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-md">
-                  {language === 'th' ? 'เข้าสู่ระบบแล้ว (Active)' : 'Logged In (Active)'}
+                <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">
+                  Active Session
                 </span>
               </div>
-              <p className="text-xs text-stone-400 font-medium mt-0.5">
+              <p className="text-xs text-stone-500 mt-0.5">
+                Store ID: <span className="font-mono font-bold text-stone-700">{formData.id || 'cafe-order'}</span>
+              </p>
+              <p className="text-xs text-stone-500 mt-0.5">
                 {language === 'th' ? 'สิทธิ์การเข้าถึง: จัดการร้านค้า, ครัว KDS, เมนู และการ์ด QR โต๊ะ' : 'Access Permissions: Store Management, Kitchen KDS, Menus & Table QRs'}
               </p>
             </div>
@@ -398,6 +408,13 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
           </button>
         </div>
       )}
+
+      {/* Custom Contact Modal for >50 Tables */}
+      <CustomContactModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+        language={language}
+      />
     </div>
   );
 };

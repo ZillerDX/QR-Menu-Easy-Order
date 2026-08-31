@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
-import { Download, Printer, QrCode, ExternalLink, ChevronDown, Store, ChevronLeft, ChevronRight, ShieldCheck, CheckCircle2, Grid, Layers, Sparkles } from 'lucide-react';
+import { Download, Printer, QrCode, ExternalLink, ChevronDown, Store, ChevronLeft, ChevronRight, ShieldCheck, CheckCircle2, Grid, Layers, Sparkles, Sliders } from 'lucide-react';
 import { StoreConfig, Language } from '../../types';
 import { t } from '../../utils/i18n';
+import { CustomContactModal } from '../common/CustomContactModal';
 
 interface QRGeneratorProps {
   storeConfig: StoreConfig;
@@ -15,6 +16,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
   const [viewMode, setViewMode] = useState<'single' | 'all'>('single');
   const [selectedRange, setSelectedRange] = useState<string>('all');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
@@ -218,7 +220,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
         </div>
       </div>
 
-      {/* Table Capacity Quick Selector (Hidden on Print) */}
+      {/* Table Capacity Manual Input Bar (Hidden on Print) */}
       <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/90 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 print:hidden no-print">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center flex-shrink-0 font-black text-base shadow-sm">
@@ -232,28 +234,44 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
               </span>
             </h3>
             <p className="text-[11px] text-stone-500 mt-0.5">
-              {language === 'th' ? 'กดเลือกจำนวนโต๊ะด้านขวาเพื่อขยายสร้าง QR Code สูงสุด 50 โต๊ะได้ทันที' : 'Click preset to expand or adjust table QR codes up to 50 tables'}
+              {language === 'th' ? 'ระบุจำนวนโต๊ะที่ต้องการสร้าง QR Code ได้เอง (รองรับ 1 - 50 โต๊ะ สัมพันธ์กับหน้าตั้งค่า)' : 'Set table capacity manually (1 - 50 tables, synced with Store Settings)'}
             </p>
           </div>
         </div>
 
-        {/* Presets */}
-        <div className="flex items-center gap-1.5 flex-wrap w-full md:w-auto justify-start md:justify-end">
-          <span className="text-[11px] font-bold text-stone-400 mr-1">{language === 'th' ? 'เปลี่ยนเป็น:' : 'Set to:'}</span>
-          {[10, 15, 20, 30, 40, 50].map((num) => (
-            <button
-              key={num}
-              type="button"
-              onClick={() => handleSetTableCount(num)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
-                activeTableCount === num
-                  ? 'bg-orange-500 text-white shadow-sm shadow-orange-500/20'
-                  : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
-              }`}
-            >
-              {num} {language === 'th' ? 'โต๊ะ' : 'T'}
-            </button>
-          ))}
+        {/* Manual Input Controls */}
+        <div className="flex items-center gap-3 w-full md:w-auto justify-start md:justify-end flex-wrap">
+          <div className="flex items-center gap-2 bg-stone-50 border border-stone-200/90 rounded-2xl p-1.5 px-3">
+            <Sliders className="w-3.5 h-3.5 text-stone-400" />
+            <span className="text-xs font-bold text-stone-600">{language === 'th' ? 'ใส่จำนวนโต๊ะ:' : 'Set Count:'}</span>
+            <input
+              type="number"
+              min="1"
+              max="50"
+              value={activeTableCount}
+              onChange={(e) => {
+                const rawVal = e.target.value;
+                if (rawVal === '') return;
+                const val = parseInt(rawVal, 10);
+                if (val > 50) {
+                  handleSetTableCount(50);
+                  setIsContactModalOpen(true);
+                } else {
+                  handleSetTableCount(Math.max(1, isNaN(val) ? 1 : val));
+                }
+              }}
+              className="w-16 px-2.5 py-1 text-center bg-white rounded-xl border border-stone-200 font-black text-sm text-stone-900 focus:outline-none focus:border-orange-500 shadow-2xs"
+            />
+            <span className="text-xs font-bold text-stone-600">{language === 'th' ? 'โต๊ะ' : 'Tables'}</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsContactModalOpen(true)}
+            className="text-xs font-bold text-orange-600 hover:text-orange-700 underline cursor-pointer py-1"
+          >
+            {language === 'th' ? '⚡ ต้องการ > 50 โต๊ะ?' : '⚡ Need > 50 Tables?'}
+          </button>
         </div>
       </div>
 
@@ -702,6 +720,13 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
           </div>
         </div>
       )}
+
+      {/* Custom Enterprise Modal for > 50 Tables */}
+      <CustomContactModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+        language={language}
+      />
     </div>
   );
 };
