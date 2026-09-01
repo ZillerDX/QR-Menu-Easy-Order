@@ -159,12 +159,22 @@ function AppContent() {
   const [isUpdatePasswordOpen, setIsUpdatePasswordOpen] = useState(false);
   const [errorToast, setErrorToast] = useState<string | null>(null);
 
-  // Dynamically update document title based on language & store config
+  // Dynamically update document title & favicon based on language & store config
   useEffect(() => {
     const shopName = language === 'en' ? (storeConfig.nameEn || storeConfig.name) : storeConfig.name;
     const shopTagline = language === 'en' ? (storeConfig.taglineEn || storeConfig.tagline) : storeConfig.tagline;
     document.title = `${shopName} - ${shopTagline || (language === 'en' ? 'Smart Ordering System' : 'ระบบสั่งอาหาร')}`;
-  }, [language, storeConfig.name, storeConfig.nameEn, storeConfig.tagline, storeConfig.taglineEn]);
+
+    try {
+      const faviconLink = document.querySelector<HTMLLinkElement>("link[rel~='icon'][type='image/png']") ||
+                          document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+      if (faviconLink && storeConfig.logoUrl) {
+        faviconLink.href = storeConfig.logoUrl;
+      }
+    } catch {
+      // Graceful fallback
+    }
+  }, [language, storeConfig.name, storeConfig.nameEn, storeConfig.tagline, storeConfig.taglineEn, storeConfig.logoUrl]);
 
   // Auto-provision or resolve user's store from Supabase
   const resolveUserStore = useCallback(async (currentUser: User): Promise<{ shopId: string; config: StoreConfig }> => {
