@@ -1283,6 +1283,7 @@ function AppContent() {
               onRestockCategory={handleRestockCategory}
               onPrintReceipt={(order) => setReceiptOrder(order)}
               onCancelOrder={handleCancelOrder}
+              onRefreshOrders={() => fetchOrdersOnly(shopId)}
             />
           )}
 

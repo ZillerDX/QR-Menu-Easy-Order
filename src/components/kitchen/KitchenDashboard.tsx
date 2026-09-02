@@ -18,7 +18,9 @@ import {
   Activity,
   AlertCircle,
   Settings2,
-  X
+  X,
+  Calendar,
+  RotateCw
 } from 'lucide-react';
 import { Order, MenuItem, MenuCategory, Language, OrderStatus } from '../../types';
 import { t } from '../../utils/i18n';
@@ -41,6 +43,7 @@ interface KitchenDashboardProps {
   onRestockCategory?: (categoryId: string) => void;
   onPrintReceipt?: (order: Order) => void;
   onCancelOrder?: (orderId: string, reason: string) => Promise<void> | void;
+  onRefreshOrders?: () => Promise<void> | void;
 }
 
 export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
@@ -54,8 +57,15 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
   onRestockCategory,
   onPrintReceipt,
   onCancelOrder,
+  onRefreshOrders,
 }) => {
   const [filter, setFilter] = useState<'active' | 'ready' | 'completed' | 'all'>('active');
+  const [dateFilterMode, setDateFilterMode] = useState<'today' | 'yesterday' | 'last7days' | 'custom' | 'all'>('today');
+  const [customDate, setCustomDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<string>(() => 
+    new Date().toLocaleTimeString(language === 'th' ? 'th-TH' : 'en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  );
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [showStock, setShowStock] = useState(false);
   const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
   const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
@@ -78,6 +88,63 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
     setTimeout(() => setToast(null), 4500);
   };
 
+  // Auto-detect new day: refresh data and reset filter to 'today'
+  const currentDayRef = React.useRef(new Date().toDateString());
+  React.useEffect(() => {
+    const checkNewDay = () => {
+      const todayStr = new Date().toDateString();
+      if (todayStr !== currentDayRef.current) {
+        currentDayRef.current = todayStr;
+        setDateFilterMode('today');
+        setCustomDate(new Date().toISOString().slice(0, 10));
+        onRefreshOrders?.();
+        setLastRefreshedAt(
+          new Date().toLocaleTimeString(language === 'th' ? 'th-TH' : 'en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          })
+        );
+        triggerToast(
+          language === 'th' ? '🌅 เริ่มต้นวันใหม่แล้ว!' : '🌅 New day started!',
+          language === 'th' ? 'ระบบรีเฟรชข้อมูลเป็นของวันนี้เรียบร้อยแล้ว' : 'Data refreshed for today.',
+          'sound'
+        );
+      }
+    };
+
+    const interval = setInterval(checkNewDay, 15000);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') checkNewDay();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [language, onRefreshOrders]);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await onRefreshOrders?.();
+      setLastRefreshedAt(
+        new Date().toLocaleTimeString(language === 'th' ? 'th-TH' : 'en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        })
+      );
+      triggerToast(
+        language === 'th' ? '🔄 รีเฟรชข้อมูลสำเร็จ' : 'Data Refreshed',
+        language === 'th' ? 'ข้อมูลออเดอร์เป็นปัจจุบันแล้ว' : 'Order tickets are up to date',
+        'sound'
+      );
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 400);
+    }
+  };
+
   const prevOrdersCountRef = React.useRef(orders.length);
   React.useEffect(() => {
     if (orders.length > prevOrdersCountRef.current) {
@@ -98,27 +165,97 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
     prevOrdersCountRef.current = orders.length;
   }, [orders, language]);
 
-  // 1. In-Kitchen (Pending + Cooking ONLY)
-  const inKitchenOrders = orders.filter((o) => o.status === 'pending' || o.status === 'cooking');
-  const pendingCount = orders.filter((o) => o.status === 'pending').length;
-  const cookingCount = orders.filter((o) => o.status === 'cooking').length;
-  // 2. Ready to Serve (Ready ONLY)
-  const readyOrders = orders.filter((o) => o.status === 'ready');
-  // 3. Completed (Completed + Cancelled)
-  const completedOrders = orders.filter((o) => o.status === 'completed');
-  const cancelledOrders = orders.filter((o) => o.status === 'cancelled');
+  // Helper to determine if an order matches the selected date filter
+  const isOrderInDateRange = (order: Order): boolean => {
+    if (!order.createdAt) return true;
+    const orderDate = new Date(order.createdAt);
+    const now = new Date();
 
-  // Strict Filter Mapping
-  const filteredOrders = orders.filter((o) => {
-    if (filter === 'active') return o.status === 'pending' || o.status === 'cooking';
-    if (filter === 'ready') return o.status === 'ready';
-    if (filter === 'completed') return o.status === 'completed' || o.status === 'cancelled';
-    return true;
+    if (dateFilterMode === 'today') {
+      return (
+        orderDate.getFullYear() === now.getFullYear() &&
+        orderDate.getMonth() === now.getMonth() &&
+        orderDate.getDate() === now.getDate()
+      );
+    }
+
+    if (dateFilterMode === 'yesterday') {
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      return (
+        orderDate.getFullYear() === yesterday.getFullYear() &&
+        orderDate.getMonth() === yesterday.getMonth() &&
+        orderDate.getDate() === yesterday.getDate()
+      );
+    }
+
+    if (dateFilterMode === 'last7days') {
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(now.getDate() - 7);
+      sevenDaysAgo.setHours(0, 0, 0, 0);
+      return orderDate >= sevenDaysAgo;
+    }
+
+    if (dateFilterMode === 'custom') {
+      if (!customDate) return true;
+      const year = orderDate.getFullYear();
+      const month = String(orderDate.getMonth() + 1).padStart(2, '0');
+      const day = String(orderDate.getDate()).padStart(2, '0');
+      const localDateStr = `${year}-${month}-${day}`;
+      const isoDateStr = orderDate.toISOString().slice(0, 10);
+      return localDateStr === customDate || isoDateStr === customDate;
+    }
+
+    return true; // 'all'
+  };
+
+  // 1. In-Kitchen (Active unfulfilled queue: Pending + Cooking)
+  // If viewing today or all, show all unfulfilled tickets. If reviewing a past date, scope to that date.
+  const inKitchenOrders = orders.filter((o) => {
+    const isActive = o.status === 'pending' || o.status === 'cooking';
+    if (!isActive) return false;
+    if (dateFilterMode === 'today' || dateFilterMode === 'all') return true;
+    return isOrderInDateRange(o);
+  });
+  const pendingCount = inKitchenOrders.filter((o) => o.status === 'pending').length;
+  const cookingCount = inKitchenOrders.filter((o) => o.status === 'cooking').length;
+
+  // 2. Ready to Serve (Ready)
+  const readyOrders = orders.filter((o) => {
+    if (o.status !== 'ready') return false;
+    if (dateFilterMode === 'today' || dateFilterMode === 'all') return true;
+    return isOrderInDateRange(o);
   });
 
-  const totalRevenue = orders
-    .filter((o) => o.status === 'completed')
-    .reduce((sum, o) => sum + o.totalPrice, 0);
+  // 3. Completed (Completed + Cancelled) strictly matching date range
+  const completedOrders = orders.filter((o) => o.status === 'completed' && isOrderInDateRange(o));
+  const cancelledOrders = orders.filter((o) => o.status === 'cancelled' && isOrderInDateRange(o));
+
+  // 4. All orders matching the selected date range
+  const dateScopedOrders = orders.filter((o) => isOrderInDateRange(o));
+
+  // Strict Filter Mapping for main display grid
+  const filteredOrders = orders.filter((o) => {
+    if (filter === 'active') {
+      const isActive = o.status === 'pending' || o.status === 'cooking';
+      if (!isActive) return false;
+      if (dateFilterMode === 'today' || dateFilterMode === 'all') return true;
+      return isOrderInDateRange(o);
+    }
+    if (filter === 'ready') {
+      if (o.status !== 'ready') return false;
+      if (dateFilterMode === 'today' || dateFilterMode === 'all') return true;
+      return isOrderInDateRange(o);
+    }
+    if (filter === 'completed') {
+      if (o.status !== 'completed' && o.status !== 'cancelled') return false;
+      return isOrderInDateRange(o);
+    }
+    return isOrderInDateRange(o);
+  });
+
+  // Dynamic revenue calculation strictly based on the selected date filter
+  const totalRevenue = completedOrders.reduce((sum, o) => sum + o.totalPrice, 0);
 
   const handleQuickTestSound = () => {
     soundService.playNewOrderChime();
@@ -350,7 +487,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
             </div>
           </div>
 
-          {/* Card 3: Today's Revenue */}
+          {/* Card 3: Revenue Scoped by Selected Date Filter */}
           <button
             type="button"
             onClick={() => setIsSalesModalOpen(true)}
@@ -359,7 +496,15 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
           >
             <div className="flex items-center justify-between text-teal-900">
               <span className="text-[11px] font-black uppercase tracking-wider">
-                {t('kdsTodaySales', language)}
+                {dateFilterMode === 'today'
+                  ? t('kdsTodaySales', language)
+                  : dateFilterMode === 'yesterday'
+                  ? (language === 'th' ? 'ยอดขายเมื่อวาน' : 'Yesterday Sales')
+                  : dateFilterMode === 'last7days'
+                  ? (language === 'th' ? 'ยอดขาย 7 วันล่าสุด' : 'Past 7 Days Sales')
+                  : dateFilterMode === 'custom'
+                  ? (language === 'th' ? `ยอดขาย (${customDate})` : `Sales (${customDate})`)
+                  : (language === 'th' ? 'ยอดขายทั้งหมด' : 'All Time Sales')}
               </span>
               <TrendingUp className="w-4 h-4 text-teal-600 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             </div>
@@ -406,79 +551,194 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
         </React.Suspense>
       )}
 
-      {/* 2. Restaurant Order Lane Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-        {/* Lane 1: Pending & Cooking */}
-        <button
-          onClick={() => setFilter('active')}
-          className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all duration-200 flex items-center gap-2 flex-shrink-0 cursor-pointer ${
-            filter === 'active'
-              ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/30 ring-2 ring-orange-400/40'
-              : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200/90 shadow-2xs'
-          }`}
-        >
-          <UtensilsCrossed className="w-4 h-4" />
-          <span>{t('kdsFilterActive', language)}</span>
-          <span className={`ml-0.5 px-2 py-0.5 rounded-full text-[11px] font-black ${
-            filter === 'active' ? 'bg-white/25 text-white' : 'bg-orange-100 text-orange-700'
-          }`}>
-            {inKitchenOrders.length}
-          </span>
-        </button>
+      {/* 2. Date Filter & Data Sync Toolbar */}
+      <div className="bg-white rounded-2xl p-3 sm:p-4 border border-stone-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        {/* Left: Date Preset Pills & Custom Date Picker */}
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5 text-xs font-black text-stone-600 mr-1 shrink-0">
+            <Calendar className="w-4 h-4 text-orange-500 shrink-0" />
+            <span>{t('kdsDateFilterTitle', language)}</span>
+          </div>
 
-        {/* Lane 2: Ready to Serve */}
-        <button
-          onClick={() => setFilter('ready')}
-          className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all duration-200 flex items-center gap-2 flex-shrink-0 cursor-pointer ${
-            filter === 'ready'
-              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400/40'
-              : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200/90 shadow-2xs'
-          }`}
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>{t('kdsFilterReady', language)}</span>
-          <span className={`ml-0.5 px-2 py-0.5 rounded-full text-[11px] font-black ${
-            filter === 'ready' ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-700'
-          }`}>
-            {readyOrders.length}
-          </span>
-        </button>
+          {/* Preset: Today (Default) */}
+          <button
+            type="button"
+            onClick={() => setDateFilterMode('today')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer flex items-center gap-1.5 active:scale-95 ${
+              dateFilterMode === 'today'
+                ? 'bg-orange-500 text-white shadow-xs'
+                : 'bg-stone-100 hover:bg-stone-200/70 text-stone-700 border border-stone-200/60'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5 shrink-0" />
+            <span>{t('kdsDateFilterToday', language)}</span>
+            {dateFilterMode === 'today' && <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0 animate-pulse" />}
+          </button>
 
-        {/* Lane 3: Completed & Closed Bills */}
-        <button
-          onClick={() => setFilter('completed')}
-          className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all duration-200 flex items-center gap-2 flex-shrink-0 cursor-pointer ${
-            filter === 'completed'
-              ? 'bg-stone-900 text-white shadow-lg ring-2 ring-stone-700'
-              : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200/90 shadow-2xs'
-          }`}
-        >
-          <CheckCircle2 className="w-4 h-4" />
-          <span>{t('kdsFilterCompleted', language)}</span>
-          <span className={`ml-0.5 px-2 py-0.5 rounded-full text-[11px] font-black ${
-            filter === 'completed' ? 'bg-white/25 text-white' : 'bg-stone-100 text-stone-700'
-          }`}>
-            {completedOrders.length + cancelledOrders.length}
-          </span>
-        </button>
+          {/* Preset: Yesterday */}
+          <button
+            type="button"
+            onClick={() => setDateFilterMode('yesterday')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer flex items-center gap-1.5 active:scale-95 ${
+              dateFilterMode === 'yesterday'
+                ? 'bg-orange-500 text-white shadow-xs'
+                : 'bg-stone-100 hover:bg-stone-200/70 text-stone-700 border border-stone-200/60'
+            }`}
+          >
+            <span>{t('kdsDateFilterYesterday', language)}</span>
+          </button>
 
-        {/* Lane 4: All Orders */}
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all duration-200 flex items-center gap-2 flex-shrink-0 cursor-pointer ${
-            filter === 'all'
-              ? 'bg-stone-700 text-white shadow-lg ring-2 ring-stone-500'
-              : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200/90 shadow-2xs'
-          }`}
-        >
-          <Layers className="w-4 h-4" />
-          <span>{t('kdsFilterAll', language)}</span>
-          <span className={`ml-0.5 px-2 py-0.5 rounded-full text-[11px] font-black ${
-            filter === 'all' ? 'bg-white/25 text-white' : 'bg-stone-100 text-stone-700'
+          {/* Preset: Last 7 Days */}
+          <button
+            type="button"
+            onClick={() => setDateFilterMode('last7days')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer flex items-center gap-1.5 active:scale-95 ${
+              dateFilterMode === 'last7days'
+                ? 'bg-orange-500 text-white shadow-xs'
+                : 'bg-stone-100 hover:bg-stone-200/70 text-stone-700 border border-stone-200/60'
+            }`}
+          >
+            <span>{t('kdsDateFilterLast7Days', language)}</span>
+          </button>
+
+          {/* Preset: All Time */}
+          <button
+            type="button"
+            onClick={() => setDateFilterMode('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer flex items-center gap-1.5 active:scale-95 ${
+              dateFilterMode === 'all'
+                ? 'bg-orange-500 text-white shadow-xs'
+                : 'bg-stone-100 hover:bg-stone-200/70 text-stone-700 border border-stone-200/60'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 shrink-0" />
+            <span>{t('kdsDateFilterAllTime', language)}</span>
+          </button>
+
+          {/* Custom Date Picker */}
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border transition ${
+            dateFilterMode === 'custom'
+              ? 'border-orange-500 bg-orange-50 text-orange-800 ring-1 ring-orange-400/30'
+              : 'border-stone-200/80 bg-stone-50 text-stone-600 hover:border-stone-300'
           }`}>
-            {orders.length}
+            <span className="text-[11px] font-bold shrink-0">{t('kdsDateFilterCustom', language)}:</span>
+            <input
+              type="date"
+              value={customDate}
+              onChange={(e) => {
+                setCustomDate(e.target.value);
+                setDateFilterMode('custom');
+              }}
+              className="bg-transparent text-xs font-black text-stone-800 outline-none cursor-pointer"
+            />
+          </div>
+        </div>
+
+        {/* Right: Refresh Button & Sync Indicator */}
+        <div className="flex items-center justify-between md:justify-end gap-2.5 pt-2 md:pt-0 border-t md:border-t-0 border-stone-100 shrink-0">
+          <span className="text-[11px] text-stone-500 font-medium">
+            {lastRefreshedAt && `${t('kdsLastUpdated', language)} ${lastRefreshedAt}`}
           </span>
-        </button>
+          <button
+            type="button"
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-orange-50 hover:text-orange-600 text-stone-700 border border-stone-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 shadow-2xs"
+            title={t('kdsRefreshData', language)}
+          >
+            <RotateCw className={`w-3.5 h-3.5 text-orange-500 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>{t('kdsRefreshData', language)}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 3. Restaurant Order Lane Tabs - Perfectly Symmetrical Segmented Grid (No Glow, No Overflow) */}
+      <div className="bg-white rounded-2xl p-1.5 sm:p-2 border border-stone-200/90 shadow-xs">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 sm:gap-2">
+          {/* Lane 1: Pending & Cooking */}
+          <button
+            type="button"
+            onClick={() => setFilter('active')}
+            className={`w-full py-2.5 px-3.5 rounded-xl text-xs sm:text-sm font-black transition-all duration-150 flex items-center justify-between gap-2 cursor-pointer active:scale-[0.98] ${
+              filter === 'active'
+                ? 'bg-orange-500 text-white shadow-xs'
+                : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border border-stone-200/60'
+            }`}
+          >
+            <div className="flex items-center gap-2 min-w-0 truncate">
+              <UtensilsCrossed className="w-4 h-4 shrink-0" />
+              <span className="truncate">{t('kdsFilterActive', language)}</span>
+            </div>
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-black shrink-0 ${
+              filter === 'active' ? 'bg-white/25 text-white' : 'bg-orange-100 text-orange-700'
+            }`}>
+              {inKitchenOrders.length}
+            </span>
+          </button>
+
+          {/* Lane 2: Ready to Serve */}
+          <button
+            type="button"
+            onClick={() => setFilter('ready')}
+            className={`w-full py-2.5 px-3.5 rounded-xl text-xs sm:text-sm font-black transition-all duration-150 flex items-center justify-between gap-2 cursor-pointer active:scale-[0.98] ${
+              filter === 'ready'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border border-stone-200/60'
+            }`}
+          >
+            <div className="flex items-center gap-2 min-w-0 truncate">
+              <Sparkles className="w-4 h-4 shrink-0" />
+              <span className="truncate">{t('kdsFilterReady', language)}</span>
+            </div>
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-black shrink-0 ${
+              filter === 'ready' ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-700'
+            }`}>
+              {readyOrders.length}
+            </span>
+          </button>
+
+          {/* Lane 3: Completed & Closed Bills */}
+          <button
+            type="button"
+            onClick={() => setFilter('completed')}
+            className={`w-full py-2.5 px-3.5 rounded-xl text-xs sm:text-sm font-black transition-all duration-150 flex items-center justify-between gap-2 cursor-pointer active:scale-[0.98] ${
+              filter === 'completed'
+                ? 'bg-stone-800 text-white shadow-xs'
+                : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border border-stone-200/60'
+            }`}
+          >
+            <div className="flex items-center gap-2 min-w-0 truncate">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span className="truncate">{t('kdsFilterCompleted', language)}</span>
+            </div>
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-black shrink-0 ${
+              filter === 'completed' ? 'bg-white/25 text-white' : 'bg-stone-200 text-stone-700'
+            }`}>
+              {completedOrders.length + cancelledOrders.length}
+            </span>
+          </button>
+
+          {/* Lane 4: All Orders */}
+          <button
+            type="button"
+            onClick={() => setFilter('all')}
+            className={`w-full py-2.5 px-3.5 rounded-xl text-xs sm:text-sm font-black transition-all duration-150 flex items-center justify-between gap-2 cursor-pointer active:scale-[0.98] ${
+              filter === 'all'
+                ? 'bg-stone-700 text-white shadow-xs'
+                : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border border-stone-200/60'
+            }`}
+          >
+            <div className="flex items-center gap-2 min-w-0 truncate">
+              <Layers className="w-4 h-4 shrink-0" />
+              <span className="truncate">{t('kdsFilterAll', language)}</span>
+            </div>
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-black shrink-0 ${
+              filter === 'all' ? 'bg-white/25 text-white' : 'bg-stone-200 text-stone-700'
+            }`}>
+              {dateScopedOrders.length}
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* 3. Orders Grid Presentation */}
