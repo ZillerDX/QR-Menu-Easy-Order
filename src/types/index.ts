@@ -81,6 +81,9 @@ export interface Order {
   cancelReason?: string;
 }
 
+export type SubscriptionPlan = 'free_trial' | 'monthly' | 'half_year' | 'yearly';
+export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'expired';
+
 export interface StoreConfig {
   id?: string;
   userId?: string;
@@ -98,4 +101,15 @@ export interface StoreConfig {
   branchNumber?: string;
   phone?: string;
   companyLegalName?: string;
+  // Subscription & Licensing
+  subscriptionPlan?: SubscriptionPlan;
+  subscriptionStatus?: SubscriptionStatus;
+  trialStartedAt?: string;
+  trialExpiresAt?: string;
+  subscriptionExpiresAt?: string;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  originalOwnerEmail?: string;
+  hasActiveQRsPrinted?: boolean;
 }
+

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MenuItem, MenuCategory, CartItem, Order, OrderStatus, SelectedOption, Language, StoreConfig, PaymentMethod } from './types';
+import { MenuItem, MenuCategory, CartItem, Order, OrderStatus, SelectedOption, Language, StoreConfig, PaymentMethod, SubscriptionPlan } from './types';
 import { initialMenuItems, initialCategories, initialStoreConfig } from './data/initialMenu';
 import { CAFE_ORDER_LOGO_DATA_URI } from './data/logoData';
 import { syncManager } from './utils/storage';
@@ -14,7 +14,7 @@ import { OrderTracker } from './components/customer/OrderTracker';
 import { ConfirmModal } from './components/common/ConfirmModal';
 import { supabase, authService } from './utils/supabaseClient';
 import { User } from '@supabase/supabase-js';
-import { Search, Sparkles, Utensils, ArrowRight, Hourglass, Flame, CheckCircle2, ShoppingBag, Ban, Loader2, RotateCcw, AlertCircle, X } from 'lucide-react';
+import { Search, Sparkles, Utensils, ArrowRight, Hourglass, Flame, CheckCircle2, ShoppingBag, Ban, Loader2, RotateCcw, AlertCircle, X, CreditCard } from 'lucide-react';
 import { renderCategoryIcon } from './utils/categoryIcons';
 
 const KitchenDashboard = React.lazy(() => import('./components/kitchen/KitchenDashboard').then((m) => ({ default: m.KitchenDashboard })));
@@ -25,6 +25,7 @@ const StorePortalLanding = React.lazy(() => import('./components/portal/StorePor
 const ReceiptModal = React.lazy(() => import('./components/common/ReceiptModal').then((m) => ({ default: m.ReceiptModal })));
 const OrderCountdownModal = React.lazy(() => import('./components/customer/OrderCountdownModal').then((m) => ({ default: m.OrderCountdownModal })));
 const UpdatePasswordModal = React.lazy(() => import('./components/portal/UpdatePasswordModal').then((m) => ({ default: m.UpdatePasswordModal })));
+const SubscriptionPlansModal = React.lazy(() => import('./components/admin/SubscriptionPlansModal').then((m) => ({ default: m.SubscriptionPlansModal })));
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -157,6 +158,7 @@ function AppContent() {
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [isUpdatePasswordOpen, setIsUpdatePasswordOpen] = useState(false);
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [errorToast, setErrorToast] = useState<string | null>(null);
 
   // Dynamically update document title & favicon based on language & store config
@@ -211,6 +213,15 @@ function AppContent() {
           branchNumber: existing.branch_number || '00000 (สำนักงานใหญ่)',
           phone: isDefaultMockPhone ? '' : (existing.phone || ''),
           companyLegalName: isDefaultMockLegal ? '' : (existing.company_legal_name || ''),
+          subscriptionPlan: existing.subscription_plan || 'free_trial',
+          subscriptionStatus: existing.subscription_status || 'trialing',
+          trialStartedAt: existing.trial_started_at || existing.created_at || new Date().toISOString(),
+          trialExpiresAt: existing.trial_expires_at || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+          subscriptionExpiresAt: existing.subscription_expires_at,
+          stripeCustomerId: existing.stripe_customer_id,
+          stripeSubscriptionId: existing.stripe_subscription_id,
+          originalOwnerEmail: existing.original_owner_email || currentUser.email || '',
+          hasActiveQRsPrinted: existing.has_active_qrs_printed || syncManager.hasPrintedQRs(existing.id),
         };
         return { shopId: existing.id, config: mappedConfig };
       }
@@ -220,6 +231,9 @@ function AppContent() {
       const cleanSlug = userPrefix.toLowerCase().replace(/[^a-z0-9]/g, '');
       const uniqueSuffix = currentUser.id.replace(/-/g, '').slice(0, 6);
       const newShopId = `shop-${cleanSlug || 'store'}-${uniqueSuffix}`;
+
+      const now = new Date();
+      const trialExpires = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
 
       const newStoreConfig: StoreConfig = {
         ...initialStoreConfig,
@@ -234,6 +248,12 @@ function AppContent() {
         taxId: '',
         address: '',
         branchNumber: '00000 (สำนักงานใหญ่)',
+        subscriptionPlan: 'free_trial',
+        subscriptionStatus: 'trialing',
+        trialStartedAt: now.toISOString(),
+        trialExpiresAt: trialExpires.toISOString(),
+        originalOwnerEmail: currentUser.email || '',
+        hasActiveQRsPrinted: false,
       };
 
       // 3. Insert store_config
@@ -404,6 +424,15 @@ function AppContent() {
           branchNumber: configData.branch_number || '00000 (สำนักงานใหญ่)',
           phone: isDefaultMockPhone ? '' : (configData.phone || ''),
           companyLegalName: isDefaultMockLegal ? '' : (configData.company_legal_name || ''),
+          subscriptionPlan: configData.subscription_plan || 'free_trial',
+          subscriptionStatus: configData.subscription_status || 'trialing',
+          trialStartedAt: configData.trial_started_at,
+          trialExpiresAt: configData.trial_expires_at,
+          subscriptionExpiresAt: configData.subscription_expires_at,
+          stripeCustomerId: configData.stripe_customer_id,
+          stripeSubscriptionId: configData.stripe_subscription_id,
+          originalOwnerEmail: configData.original_owner_email,
+          hasActiveQRsPrinted: configData.has_active_qrs_printed || syncManager.hasPrintedQRs(targetShopId),
         };
         setStoreConfig(mappedConfig);
         syncManager.saveStoreConfig(mappedConfig, targetShopId);
@@ -702,6 +731,36 @@ function AppContent() {
     };
   }, [fetchOrdersOnly, fetchStoreData, hasTableParam, resolveUserStore, shopId]);
 
+  // Stripe Checkout return detection
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const isSubscribed = params.get('subscribed') === 'true' || params.has('session_id');
+    const planParam = params.get('plan') as SubscriptionPlan | null;
+
+    if (isSubscribed) {
+      const plan: SubscriptionPlan = (planParam === 'yearly' || planParam === 'half_year' || planParam === 'monthly') ? planParam : 'monthly';
+      const durationDays = plan === 'yearly' ? 365 : plan === 'half_year' ? 180 : 30;
+      const newExpiry = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
+
+      const updated = syncManager.updateSubscription(shopId, plan, 'active', newExpiry);
+      setStoreConfig(updated);
+
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('subscribed');
+      newUrl.searchParams.delete('session_id');
+      newUrl.searchParams.delete('plan');
+      window.history.replaceState(null, '', newUrl.toString());
+
+      setErrorToast(
+        language === 'th'
+          ? '🎉 ขอบคุณที่ต่ออายุแพ็กเกจ! ระบบเปิดใช้งานแพ็กเกจให้ร้านค้าของคุณเรียบร้อยแล้ว'
+          : '🎉 Thank you for subscribing! Your store license is now active.'
+      );
+      setTimeout(() => setErrorToast(null), 6000);
+    }
+  }, [shopId, language]);
+
   const handleToggleLanguage = () => {
     const nextLang: Language = language === 'en' ? 'th' : 'en';
     setLanguage(nextLang);
@@ -816,6 +875,16 @@ function AppContent() {
 
   const handleStartCheckout = () => {
     if (cart.length === 0) return;
+    const sub = syncManager.getSubscriptionStatus(storeConfig);
+    if (sub.isExpired) {
+      setErrorToast(
+        language === 'th'
+          ? 'ร้านค้านี้กำลังอัปเกรดระบบเพื่อความต่อเนื่อง กรุณาสั่งอาหารโดยตรงกับพนักงานที่เคาน์เตอร์นะคะ'
+          : 'Store system is updating. Please order directly with the staff at the counter.'
+      );
+      setTimeout(() => setErrorToast(null), 6000);
+      return;
+    }
     setIsCartOpen(false);
     setIsCountdownOpen(true);
   };
@@ -1106,6 +1175,7 @@ function AppContent() {
   const isDirectNonTableAccess = !hasTableParam;
   const shouldShowStorePortal = isDirectNonTableAccess && !user && !isSimulatorMode;
   const isCustomerDining = hasTableParam || isSimulatorMode;
+  const subStatus = syncManager.getSubscriptionStatus(storeConfig);
 
   // Zero-Flash Initial Splash Loader (Clean & Instant)
   if (!isAuthReady) {
@@ -1146,7 +1216,31 @@ function AppContent() {
         user={user}
         onLogout={() => setIsLogoutConfirmOpen(true)}
         isCustomerView={isCustomerDining && !user}
+        onOpenSubscriptionModal={() => setIsSubscriptionModalOpen(true)}
       />
+
+      {/* Expired Staff Warning Banner */}
+      {user && subStatus.isExpired && (
+        <div className="bg-red-600 text-white px-4 py-2.5 flex items-center justify-between text-xs font-bold shadow-md z-20 sticky top-14">
+          <div className="flex items-center justify-between max-w-6xl mx-auto w-full gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>
+                {language === 'th'
+                  ? 'แพ็กเกจทดลองใช้หรือการสมัครสมาชิกของร้านสิ้นสุดแล้ว ป้ายโต๊ะ QR จะไม่สามารถส่งออเดอร์ใหม่เข้าครัวได้'
+                  : 'Your subscription or trial has expired. Customers cannot submit new table orders until renewed.'}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsSubscriptionModalOpen(true)}
+              className="px-3.5 py-1 bg-white text-red-700 hover:bg-red-50 rounded-xl font-black text-xs transition cursor-pointer shadow-xs"
+            >
+              {language === 'th' ? 'ดูแพ็กเกจ & ต่ออายุ' : 'Renew Plan'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 w-full flex flex-col">
@@ -1170,6 +1264,18 @@ function AppContent() {
           {/* VIEW 1: CUSTOMER ORDERING MENU */}
           {activeRole === 'customer' && !shouldShowStorePortal && (
             <div className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-5 space-y-6 pb-28 animate-in fade-in duration-200">
+              {/* Expired Store Notice for Customers */}
+              {subStatus.isExpired && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-2xl flex items-center gap-2.5 text-xs font-bold">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>
+                    {language === 'th'
+                      ? 'ร้านค้านี้กำลังอัปเกรดระบบเพื่อความต่อเนื่อง คุณสามารถดูเมนูได้ตามปกติและสั่งอาหารกับพนักงานที่เคาน์เตอร์ได้ค่ะ'
+                      : 'The store is currently updating its system. You may browse the menu and order directly with staff at the counter.'}
+                  </span>
+                </div>
+              )}
+
               {/* Active Tracked Order Bar for current customer session */}
               {trackedOrder && (
                 <div 
@@ -1332,6 +1438,7 @@ function AppContent() {
               onSave={handleSaveStoreConfig}
               user={user}
               onLogout={() => setIsLogoutConfirmOpen(true)}
+              onOpenSubscriptionModal={() => setIsSubscriptionModalOpen(true)}
             />
           )}
 
@@ -1427,6 +1534,14 @@ function AppContent() {
               window.history.replaceState(null, '', window.location.pathname + window.location.search);
             }
           }}
+        />
+
+        {/* Subscription & Pricing Plans Modal */}
+        <SubscriptionPlansModal
+          isOpen={isSubscriptionModalOpen}
+          onClose={() => setIsSubscriptionModalOpen(false)}
+          storeConfig={storeConfig}
+          language={language}
         />
       </React.Suspense>
 

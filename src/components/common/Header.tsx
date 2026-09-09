@@ -1,8 +1,9 @@
 import React from 'react';
-import { ShoppingBag, Store, LogOut } from 'lucide-react';
+import { ShoppingBag, Store, LogOut, Sparkles, Clock, AlertTriangle } from 'lucide-react';
 import { StoreConfig, Language } from '../../types';
 import { CAFE_ORDER_LOGO_DATA_URI } from '../../data/logoData';
 import { t } from '../../utils/i18n';
+import { syncManager } from '../../utils/storage';
 import { AppRole } from './RoleSwitcher';
 import { User } from '@supabase/supabase-js';
 
@@ -17,6 +18,7 @@ interface HeaderProps {
   user: User | null;
   onLogout: () => void;
   isCustomerView?: boolean;
+  onOpenSubscriptionModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -30,7 +32,9 @@ export const Header: React.FC<HeaderProps> = ({
   user,
   onLogout,
   isCustomerView = true,
+  onOpenSubscriptionModal,
 }) => {
+  const subStatus = syncManager.getSubscriptionStatus(storeConfig);
   const getTableDisplayLabel = (table: string) => {
     if (table === 'TAKEAWAY') {
       return language === 'th' ? 'กลับบ้าน' : 'Takeaway';
@@ -163,6 +167,42 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="flex items-center gap-1.5 bg-blue-50 text-blue-800 border border-blue-200 px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs font-black shadow-2xs whitespace-nowrap h-9">
                   Table QR
                 </div>
+              )}
+
+              {/* Store Subscription Pill */}
+              {onOpenSubscriptionModal && (
+                <button
+                  type="button"
+                  onClick={onOpenSubscriptionModal}
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-2xl text-xs font-black shadow-2xs whitespace-nowrap h-9 transition cursor-pointer border ${
+                    subStatus.isExpired
+                      ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 animate-pulse'
+                      : subStatus.isTrial
+                      ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+                      : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                  }`}
+                  title={language === 'th' ? 'จัดการแพ็กเกจค่าบริการ' : 'Manage Subscription'}
+                >
+                  {subStatus.isExpired ? (
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+                  ) : subStatus.isTrial ? (
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  ) : (
+                    <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                  )}
+                  <span className="hidden sm:inline">
+                    {subStatus.isExpired
+                      ? (language === 'th' ? 'หมดอายุ (ต่ออายุ)' : 'Expired (Renew)')
+                      : subStatus.isTrial
+                      ? (language === 'th' ? `ทดลองฟรี (เหลือ ${subStatus.daysLeft} วัน)` : `Trial (${subStatus.daysLeft}d)`)
+                      : (language === 'th' 
+                          ? (subStatus.plan === 'yearly' ? 'รายปี (Active)' : subStatus.plan === 'half_year' ? '6 เดือน (Active)' : 'รายเดือน (Active)') 
+                          : `Plan: ${subStatus.plan}`)}
+                  </span>
+                  <span className="sm:hidden text-[10px]">
+                    {subStatus.isExpired ? 'หมดอายุ' : subStatus.isTrial ? `${subStatus.daysLeft}วัน` : 'Active'}
+                  </span>
+                </button>
               )}
 
               <div className="flex items-center gap-1.5 bg-stone-100 border border-stone-200/90 pl-2 pr-1 py-1 rounded-2xl h-9 flex-shrink-0">

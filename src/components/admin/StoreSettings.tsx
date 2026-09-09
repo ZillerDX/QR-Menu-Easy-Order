@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { Store, Upload, CheckCircle2, QrCode, Clock, Hash, LogOut, ShieldCheck } from 'lucide-react';
+import { Store, Upload, CheckCircle2, QrCode, Clock, Hash, LogOut, ShieldCheck, Sparkles, CreditCard, AlertTriangle } from 'lucide-react';
 import { StoreConfig, Language } from '../../types';
 import { CAFE_ORDER_LOGO_DATA_URI } from '../../data/logoData';
 import { t } from '../../utils/i18n';
+import { syncManager } from '../../utils/storage';
 import { User } from '@supabase/supabase-js';
 import { CustomContactModal } from '../common/CustomContactModal';
 
@@ -12,6 +13,7 @@ interface StoreSettingsProps {
   onSave: (config: StoreConfig) => void;
   user?: User | null;
   onLogout?: () => void;
+  onOpenSubscriptionModal?: () => void;
 }
 
 export const StoreSettings: React.FC<StoreSettingsProps> = ({
@@ -20,10 +22,12 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
   onSave,
   user,
   onLogout,
+  onOpenSubscriptionModal,
 }) => {
   const [formData, setFormData] = useState<StoreConfig>({ ...storeConfig });
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [tableInputText, setTableInputText] = useState<string>(() => String(storeConfig.tableCount || 10));
+  const subStatus = syncManager.getSubscriptionStatus(formData);
 
   React.useEffect(() => {
     setFormData({ ...storeConfig });
@@ -78,6 +82,76 @@ export const StoreSettings: React.FC<StoreSettingsProps> = ({
             <span>{t('settingsSaveSuccess', language)}</span>
           </div>
         )}
+      </div>
+
+      {/* Subscription & Licensing Card */}
+      <div className="bg-white rounded-3xl p-6 border border-stone-200 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black flex-shrink-0 ${
+              subStatus.isExpired 
+                ? 'bg-red-100 text-red-600' 
+                : subStatus.isTrial 
+                ? 'bg-amber-100 text-amber-700' 
+                : 'bg-emerald-100 text-emerald-700'
+            }`}>
+              {subStatus.isExpired ? (
+                <AlertTriangle className="w-6 h-6" />
+              ) : subStatus.isTrial ? (
+                <Sparkles className="w-6 h-6" />
+              ) : (
+                <CreditCard className="w-6 h-6" />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-black text-stone-900 text-base">
+                  {language === 'th' ? 'แพ็กเกจการใช้งาน & ต่ออายุ' : 'Subscription & License'}
+                </h3>
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
+                  subStatus.isExpired 
+                    ? 'bg-red-100 text-red-700' 
+                    : subStatus.isTrial 
+                    ? 'bg-amber-100 text-amber-800' 
+                    : 'bg-emerald-100 text-emerald-800'
+                }`}>
+                  {subStatus.isExpired 
+                    ? (language === 'th' ? 'หมดอายุ' : 'Expired')
+                    : subStatus.isTrial 
+                    ? (language === 'th' ? `ทดลองฟรี เหลือ ${subStatus.daysLeft} วัน` : `Trial (${subStatus.daysLeft}d left)`)
+                    : (language === 'th' ? `ใช้งานได้ปกติ (${subStatus.daysLeft} วัน)` : `Active (${subStatus.daysLeft}d left)`)}
+                </span>
+              </div>
+              <p className="text-xs text-stone-500 mt-0.5">
+                {subStatus.isTrial 
+                  ? (language === 'th' ? 'สิทธิ์ทดลองใช้งานฟรี 14 วันสำหรับร้านค้าใหม่' : '14-Day Free Trial for new stores')
+                  : (language === 'th' ? `แพ็กเกจปัจจุบัน: ${subStatus.plan}` : `Plan: ${subStatus.plan}`)}
+                {subStatus.expiresAtDate && ` • หมดอายุ ${subStatus.expiresAtDate.toLocaleDateString(language === 'th' ? 'th-TH' : 'en-US')}`}
+              </p>
+            </div>
+          </div>
+
+          {onOpenSubscriptionModal && (
+            <button
+              type="button"
+              onClick={onOpenSubscriptionModal}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/25 transition cursor-pointer flex-shrink-0"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>{language === 'th' ? 'ดูแพ็กเกจ & ต่ออายุ' : 'View Plans & Upgrade'}</span>
+            </button>
+          )}
+        </div>
+
+        {/* Anti-Abuse QR Permanence Note */}
+        <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-100 flex items-start gap-2.5 text-xs text-stone-600">
+          <ShieldCheck className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+          <p className="leading-relaxed">
+            {language === 'th'
+              ? 'ป้าย QR Code ตั้งโต๊ะทุกใบผูกเข้ากับ Store ID อย่างถาวร เมื่อต่ออายุแพ็กเกจ โค้ดเดิมที่ปรินท์วางบนโต๊ะจะใช้งานได้ต่อเนื่อง 100% โดยไม่ต้องพิมพ์หรือเปลี่ยนป้ายใหม่'
+              : 'All printed table QR codes are permanently linked to your Store ID. Renewing keeps existing table stands working seamlessly with zero re-printing.'}
+          </p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200 shadow-xs space-y-6">

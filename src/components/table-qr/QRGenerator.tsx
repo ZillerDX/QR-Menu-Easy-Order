@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import { Download, Printer, QrCode, ExternalLink, ChevronDown, Store, ChevronLeft, ChevronRight, ShieldCheck, CheckCircle2, Grid, Layers, Sparkles, Sliders } from 'lucide-react';
 import { StoreConfig, Language } from '../../types';
 import { t } from '../../utils/i18n';
+import { syncManager } from '../../utils/storage';
 import { CustomContactModal } from '../common/CustomContactModal';
 
 interface QRGeneratorProps {
@@ -128,6 +129,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
   }, [isDropdownOpen]);
 
   const handlePrintSingle = () => {
+    syncManager.markQRsPrinted(shopSlug);
     setViewMode('single');
     setTimeout(() => {
       window.print();
@@ -135,6 +137,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
   };
 
   const handlePrintAll = () => {
+    syncManager.markQRsPrinted(shopSlug);
     setViewMode('all');
     setTimeout(() => {
       window.print();
@@ -142,6 +145,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
   };
 
   const handleDownload = (tableToDownload = selectedTable) => {
+    syncManager.markQRsPrinted(shopSlug);
     const url = batchQrUrls[tableToDownload] || qrDataUrl;
     if (!url) return;
     const a = document.createElement('a');
@@ -308,11 +312,11 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
             <p className="text-emerald-800 text-[11px] mt-1 leading-relaxed">
               {language === 'th' ? (
                 <>
-                  รหัสร้านค้าของคุณคือ <span className="font-mono font-black bg-emerald-100 px-1.5 py-0.5 rounded text-emerald-900">{shopSlug}</span> • ทุก QR Code และลิงก์จะผูกกับบัญชีร้านนี้โดยเฉพาะ เมื่อลูกค้าสแกน ออเดอร์จะวิ่งเข้าเฉพาะจอครัว KDS ของร้านนี้ 100% ไม่มีวันปะปนกับร้านอื่น
+                  รหัสร้านค้าของคุณคือ <span className="font-mono font-black bg-emerald-100 px-1.5 py-0.5 rounded text-emerald-900">{shopSlug}</span> • ทุก QR Code สำหรับตั้งโต๊ะจะผูกกับบัญชีร้านนี้โดยเฉพาะ ออเดอร์จะเข้าครัว KDS ของร้านนี้ 100% และเมื่อต่ออายุแพ็กเกจ โค้ดเดิมที่พิมพ์วางบนโต๊ะจะสามารถใช้งานต่อได้ทันทีโดยไม่ต้องพิมพ์ใหม่
                 </>
               ) : (
                 <>
-                  Store ID: <span className="font-mono font-black bg-emerald-100 px-1.5 py-0.5 rounded text-emerald-900">{shopSlug}</span> • All QR links are cryptographically routed to your store only. Customer orders strictly target your kitchen display.
+                  Store ID: <span className="font-mono font-black bg-emerald-100 px-1.5 py-0.5 rounded text-emerald-900">{shopSlug}</span> • All QR links are tied permanently to your store. Renewing your subscription preserves all printed table stands with zero re-printing.
                 </>
               )}
             </p>

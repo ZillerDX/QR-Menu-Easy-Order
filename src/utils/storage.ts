@@ -1,4 +1,4 @@
-import { Order, MenuItem, MenuCategory, StoreConfig } from '../types';
+import { Order, MenuItem, MenuCategory, StoreConfig, SubscriptionPlan, SubscriptionStatus } from '../types';
 import { initialMenuItems, initialCategories, initialStoreConfig } from '../data/initialMenu';
 import { CAFE_ORDER_LOGO_DATA_URI } from '../data/logoData';
 
@@ -370,6 +370,92 @@ class RealtimeSyncManager {
     safeStorage.setItem(getStoreKey(targetShop), JSON.stringify(configWithId));
     this.broadcast({ type: 'STORE_CONFIG_UPDATED', payload: configWithId, storeId: targetShop });
     return configWithId;
+  }
+
+  // --- Subscription & Anti-Abuse Licensing Helpers ---
+  getSubscriptionStatus(config?: StoreConfig): {
+    plan: SubscriptionPlan;
+    status: SubscriptionStatus;
+    isActive: boolean;
+    isTrial: boolean;
+    isExpired: boolean;
+    daysLeft: number;
+    expiresAtDate: Date | null;
+  } {
+    const plan: SubscriptionPlan = config?.subscriptionPlan || 'free_trial';
+    const rawStatus: SubscriptionStatus = config?.subscriptionStatus || 'trialing';
+    
+    // Determine effective expiration date
+    let expiresAtStr = config?.subscriptionExpiresAt;
+    if (!expiresAtStr && config?.trialExpiresAt) {
+      expiresAtStr = config.trialExpiresAt;
+    }
+    
+    const now = Date.now();
+    let expiresAtDate: Date | null = null;
+    let daysLeft = 14;
+
+    if (expiresAtStr) {
+      expiresAtDate = new Date(expiresAtStr);
+      if (!isNaN(expiresAtDate.getTime())) {
+        const diffMs = expiresAtDate.getTime() - now;
+        daysLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+      }
+    }
+
+    const isExpired = rawStatus === 'expired' || (expiresAtDate !== null && expiresAtDate.getTime() < now);
+    const isTrial = plan === 'free_trial' || rawStatus === 'trialing';
+    const isActive = !isExpired && (rawStatus === 'active' || rawStatus === 'trialing');
+
+    return {
+      plan,
+      status: isExpired ? 'expired' : (rawStatus || 'trialing'),
+      isActive,
+      isTrial,
+      isExpired,
+      daysLeft,
+      expiresAtDate,
+    };
+  }
+
+  updateSubscription(
+    shopId: string,
+    plan: SubscriptionPlan,
+    status: SubscriptionStatus,
+    expiresAt: string,
+    stripeCustomerId?: string,
+    stripeSubscriptionId?: string
+  ): StoreConfig {
+    const current = this.getStoreConfig(shopId);
+    const updated: StoreConfig = {
+      ...current,
+      subscriptionPlan: plan,
+      subscriptionStatus: status,
+      subscriptionExpiresAt: expiresAt,
+      ...(stripeCustomerId ? { stripeCustomerId } : {}),
+      ...(stripeSubscriptionId ? { stripeSubscriptionId } : {}),
+    };
+    return this.saveStoreConfig(updated, shopId);
+  }
+
+  markQRsPrinted(shopId = DEFAULT_SHOP_ID): void {
+    const config = this.getStoreConfig(shopId);
+    if (!config.hasActiveQRsPrinted) {
+      this.saveStoreConfig({ ...config, hasActiveQRsPrinted: true }, shopId);
+    }
+    try {
+      safeStorage.setItem(`store_qrs_printed_${shopId}`, 'true');
+    } catch {}
+  }
+
+  hasPrintedQRs(shopId = DEFAULT_SHOP_ID): boolean {
+    const config = this.getStoreConfig(shopId);
+    if (config.hasActiveQRsPrinted) return true;
+    try {
+      return safeStorage.getItem(`store_qrs_printed_${shopId}`) === 'true';
+    } catch {
+      return false;
+    }
   }
 
   // --- Reset Store Data ---
