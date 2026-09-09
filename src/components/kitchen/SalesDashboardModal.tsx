@@ -5,12 +5,11 @@ import {
   Award, Clock, Download, BarChart3, 
   ArrowRight, CheckCircle2, Flame, ShoppingBag,
   CalendarRange, ChevronLeft, ChevronRight,
-  Lightbulb, Utensils, FileSpreadsheet
+  Lightbulb, Utensils
 } from 'lucide-react';
 import { Order, Language } from '../../types';
 import { t } from '../../utils/i18n';
 import { 
-  generateSalesInfographicExcel, 
   generateSalesCSV, 
   downloadReportFile, 
   SalesReportData 
@@ -329,19 +328,6 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     };
   };
 
-  // Infographic Excel Spreadsheet Export (.xls)
-  const handleExportExcel = () => {
-    if (filteredOrders.length === 0) return;
-    const data = buildReportData();
-    const excelContent = generateSalesInfographicExcel(data);
-    const now = new Date();
-    const dateStr = now.toISOString().slice(0, 10);
-    downloadReportFile(
-      excelContent,
-      `Sales_Report_Infographic_${preset}_${dateStr}.xls`,
-      'application/vnd.ms-excel;charset=utf-8;'
-    );
-  };
 
   // Clean Standard CSV Export (.csv)
   const handleExportCSV = () => {
@@ -441,22 +427,14 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
             </div>
           </div>
 
-          {/* Action Tools (Excel Infographic + CSV + Single X Close Button) */}
+          {/* Action Tools (Single Green CSV Button + Single X Close Button) */}
           <div className="flex items-center gap-2 relative z-10">
             <button
-              onClick={handleExportExcel}
-              className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-emerald-950/40 border border-emerald-400/30"
-              title={language === 'th' ? 'ส่งออกรายงาน Excel รูปแบบ Infographic สวยงาม' : 'Export Excel Infographic Report'}
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>{language === 'th' ? 'Excel (Infographic)' : 'Excel Report'}</span>
-            </button>
-            <button
               onClick={handleExportCSV}
-              className="px-3 py-2 rounded-2xl bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white text-xs font-black flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-stone-700 shadow-2xs"
-              title={language === 'th' ? 'ส่งออกข้อมูลดิบ CSV' : 'Export Raw CSV Data'}
+              className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-emerald-950/40 border border-emerald-400/30"
+              title={language === 'th' ? 'ส่งออกรายงาน CSV' : 'Export CSV Report'}
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>CSV</span>
             </button>
             <button
