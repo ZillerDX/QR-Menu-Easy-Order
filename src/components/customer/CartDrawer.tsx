@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Trash2, Plus, Minus, Store, ArrowRight, Utensils, QrCode, Banknote, CreditCard } from 'lucide-react';
+import { X, Trash2, Plus, Minus, Store, ArrowRight, Utensils, QrCode, Banknote, CreditCard, FileText } from 'lucide-react';
 import { CartItem, Language, PaymentMethod } from '../../types';
 import { t } from '../../utils/i18n';
 
@@ -135,8 +135,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     )}
 
                     {cartItem.specialNote && (
-                      <div className="text-[11px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md font-medium mt-1 inline-block">
-                        ✏️ {cartItem.specialNote}
+                      <div className="text-[11px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md font-medium mt-1 inline-flex items-center gap-1">
+                        <FileText className="w-3 h-3 text-amber-600 shrink-0" />
+                        <span>{cartItem.specialNote}</span>
                       </div>
                     )}
                   </div>

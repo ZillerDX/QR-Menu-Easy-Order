@@ -43,10 +43,13 @@ export const OrderCard: React.FC<OrderCardProps> = ({
     setActivePayMethod(order.paymentMethod || 'promptpay');
   }, [order.paymentMethod]);
 
+  const isHistorical = order.status === 'completed' || order.status === 'cancelled';
+
   useEffect(() => {
+    if (isHistorical) return;
     const interval = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isHistorical]);
 
   const orderTime = new Date(order.createdAt).getTime();
   const diffMinutes = Math.max(0, Math.floor((now - orderTime) / 60000));

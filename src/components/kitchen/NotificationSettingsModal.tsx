@@ -4,7 +4,12 @@ import {
   Bell, 
   Check, 
   X, 
-  Play
+  Play,
+  Music,
+  Volume2,
+  Sparkles,
+  PartyPopper,
+  Zap
 } from 'lucide-react';
 import { Language } from '../../types';
 import { soundService, SoundPreset } from '../../utils/sound';
@@ -61,14 +66,14 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
     setTimeout(() => setPlayingId(null), 850);
   };
 
-  const soundOptions: { id: SoundPreset; nameTh: string; nameEn: string; descTh: string; descEn: string; emoji: string }[] = [
+  const soundOptions: { id: SoundPreset; nameTh: string; nameEn: string; descTh: string; descEn: string; icon: React.ReactNode }[] = [
     {
       id: 'cheerful',
       nameTh: 'เมโลดี้สดใส (Cheerful Melody)',
       nameEn: 'Cheerful Melody',
       descTh: 'เสียง 4 คอร์ดประสาน นุ่มนวล ชัดเจน ฟังสบาย',
       descEn: 'Harmonic 4-note chord, warm and pleasant',
-      emoji: '🎵',
+      icon: <Music className="w-4 h-4 text-orange-500" />,
     },
     {
       id: 'service_bell',
@@ -76,7 +81,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
       nameEn: 'Restaurant Service Bell',
       descTh: 'เสียงกริ่งสไตล์คาเฟ่คลาสสิก ดังกังวานชัดเจน',
       descEn: 'Classic cafe ding-dong bell chime',
-      emoji: '🛎️',
+      icon: <Bell className="w-4 h-4 text-amber-500" />,
     },
     {
       id: 'marimba_breeze',
@@ -84,7 +89,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
       nameEn: 'Cafe Marimba Breeze',
       descTh: 'เสียงเคาะไม้อะคูสติก นุ่มนวล ฟังสบายเป็นธรรมชาติ',
       descEn: 'Warm acoustic wooden chime, pleasant & organic',
-      emoji: '🪵',
+      icon: <Volume2 className="w-4 h-4 text-emerald-600" />,
     },
     {
       id: 'counter_ding',
@@ -92,7 +97,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
       nameEn: 'Counter Double Ding',
       descTh: 'เสียงกริ่งคู่โทนสูง คมชัด กังวานได้ยินชัดเจน',
       descEn: 'Crisp high-clarity double ping chime',
-      emoji: '🔔',
+      icon: <Sparkles className="w-4 h-4 text-blue-500" />,
     },
     {
       id: 'cozy_fanfare',
@@ -100,7 +105,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
       nameEn: 'Cozy Cafe Fanfare',
       descTh: 'เมโลดี้เฉลิมฉลองอารมณ์ดี สำหรับออเดอร์ใหม่',
       descEn: 'Uplifting fanfare melody for celebratory orders',
-      emoji: '🎺',
+      icon: <PartyPopper className="w-4 h-4 text-purple-500" />,
     },
     {
       id: 'kitchen_alert',
@@ -108,7 +113,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
       nameEn: 'Kitchen Pulse Alert',
       descTh: 'เสียงเตือน 2 จังหวะความถี่สูง เหมาะกับครัวที่เสียงดัง',
       descEn: 'High-clarity dual-pulse chime for loud kitchens',
-      emoji: '⚡',
+      icon: <Zap className="w-4 h-4 text-red-500" />,
     },
   ];
 
@@ -178,9 +183,9 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
                       {isSelected && <Check className="w-3 h-3 text-white stroke-[3]" />}
                     </div>
 
-                    {/* Emoji Badge */}
+                    {/* Icon Badge */}
                     <div className="w-9 h-9 rounded-xl bg-white border border-stone-200/80 flex items-center justify-center text-base shadow-2xs flex-shrink-0">
-                      {opt.emoji}
+                      {opt.icon}
                     </div>
 
                     <div className="min-w-0 flex-1">

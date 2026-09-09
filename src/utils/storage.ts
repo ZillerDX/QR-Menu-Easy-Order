@@ -65,27 +65,25 @@ class RealtimeSyncManager {
   private listeners: Set<EventListener> = new Set();
 
   constructor() {
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      this.channel = new BroadcastChannel(CHANNEL_NAME);
-      this.channel.onmessage = (msg) => {
-        this.notifyListeners(msg.data);
-      };
-    }
-
     if (typeof window !== 'undefined') {
-      window.addEventListener('storage', (e) => {
-        if (e.key && e.key.startsWith('qr_menu_orders_') && e.newValue) {
-          try {
-            const orders = JSON.parse(e.newValue);
-            const latest = orders[0];
-            if (latest) {
-              this.notifyListeners({ type: 'ORDER_CREATED', payload: latest, storeId: latest.storeId });
+      if (typeof BroadcastChannel !== 'undefined') {
+        this.channel = new BroadcastChannel(CHANNEL_NAME);
+        this.channel.onmessage = (msg) => {
+          this.notifyListeners(msg.data);
+        };
+      } else {
+        // Storage event fallback only for browsers without BroadcastChannel, using explicit event key
+        window.addEventListener('storage', (e: StorageEvent) => {
+          if (e.key === 'qr_menu_broadcast_event_v4' && e.newValue) {
+            try {
+              const event: SyncEventType = JSON.parse(e.newValue);
+              this.notifyListeners(event);
+            } catch {
+              // ignore malformed storage json
             }
-          } catch {
-            // ignore malformed storage json
           }
-        }
-      });
+        });
+      }
     }
   }
 
@@ -112,6 +110,12 @@ class RealtimeSyncManager {
         this.channel.postMessage(event);
       } catch {
         // BroadcastChannel error fallback
+      }
+    } else if (typeof window !== 'undefined') {
+      try {
+        safeStorage.setItem('qr_menu_broadcast_event_v4', JSON.stringify(event));
+      } catch {
+        // storage fallback error
       }
     }
     this.notifyListeners(event);

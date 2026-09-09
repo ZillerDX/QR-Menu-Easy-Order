@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import confetti from 'canvas-confetti';
-import { CheckCircle2, Clock, ChefHat, Sparkles, Plus, X, Utensils, Receipt, Ban, AlertCircle } from 'lucide-react';
+import { CheckCircle2, Clock, ChefHat, Sparkles, Plus, X, Utensils, Receipt, Ban, AlertCircle, FileText } from 'lucide-react';
 import { Order, OrderStatus, Language } from '../../types';
 import { t } from '../../utils/i18n';
 
@@ -163,11 +163,11 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
                 <span className="text-[11px] font-black uppercase tracking-wider text-stone-400">
                   {language === 'th' ? 'ความคืบหน้าออเดอร์' : 'Live Order Progress'}
                 </span>
-                <span className="text-xs font-black text-orange-600 bg-orange-100/70 px-2.5 py-0.5 rounded-full animate-pulse">
-                  {order.status === 'pending' && `⏳ ${t('trackerStep1', language)}`}
-                  {order.status === 'cooking' && `🍳 ${t('trackerStep2', language)}`}
-                  {order.status === 'ready' && `✨ ${t('trackerStep3', language)}`}
-                  {order.status === 'completed' && `✅ ${t('trackerStep4', language)}`}
+                <span className="text-xs font-black text-orange-600 bg-orange-100/70 px-2.5 py-0.5 rounded-full animate-pulse flex items-center gap-1.5">
+                  {order.status === 'pending' && <><Clock className="w-3.5 h-3.5" />{t('trackerStep1', language)}</>}
+                  {order.status === 'cooking' && <><ChefHat className="w-3.5 h-3.5" />{t('trackerStep2', language)}</>}
+                  {order.status === 'ready' && <><Sparkles className="w-3.5 h-3.5" />{t('trackerStep3', language)}</>}
+                  {order.status === 'completed' && <><CheckCircle2 className="w-3.5 h-3.5" />{t('trackerStep4', language)}</>}
                 </span>
               </div>
 
@@ -252,8 +252,9 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
                       </p>
                     )}
                     {item.specialNote && (
-                      <p className="text-[11px] text-amber-600 font-medium pl-7">
-                        ✏️ {item.specialNote}
+                      <p className="text-[11px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md font-medium mt-1 ml-7 inline-flex items-center gap-1">
+                        <FileText className="w-3 h-3 text-amber-600 shrink-0" />
+                        <span>{item.specialNote}</span>
                       </p>
                     )}
                   </div>

@@ -4,7 +4,8 @@ import {
   X, Calendar, TrendingUp, Receipt, CreditCard, 
   Award, Clock, Download, BarChart3, 
   ArrowRight, CheckCircle2, Flame, ShoppingBag,
-  CalendarRange, ChevronLeft, ChevronRight
+  CalendarRange, ChevronLeft, ChevronRight,
+  Lightbulb, Utensils
 } from 'lucide-react';
 import { Order, Language } from '../../types';
 import { t } from '../../utils/i18n';
@@ -321,7 +322,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
 
     // Header Banner
     lines.push(escapeCsv('════════════════════════════════════════════════════════════════════════════════════════'));
-    lines.push(escapeCsv(isTh ? '📊 รายงานสรุปผลประกอบการ & สถิติยอดขาย (EXECUTIVE SALES & BUSINESS REPORT)' : '📊 EXECUTIVE SALES & BUSINESS ANALYTICS REPORT'));
+    lines.push(escapeCsv(isTh ? 'รายงานสรุปผลประกอบการ & สถิติยอดขาย (EXECUTIVE SALES & BUSINESS REPORT)' : 'EXECUTIVE SALES & BUSINESS ANALYTICS REPORT'));
     lines.push(escapeCsv('════════════════════════════════════════════════════════════════════════════════════════'));
     lines.push(`${escapeCsv(isTh ? 'วันที่ออกรายงาน (Generated Date)' : 'Generated Date')},${escapeCsv(generatedDate)}`);
     lines.push(`${escapeCsv(isTh ? 'รอบเวลาที่วิเคราะห์ (Timeframe)' : 'Selected Timeframe')},${escapeCsv(rangeLabel)}`);
@@ -330,7 +331,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
 
     // Section 1: KPI Summary
     lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
-    lines.push(escapeCsv(isTh ? '📌 1. สรุปตัวชี้วัดประสิทธิภาพหลัก (KEY PERFORMANCE INDICATORS)' : '📌 1. KEY PERFORMANCE INDICATORS (KPIs)'));
+    lines.push(escapeCsv(isTh ? '1. สรุปตัวชี้วัดประสิทธิภาพหลัก (KEY PERFORMANCE INDICATORS)' : '1. KEY PERFORMANCE INDICATORS (KPIs)'));
     lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
     lines.push(`${escapeCsv(isTh ? 'ตัวชี้วัด (Metric)' : 'Metric')},${escapeCsv(isTh ? 'มูลค่า (Value)' : 'Value')},${escapeCsv(isTh ? 'หน่วย (Unit)' : 'Unit')},${escapeCsv(isTh ? 'คำอธิบาย (Notes)' : 'Notes')}`);
     lines.push(`${escapeCsv(isTh ? 'ยอดขายรวมสุทธิ (Total Revenue)' : 'Total Revenue')},${metrics.totalSales},${escapeCsv(isTh ? 'บาท (THB)' : 'THB')},${escapeCsv(isTh ? 'ยอดบิลทั้งหมดที่เสร็จสิ้น' : 'Total completed sales')}`);
@@ -342,7 +343,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
 
     // Section 2: Top Best Sellers
     lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
-    lines.push(escapeCsv(isTh ? '🏆 2. 5 อันดับเมนูขายดีที่สุด (TOP 5 BEST SELLING MENU ITEMS)' : '🏆 2. TOP 5 BEST SELLING DISHES'));
+    lines.push(escapeCsv(isTh ? '2. 5 อันดับเมนูขายดีที่สุด (TOP 5 BEST SELLING MENU ITEMS)' : '2. TOP 5 BEST SELLING DISHES'));
     lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
     lines.push(`${escapeCsv(isTh ? 'อันดับ (Rank)' : 'Rank')},${escapeCsv(isTh ? 'ชื่อเมนู (Menu Name)' : 'Menu Name (TH)')},${escapeCsv(isTh ? 'ชื่อภาษาอังกฤษ (English Name)' : 'English Name')},${escapeCsv(isTh ? 'จำนวนที่ขายได้ (Qty Sold)' : 'Qty Sold')},${escapeCsv(isTh ? 'ยอดขายรวม (Total Revenue THB)' : 'Total Revenue (THB)')},${escapeCsv(isTh ? 'สัดส่วนยอดขาย (% Share)' : '% Revenue Share')}`);
     metrics.topItems.forEach((item, idx) => {
@@ -353,7 +354,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
 
     // Section 3: 24-Hour Hourly Peak Traffic
     lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
-    lines.push(escapeCsv(isTh ? '⏰ 3. สถิติยอดขายรายชั่วโมง 24 ชม. (24-HOUR PEAK HOURLY TRAFFIC)' : '⏰ 3. 24-HOUR HOURLY TRAFFIC & REVENUE'));
+    lines.push(escapeCsv(isTh ? '3. สถิติยอดขายรายชั่วโมง 24 ชม. (24-HOUR PEAK HOURLY TRAFFIC)' : '3. 24-HOUR HOURLY TRAFFIC & REVENUE'));
     lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
     lines.push(`${escapeCsv(isTh ? 'ช่วงเวลา (Time Window)' : 'Time Window')},${escapeCsv(isTh ? 'จำนวนบิล (Orders)' : 'Orders Count')},${escapeCsv(isTh ? 'ยอดขาย (Revenue THB)' : 'Revenue (THB)')},${escapeCsv(isTh ? 'ระดับความหนาแน่น (Traffic Level)' : 'Traffic Level')}`);
     metrics.hourlySales.forEach((sales, hr) => {
@@ -361,7 +362,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
         const hrStart = String(hr).padStart(2, '0') + ':00';
         const hrEnd = String(hr).padStart(2, '0') + ':59';
         const isPeak = sales === metrics.maxHourlySales && sales > 0;
-        const level = isPeak ? (isTh ? '🔥 ช่วงพีคสูงสุด (Peak Traffic)' : '🔥 PEAK TRAFFIC') : (isTh ? 'ปกติ (Normal)' : 'Normal');
+        const level = isPeak ? (isTh ? 'ช่วงพีคสูงสุด (Peak Traffic)' : 'PEAK TRAFFIC') : (isTh ? 'ปกติ (Normal)' : 'Normal');
         lines.push(`${escapeCsv(`${hrStart} - ${hrEnd}`)},${metrics.hourlyCounts[hr]},${sales},${escapeCsv(level)}`);
       }
     });
@@ -369,7 +370,7 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
 
     // Section 4: Detailed Order Receipts Log
     lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
-    lines.push(escapeCsv(isTh ? '🧾 4. รายการบิลออเดอร์ทั้งหมด (DETAILED ORDER RECEIPTS LOG)' : '🧾 4. DETAILED ORDER RECEIPTS LOG'));
+    lines.push(escapeCsv(isTh ? '4. รายการบิลออเดอร์ทั้งหมด (DETAILED ORDER RECEIPTS LOG)' : '4. DETAILED ORDER RECEIPTS LOG'));
     lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
     lines.push(`${escapeCsv(isTh ? 'เลขออเดอร์ (Order #)' : 'Order #')},${escapeCsv(isTh ? 'โต๊ะ/ประเภท (Table/Type)' : 'Table/Type')},${escapeCsv(isTh ? 'วันและเวลา (Date & Time)' : 'Date & Time')},${escapeCsv(isTh ? 'รายการอาหาร (Items Ordered)' : 'Items Ordered')},${escapeCsv(isTh ? 'วิธีชำระเงิน (Payment Method)' : 'Payment Method')},${escapeCsv(isTh ? 'สถานะ (Status)' : 'Status')},${escapeCsv(isTh ? 'ยอดสุทธิ (Total THB)' : 'Total (THB)')}`);
 
@@ -882,8 +883,8 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
                                 className="w-10 h-10 rounded-xl object-cover border border-stone-200/80 flex-shrink-0 shadow-2xs"
                               />
                             ) : (
-                              <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-black text-xs flex-shrink-0">
-                                ☕
+                              <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center flex-shrink-0">
+                                <Utensils className="w-5 h-5 text-orange-600" />
                               </div>
                             )}
 
@@ -982,8 +983,8 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
 
               {/* Peak Hour Smart Suggestion Banner */}
               <div className="p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200/80 text-xs text-amber-950 font-bold flex items-center gap-2.5">
-                <span className="w-7 h-7 rounded-xl bg-amber-200/80 text-amber-800 flex items-center justify-center flex-shrink-0 text-sm shadow-2xs">
-                  💡
+                <span className="w-7 h-7 rounded-xl bg-amber-200/80 text-amber-800 flex items-center justify-center flex-shrink-0 shadow-2xs">
+                  <Lightbulb className="w-4 h-4 text-amber-800" />
                 </span>
                 <span className="leading-snug text-[11px] sm:text-xs">
                   {language === 'th'

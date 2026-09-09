@@ -17,12 +17,12 @@ class SoundService {
   private isUnlocked: boolean = false;
 
   constructor() {
-    // Sound is ALWAYS active and enabled by default
-    this.soundEnabled = true;
+    // Sound enabled default, load from localStorage if available
     try {
-      localStorage.setItem('pos_sound_enabled', 'true');
+      const stored = localStorage.getItem('pos_sound_enabled');
+      this.soundEnabled = stored !== null ? stored === 'true' : true;
     } catch {
-      // ignore
+      this.soundEnabled = true;
     }
 
     // Auto-unlock AudioContext on first user interaction anywhere on the screen
@@ -48,7 +48,7 @@ class SoundService {
   }
 
   isSoundEnabled(): boolean {
-    return true; // Always active
+    return this.soundEnabled;
   }
 
   setSoundEnabled(enabled: boolean) {
@@ -76,6 +76,7 @@ class SoundService {
    * Play rich harmonic chime for new incoming orders (6 unique presets)
    */
   playNewOrderChime(preset: SoundPreset = 'cheerful') {
+    if (!this.soundEnabled) return;
     this.vibrate([200, 100, 200]);
 
     try {

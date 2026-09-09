@@ -25,6 +25,7 @@ export const OrderCountdownModal: React.FC<OrderCountdownModalProps> = ({
   const [timeLeft, setTimeLeft] = useState(3);
   const [isSuccess, setIsSuccess] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const finishTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -46,6 +47,9 @@ export const OrderCountdownModal: React.FC<OrderCountdownModalProps> = ({
 
       return () => {
         clearInterval(interval);
+        if (finishTimeoutRef.current) {
+          clearTimeout(finishTimeoutRef.current);
+        }
       };
     }
   }, [isOpen]);
@@ -75,7 +79,7 @@ export const OrderCountdownModal: React.FC<OrderCountdownModalProps> = ({
       });
     } catch {}
 
-    setTimeout(() => {
+    finishTimeoutRef.current = setTimeout(() => {
       onComplete();
     }, 1200);
   };
@@ -83,6 +87,9 @@ export const OrderCountdownModal: React.FC<OrderCountdownModalProps> = ({
   const handleManualCancel = () => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
+    }
+    if (finishTimeoutRef.current) {
+      clearTimeout(finishTimeoutRef.current);
     }
     soundService.playClickPop();
     onCancel();

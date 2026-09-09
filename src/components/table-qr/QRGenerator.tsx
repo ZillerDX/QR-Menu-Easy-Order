@@ -289,7 +289,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
             onClick={() => setIsContactModalOpen(true)}
             className="text-xs font-bold text-orange-600 hover:text-orange-700 underline cursor-pointer py-1"
           >
-            {language === 'th' ? '⚡ ต้องการ > 50 โต๊ะ?' : '⚡ Need > 50 Tables?'}
+            {language === 'th' ? 'ต้องการ > 50 โต๊ะ?' : 'Need > 50 Tables?'}
           </button>
         </div>
       </div>
@@ -302,7 +302,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
           </div>
           <div>
             <h4 className="font-black text-emerald-950 text-xs sm:text-sm flex items-center gap-2">
-              <span>{language === 'th' ? '🔒 ตรวจสอบความถูกต้องของ QR ไม่ให้ซ้ำร้าน / ป้องกันออเดอร์ไปโผล่ร้านอื่น' : '🔒 Verified Store Routing: Zero Cross-Store Leakage'}</span>
+              <span>{language === 'th' ? 'ตรวจสอบความถูกต้องของ QR ไม่ให้ซ้ำร้าน / ป้องกันออเดอร์ไปโผล่ร้านอื่น' : 'Verified Store Routing: Zero Cross-Store Leakage'}</span>
               <span className="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full">Active Protection</span>
             </h4>
             <p className="text-emerald-800 text-[11px] mt-1 leading-relaxed">
@@ -376,7 +376,7 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
                           className="w-full py-2 px-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-xs cursor-pointer hover:opacity-95 transition"
                         >
                           <Sparkles className="w-3.5 h-3.5" />
-                          <span>{language === 'th' ? '⚡ ขยายเป็น 50 โต๊ะทันที' : '⚡ Expand to 50 Tables'}</span>
+                          <span>{language === 'th' ? 'ขยายเป็น 50 โต๊ะทันที' : 'Expand to 50 Tables'}</span>
                         </button>
                       </div>
                     )}

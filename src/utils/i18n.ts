@@ -121,7 +121,7 @@ export const translations = {
     qrDownloadBtn: "Download Table QR Image",
     qrPrintBtn: "Print Table Stand (Card)",
     qrOpenTestBtn: "Open in Table View (New Tab)",
-    qrScanInstruction: "📱 Scan QR code with your phone camera to view menu, place order, and pay instantly without waiting for staff.",
+    qrScanInstruction: "Scan QR code with your phone camera to view menu, place order, and pay instantly without waiting for staff.",
 
     // Menu & Store Admin
     adminTitle: "Menu Management",
@@ -285,7 +285,7 @@ export const translations = {
     qrDownloadBtn: "ดาวน์โหลดรูป QR Code โต๊ะ",
     qrPrintBtn: "พิมพ์การ์ดตั้งโต๊ะ (Print Stand)",
     qrOpenTestBtn: "เปิดทดสอบในมุมมองโต๊ะนี้ (New Tab)",
-    qrScanInstruction: "📱 เปิดกล้องมือถือสแกน QR เพื่อดูเมนูทั้งหมด สั่งอาหาร และชำระเงินผ่านมือถือโดยไม่ต้องรอพนักงาน",
+    qrScanInstruction: "เปิดกล้องมือถือสแกน QR เพื่อดูเมนูทั้งหมด สั่งอาหาร และชำระเงินผ่านมือถือโดยไม่ต้องรอพนักงาน",
 
     // Menu & Store Admin
     adminTitle: "ระบบจัดการเมนูอาหาร (Menu Management)",

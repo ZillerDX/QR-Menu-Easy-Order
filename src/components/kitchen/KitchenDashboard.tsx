@@ -106,7 +106,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
           })
         );
         triggerToast(
-          language === 'th' ? '🌅 เริ่มต้นวันใหม่แล้ว!' : '🌅 New day started!',
+          language === 'th' ? 'เริ่มต้นวันใหม่แล้ว' : 'New day started',
           language === 'th' ? 'ระบบรีเฟรชข้อมูลเป็นของวันนี้เรียบร้อยแล้ว' : 'Data refreshed for today.',
           'sound'
         );
@@ -136,7 +136,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
         })
       );
       triggerToast(
-        language === 'th' ? '🔄 รีเฟรชข้อมูลสำเร็จ' : 'Data Refreshed',
+        language === 'th' ? 'รีเฟรชข้อมูลสำเร็จ' : 'Data Refreshed',
         language === 'th' ? 'ข้อมูลออเดอร์เป็นปัจจุบันแล้ว' : 'Order tickets are up to date',
         'sound'
       );
@@ -153,7 +153,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
         const tableLabel = latestOrder.tableNumber === 'TAKEAWAY' ? 'กลับบ้าน' : `โต๊ะ ${latestOrder.tableNumber}`;
         const itemsCount = latestOrder.items.reduce((sum, item) => sum + item.quantity, 0);
         triggerToast(
-          language === 'th' ? `🔔 มีออเดอร์ใหม่เข้า! (${tableLabel})` : `🔔 New Order! (${tableLabel})`,
+          language === 'th' ? `มีออเดอร์ใหม่เข้า (${tableLabel})` : `New Order (${tableLabel})`,
           language === 'th'
             ? `${itemsCount} รายการ • รวม ฿${latestOrder.totalPrice.toLocaleString()}`
             : `${itemsCount} items • Total ฿${latestOrder.totalPrice.toLocaleString()}`,
@@ -166,7 +166,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
   }, [orders, language]);
 
   // Helper to determine if an order matches the selected date filter
-  const isOrderInDateRange = (order: Order): boolean => {
+  const isOrderInDateRange = React.useCallback((order: Order): boolean => {
     if (!order.createdAt) return true;
     const orderDate = new Date(order.createdAt);
     const now = new Date();
@@ -207,60 +207,84 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
     }
 
     return true; // 'all'
-  };
+  }, [dateFilterMode, customDate]);
 
   // 1. In-Kitchen (Active unfulfilled queue: Pending + Cooking)
-  // If viewing today or all, show all unfulfilled tickets. If reviewing a past date, scope to that date.
-  const inKitchenOrders = orders.filter((o) => {
-    const isActive = o.status === 'pending' || o.status === 'cooking';
-    if (!isActive) return false;
-    if (dateFilterMode === 'today' || dateFilterMode === 'all') return true;
-    return isOrderInDateRange(o);
-  });
-  const pendingCount = inKitchenOrders.filter((o) => o.status === 'pending').length;
-  const cookingCount = inKitchenOrders.filter((o) => o.status === 'cooking').length;
-
-  // 2. Ready to Serve (Ready)
-  const readyOrders = orders.filter((o) => {
-    if (o.status !== 'ready') return false;
-    if (dateFilterMode === 'today' || dateFilterMode === 'all') return true;
-    return isOrderInDateRange(o);
-  });
-
-  // 3. Completed (Completed + Cancelled) strictly matching date range
-  const completedOrders = orders.filter((o) => o.status === 'completed' && isOrderInDateRange(o));
-  const cancelledOrders = orders.filter((o) => o.status === 'cancelled' && isOrderInDateRange(o));
-
-  // 4. All orders matching the selected date range
-  const dateScopedOrders = orders.filter((o) => isOrderInDateRange(o));
-
-  // Strict Filter Mapping for main display grid
-  const filteredOrders = orders.filter((o) => {
-    if (filter === 'active') {
+  const inKitchenOrders = React.useMemo(() => {
+    return orders.filter((o) => {
       const isActive = o.status === 'pending' || o.status === 'cooking';
       if (!isActive) return false;
       if (dateFilterMode === 'today' || dateFilterMode === 'all') return true;
       return isOrderInDateRange(o);
+    });
+  }, [orders, dateFilterMode, isOrderInDateRange]);
+
+  const { pendingCount, cookingCount } = React.useMemo(() => {
+    let pending = 0;
+    let cooking = 0;
+    for (const o of inKitchenOrders) {
+      if (o.status === 'pending') pending++;
+      else if (o.status === 'cooking') cooking++;
     }
-    if (filter === 'ready') {
+    return { pendingCount: pending, cookingCount: cooking };
+  }, [inKitchenOrders]);
+
+  // 2. Ready to Serve (Ready)
+  const readyOrders = React.useMemo(() => {
+    return orders.filter((o) => {
       if (o.status !== 'ready') return false;
       if (dateFilterMode === 'today' || dateFilterMode === 'all') return true;
       return isOrderInDateRange(o);
+    });
+  }, [orders, dateFilterMode, isOrderInDateRange]);
+
+  // 3. Completed (Completed + Cancelled) strictly matching date range
+  const { completedOrders, cancelledOrders } = React.useMemo(() => {
+    const completed: Order[] = [];
+    const cancelled: Order[] = [];
+    for (const o of orders) {
+      if (o.status === 'completed' && isOrderInDateRange(o)) completed.push(o);
+      else if (o.status === 'cancelled' && isOrderInDateRange(o)) cancelled.push(o);
     }
-    if (filter === 'completed') {
-      if (o.status !== 'completed' && o.status !== 'cancelled') return false;
+    return { completedOrders: completed, cancelledOrders: cancelled };
+  }, [orders, isOrderInDateRange]);
+
+  // 4. All orders matching the selected date range
+  const dateScopedOrders = React.useMemo(() => {
+    return orders.filter((o) => isOrderInDateRange(o));
+  }, [orders, isOrderInDateRange]);
+
+  // Strict Filter Mapping for main display grid
+  const filteredOrders = React.useMemo(() => {
+    return orders.filter((o) => {
+      if (filter === 'active') {
+        const isActive = o.status === 'pending' || o.status === 'cooking';
+        if (!isActive) return false;
+        if (dateFilterMode === 'today' || dateFilterMode === 'all') return true;
+        return isOrderInDateRange(o);
+      }
+      if (filter === 'ready') {
+        if (o.status !== 'ready') return false;
+        if (dateFilterMode === 'today' || dateFilterMode === 'all') return true;
+        return isOrderInDateRange(o);
+      }
+      if (filter === 'completed') {
+        if (o.status !== 'completed' && o.status !== 'cancelled') return false;
+        return isOrderInDateRange(o);
+      }
       return isOrderInDateRange(o);
-    }
-    return isOrderInDateRange(o);
-  });
+    });
+  }, [orders, filter, dateFilterMode, isOrderInDateRange]);
 
   // Dynamic revenue calculation strictly based on the selected date filter
-  const totalRevenue = completedOrders.reduce((sum, o) => sum + o.totalPrice, 0);
+  const totalRevenue = React.useMemo(() => {
+    return completedOrders.reduce((sum, o) => sum + o.totalPrice, 0);
+  }, [completedOrders]);
 
   const handleQuickTestSound = () => {
     soundService.playNewOrderChime();
     triggerToast(
-      language === 'th' ? '🔔 ทดสอบเสียงแจ้งเตือน' : 'Notification Sound Test',
+      language === 'th' ? 'ทดสอบเสียงแจ้งเตือน' : 'Notification Sound Test',
       language === 'th' ? 'เล่นเสียงเตือนเรียบร้อย (คลิกปุ่มตั้งค่าเพื่อเปลี่ยนเสียง)' : 'Chime played successfully',
       'sound'
     );
@@ -273,27 +297,27 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
     
     if (status === 'cooking') {
       triggerToast(
-        language === 'th' ? '🍳 กำลังเริ่มปรุงอาหาร' : 'Cooking in progress',
+        language === 'th' ? 'กำลังเริ่มปรุงอาหาร' : 'Cooking in progress',
         tableLabel,
         'cooking'
       );
     } else if (status === 'ready') {
       triggerToast(
-        language === 'th' ? '✨ ปรุงเสร็จแล้ว (พร้อมเสิร์ฟ)' : 'Dish is Ready to Serve!',
+        language === 'th' ? 'ปรุงเสร็จแล้ว (พร้อมเสิร์ฟ)' : 'Dish is Ready to Serve!',
         language === 'th' ? `ออเดอร์ ${tableLabel} ย้ายไปที่แท็บพร้อมเสิร์ฟ` : `Order for ${tableLabel} moved to Ready tab`,
         'ready',
         'ready'
       );
     } else if (status === 'completed') {
       triggerToast(
-        language === 'th' ? '✓ ปิดบิลเรียบร้อยแล้ว' : 'Bill Closed',
+        language === 'th' ? 'ปิดบิลเรียบร้อยแล้ว' : 'Bill Closed',
         tableLabel,
         'completed',
         'completed'
       );
     } else if (status === 'pending') {
       triggerToast(
-        language === 'th' ? '↩️ ย้อนสถานะกลับไปรอทำ' : 'Order reverted to pending',
+        language === 'th' ? 'ย้อนสถานะกลับไปรอทำ' : 'Order reverted to pending',
         tableLabel,
         'cooking',
         'active'
@@ -304,7 +328,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
   const handleCancelOrderWrapped = async (orderId: string, reason: string) => {
     await onCancelOrder?.(orderId, reason);
     triggerToast(
-      language === 'th' ? '🚫 ปฏิเสธออเดอร์แล้ว' : 'Order Rejected',
+      language === 'th' ? 'ปฏิเสธออเดอร์แล้ว' : 'Order Rejected',
       reason,
       'sound',
       'completed'
@@ -795,7 +819,7 @@ export const KitchenDashboard: React.FC<KitchenDashboardProps> = ({
           language={language}
           onTestChime={(preset) => {
             triggerToast(
-              language === 'th' ? '🔔 ทดสอบเสียงสำเร็จ' : 'Sound Test Successful',
+              language === 'th' ? 'ทดสอบเสียงสำเร็จ' : 'Sound Test Successful',
               language === 'th' ? `เลือกรูปแบบเสียง: ${preset}` : `Preset selected: ${preset}`,
               'sound'
             );

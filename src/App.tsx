@@ -14,7 +14,7 @@ import { OrderTracker } from './components/customer/OrderTracker';
 import { ConfirmModal } from './components/common/ConfirmModal';
 import { supabase, authService } from './utils/supabaseClient';
 import { User } from '@supabase/supabase-js';
-import { Search, Sparkles, Utensils, ArrowRight, Hourglass, Flame, CheckCircle2, ShoppingBag, Ban, Loader2, RotateCcw } from 'lucide-react';
+import { Search, Sparkles, Utensils, ArrowRight, Hourglass, Flame, CheckCircle2, ShoppingBag, Ban, Loader2, RotateCcw, AlertCircle, X } from 'lucide-react';
 import { renderCategoryIcon } from './utils/categoryIcons';
 
 const KitchenDashboard = React.lazy(() => import('./components/kitchen/KitchenDashboard').then((m) => ({ default: m.KitchenDashboard })));
@@ -53,8 +53,8 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-[#fafaf9] flex flex-col items-center justify-center p-6 text-center space-y-4">
-          <div className="w-16 h-16 rounded-3xl bg-orange-500/10 border border-orange-200 text-orange-600 flex items-center justify-center font-black text-2xl shadow-sm">
-            ☕
+          <div className="w-16 h-16 rounded-3xl bg-orange-500/10 border border-orange-200 text-orange-600 flex items-center justify-center font-black shadow-sm">
+            <Utensils className="w-8 h-8 text-orange-600" />
           </div>
           <h2 className="text-xl font-black text-stone-900">พบปัญหาในการแสดงผลชั่วคราว</h2>
           <p className="text-xs text-stone-500 max-w-md leading-relaxed font-medium">
@@ -323,15 +323,44 @@ function AppContent() {
           customerNote: row.notes,
           cancelReason: row.cancel_reason,
           createdAt: row.created_at,
+          updatedAt: row.updated_at,
         }));
-        setOrders(mappedOrders);
-        syncManager.setOrders(mappedOrders, targetShopId);
+
+        setOrders((prevOrders) => {
+          const isSame =
+            prevOrders.length === mappedOrders.length &&
+            prevOrders.every((prev, idx) => {
+              const next = mappedOrders[idx];
+              return (
+                next &&
+                prev.id === next.id &&
+                prev.status === next.status &&
+                prev.paymentStatus === next.paymentStatus &&
+                prev.paymentMethod === next.paymentMethod
+              );
+            });
+          if (isSame) {
+            return prevOrders;
+          }
+          syncManager.setOrders(mappedOrders, targetShopId);
+          return mappedOrders;
+        });
 
         const myOrderId = sessionStorage.getItem('my_active_order_id');
         if (myOrderId) {
           const myOrder = mappedOrders.find((o) => o.id === myOrderId);
           if (myOrder) {
-            setTrackedOrder(myOrder);
+            setTrackedOrder((prev) => {
+              if (
+                prev &&
+                prev.id === myOrder.id &&
+                prev.status === myOrder.status &&
+                prev.paymentStatus === myOrder.paymentStatus
+              ) {
+                return prev;
+              }
+              return myOrder;
+            });
           }
         }
       }
@@ -494,14 +523,21 @@ function AppContent() {
       }
     });
 
-    const handleFocus = () => fetchOrdersOnly(shopId);
+    const handleFocus = () => {
+      if (!document.hidden) fetchOrdersOnly(shopId);
+    };
     const handleVisibilityChange = () => {
       if (!document.hidden) fetchOrdersOnly(shopId);
     };
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    const pollInterval = setInterval(() => fetchOrdersOnly(shopId), 4000);
+    // Fallback sync polling: only runs every 15s when window is active/visible
+    const pollInterval = setInterval(() => {
+      if (!document.hidden) {
+        fetchOrdersOnly(shopId);
+      }
+    }, 15000);
 
     const unsubscribe = syncManager.subscribe((event) => {
       if (event.storeId && event.storeId !== shopId) return;
@@ -729,7 +765,7 @@ function AppContent() {
       if (error) throw error;
     } catch (err) {
       console.error("Supabase upsert store_config error:", err);
-      setErrorToast(language === 'th' ? '⚠️ บันทึกการตั้งค่าไปยังเซิร์ฟเวอร์ไม่สำเร็จ' : '⚠️ Failed to save store settings to server');
+      setErrorToast(language === 'th' ? 'บันทึกการตั้งค่าไปยังเซิร์ฟเวอร์ไม่สำเร็จ' : 'Failed to save store settings to server');
       setTimeout(() => setErrorToast(null), 5000);
     }
   };
@@ -827,7 +863,7 @@ function AppContent() {
       }]);
     } catch (e) {
       console.error("Supabase insert order error:", e);
-      setErrorToast(language === 'th' ? '⚠️ ส่งออเดอร์ไปยังเซิร์ฟเวอร์ไม่สำเร็จ แต่ออเดอร์ถูกบันทึกในเครื่องแล้ว' : '⚠️ Failed to sync order to server, but saved locally');
+      setErrorToast(language === 'th' ? 'ส่งออเดอร์ไปยังเซิร์ฟเวอร์ไม่สำเร็จ แต่ออเดอร์ถูกบันทึกในเครื่องแล้ว' : 'Failed to sync order to server, but saved locally');
       setTimeout(() => setErrorToast(null), 5000);
     }
   };
@@ -863,7 +899,7 @@ function AppContent() {
         .eq('id', orderId);
     } catch (e) {
       console.error("Supabase update status error:", e);
-      setErrorToast(language === 'th' ? '⚠️ อัปเดตสถานะไปยังเซิร์ฟเวอร์ไม่สำเร็จ' : '⚠️ Failed to sync status update to server');
+      setErrorToast(language === 'th' ? 'อัปเดตสถานะไปยังเซิร์ฟเวอร์ไม่สำเร็จ' : 'Failed to sync status update to server');
       setTimeout(() => setErrorToast(null), 5000);
     }
   };
@@ -890,7 +926,7 @@ function AppContent() {
         .eq('id', orderId);
     } catch (e) {
       console.error("Supabase cancel order error:", e);
-      setErrorToast(language === 'th' ? '⚠️ ยกเลิกออเดอร์บนเซิร์ฟเวอร์ไม่สำเร็จ' : '⚠️ Failed to sync cancellation to server');
+      setErrorToast(language === 'th' ? 'ยกเลิกออเดอร์บนเซิร์ฟเวอร์ไม่สำเร็จ' : 'Failed to sync cancellation to server');
       setTimeout(() => setErrorToast(null), 5000);
     }
   };
@@ -962,7 +998,7 @@ function AppContent() {
       if (error) throw error;
     } catch (err) {
       console.error("Supabase upsert menu item error:", err);
-      setErrorToast(language === 'th' ? '⚠️ บันทึกเมนูไปยังเซิร์ฟเวอร์ไม่สำเร็จ' : '⚠️ Failed to save menu item to server');
+      setErrorToast(language === 'th' ? 'บันทึกเมนูไปยังเซิร์ฟเวอร์ไม่สำเร็จ' : 'Failed to save menu item to server');
       setTimeout(() => setErrorToast(null), 5000);
     }
   };
@@ -975,7 +1011,7 @@ function AppContent() {
       if (error) throw error;
     } catch (err) {
       console.error("Supabase delete menu item error:", err);
-      setErrorToast(language === 'th' ? '⚠️ ลบเมนูจากเซิร์ฟเวอร์ไม่สำเร็จ' : '⚠️ Failed to delete menu item from server');
+      setErrorToast(language === 'th' ? 'ลบเมนูจากเซิร์ฟเวอร์ไม่สำเร็จ' : 'Failed to delete menu item from server');
       setTimeout(() => setErrorToast(null), 5000);
     }
   };
@@ -996,7 +1032,7 @@ function AppContent() {
       if (error) throw error;
     } catch (err) {
       console.error("Supabase upsert category error:", err);
-      setErrorToast(language === 'th' ? '⚠️ บันทึกหมวดหมู่ไปยังเซิร์ฟเวอร์ไม่สำเร็จ' : '⚠️ Failed to save category to server');
+      setErrorToast(language === 'th' ? 'บันทึกหมวดหมู่ไปยังเซิร์ฟเวอร์ไม่สำเร็จ' : 'Failed to save category to server');
       setTimeout(() => setErrorToast(null), 5000);
     }
   };
@@ -1009,7 +1045,7 @@ function AppContent() {
       if (error) throw error;
     } catch (err) {
       console.error("Supabase delete category error:", err);
-      setErrorToast(language === 'th' ? '⚠️ ลบหมวดหมู่จากเซิร์ฟเวอร์ไม่สำเร็จ' : '⚠️ Failed to delete category from server');
+      setErrorToast(language === 'th' ? 'ลบหมวดหมู่จากเซิร์ฟเวอร์ไม่สำเร็จ' : 'Failed to delete category from server');
       setTimeout(() => setErrorToast(null), 5000);
     }
   };
@@ -1034,24 +1070,37 @@ function AppContent() {
     }
   };
 
-  const filteredMenuItems = menuItems.filter((item) => {
-    const matchesSearch =
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.nameEn && item.nameEn.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.descriptionEn && item.descriptionEn.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredMenuItems = React.useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return menuItems.filter((item) => {
+      const matchesSearch =
+        !query ||
+        item.name.toLowerCase().includes(query) ||
+        (item.nameEn && item.nameEn.toLowerCase().includes(query)) ||
+        item.description.toLowerCase().includes(query) ||
+        (item.descriptionEn && item.descriptionEn.toLowerCase().includes(query));
 
-    if (!matchesSearch) return false;
+      if (!matchesSearch) return false;
 
-    if (selectedCategory === 'popular') {
-      return item.isPopular || item.isChefRecommend;
-    }
-    return item.categoryId === selectedCategory;
-  });
+      if (selectedCategory === 'popular') {
+        return item.isPopular || item.isChefRecommend;
+      }
+      return item.categoryId === selectedCategory;
+    });
+  }, [menuItems, searchQuery, selectedCategory]);
 
-  const pendingCount = orders.filter((o) => o.status === 'pending' || o.status === 'cooking').length;
-  const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const cartSubtotal = cart.reduce((sum, item) => sum + item.totalItemPrice, 0);
+  const pendingCount = React.useMemo(
+    () => orders.filter((o) => o.status === 'pending' || o.status === 'cooking').length,
+    [orders]
+  );
+  const totalCartCount = React.useMemo(
+    () => cart.reduce((sum, item) => sum + item.quantity, 0),
+    [cart]
+  );
+  const cartSubtotal = React.useMemo(
+    () => cart.reduce((sum, item) => sum + item.totalItemPrice, 0),
+    [cart]
+  );
 
   // Determine view mode:
   const isDirectNonTableAccess = !hasTableParam;
@@ -1118,48 +1167,22 @@ function AppContent() {
             />
           )}
 
-          {/* VIEW 1: CUSTOMER VIEW (OR TEST SIMULATOR) */}
-          {(!shouldShowStorePortal && activeRole === 'customer') && (
-            <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 pb-28">
-              
-              {/* Simulator Mode Exit Pill (Shown ONLY if shop owner is in testing mode) */}
-              {isSimulatorMode && !hasTableParam && (
-                <div className="bg-stone-900 text-white rounded-2xl p-3 px-4 flex items-center justify-between shadow-md animate-in slide-in-from-top-3">
-                  <div className="flex items-center gap-2 text-xs font-black">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                    <span>{language === 'th' ? 'โหมดทดสอบสั่งอาหารจำลองสำหรับเจ้าของร้าน (โต๊ะ ' + tableNumber + ')' : `Store Simulator Mode (Table ${tableNumber})`}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsSimulatorMode(false);
-                      if (!user) setActiveRole('customer');
-                    }}
-                    className="text-xs bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-xl font-bold cursor-pointer transition"
-                  >
-                    {language === 'th' ? 'กลับหน้าพอร์ทัลร้าน' : 'Exit Simulator'}
-                  </button>
-                </div>
-              )}
-
-              {/* Active Tracked Order Banner */}
+          {/* VIEW 1: CUSTOMER ORDERING MENU */}
+          {activeRole === 'customer' && !shouldShowStorePortal && (
+            <div className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-5 space-y-6 pb-28 animate-in fade-in duration-200">
+              {/* Active Tracked Order Bar for current customer session */}
               {trackedOrder && (
-                <div
+                <div 
                   onClick={() => setIsOrderTrackerOpen(true)}
-                  className={`relative overflow-hidden rounded-3xl p-4 sm:p-5 text-white shadow-xl flex items-center justify-between animate-pulse-subtle cursor-pointer hover:shadow-2xl transition-all duration-300 group hover:-translate-y-0.5 ${
-                    trackedOrder.status === 'cancelled'
-                      ? 'bg-gradient-to-r from-red-600 to-rose-600 shadow-red-500/25'
-                      : 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 shadow-orange-500/25'
-                  }`}
+                  className="bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-3xl p-4 sm:p-5 shadow-lg shadow-orange-500/20 flex items-center justify-between cursor-pointer hover:shadow-xl hover:scale-[1.008] transition-all relative overflow-hidden group border border-orange-400/30"
                 >
-                  <div className="absolute inset-0 shimmer-gradient pointer-events-none opacity-30" />
                   <div className="flex items-center gap-3.5 relative z-10">
-                    <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white flex-shrink-0 shadow-inner group-hover:scale-105 transition-transform duration-200">
-                      {trackedOrder.status === 'pending' && <Hourglass className="w-6 h-6 animate-spin" />}
-                      {trackedOrder.status === 'cooking' && <Flame className="w-6 h-6 animate-bounce" />}
-                      {trackedOrder.status === 'ready' && <Sparkles className="w-6 h-6 animate-pulse" />}
-                      {trackedOrder.status === 'completed' && <CheckCircle2 className="w-6 h-6" />}
-                      {trackedOrder.status === 'cancelled' && <Ban className="w-6 h-6" />}
+                    <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center flex-shrink-0 text-white">
+                      {trackedOrder.status === 'pending' && <Hourglass className="w-5 h-5 animate-pulse" />}
+                      {trackedOrder.status === 'cooking' && <Flame className="w-5 h-5 animate-bounce text-amber-200" />}
+                      {trackedOrder.status === 'ready' && <Sparkles className="w-5 h-5 animate-spin text-emerald-200" />}
+                      {trackedOrder.status === 'completed' && <CheckCircle2 className="w-5 h-5 text-emerald-200" />}
+                      {trackedOrder.status === 'cancelled' && <Ban className="w-5 h-5 text-red-200" />}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
@@ -1172,10 +1195,10 @@ function AppContent() {
                       </div>
                       <p className="text-xs text-orange-100 font-medium mt-0.5">
                         {trackedOrder.status === 'pending' && (language === 'th' ? 'กำลังรอคิวรับออเดอร์...' : 'Waiting for kitchen confirmation...')}
-                        {trackedOrder.status === 'cooking' && (language === 'th' ? 'ห้องครัวกำลังปรุงเมนูของคุณอย่างพิถีพิถัน 🔥' : 'Kitchen is preparing your meal 🔥')}
-                        {trackedOrder.status === 'ready' && (language === 'th' ? 'อาหารพร้อมเสิร์ฟแล้ว! กำลังนำไปส่งที่โต๊ะ ✨' : 'Food is ready to be served! ✨')}
+                        {trackedOrder.status === 'cooking' && (language === 'th' ? 'ห้องครัวกำลังปรุงเมนูของคุณอย่างพิถีพิถัน' : 'Kitchen is preparing your meal')}
+                        {trackedOrder.status === 'ready' && (language === 'th' ? 'อาหารพร้อมเสิร์ฟแล้ว! กำลังนำไปส่งที่โต๊ะ' : 'Food is ready to be served!')}
                         {trackedOrder.status === 'completed' && (language === 'th' ? 'ออเดอร์เสร็จสมบูรณ์ ทานให้อร่อยนะคะ' : 'Order completed. Enjoy your meal!')}
-                        {trackedOrder.status === 'cancelled' && (language === 'th' ? `❌ ออเดอร์ถูกยกเลิก (${trackedOrder.cancelReason || 'กรุณาติดต่อพนักงาน'})` : 'Order was cancelled by store')}
+                        {trackedOrder.status === 'cancelled' && (language === 'th' ? `ออเดอร์ถูกยกเลิก (${trackedOrder.cancelReason || 'กรุณาติดต่อพนักงาน'})` : 'Order was cancelled by store')}
                       </p>
                     </div>
                   </div>
@@ -1444,8 +1467,9 @@ function AppContent() {
       {/* Error Toast Notification */}
       {errorToast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[99999] max-w-md w-[92vw] bg-red-600 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 animate-in slide-in-from-top-3 duration-300 font-bold text-xs sm:text-sm">
+          <AlertCircle className="w-4 h-4 text-white shrink-0" />
           <span className="flex-1">{errorToast}</span>
-          <button type="button" onClick={() => setErrorToast(null)} className="text-white/80 hover:text-white px-2 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-black cursor-pointer transition">✕</button>
+          <button type="button" onClick={() => setErrorToast(null)} className="text-white/80 hover:text-white p-1 rounded-xl bg-white/10 hover:bg-white/20 transition cursor-pointer" title="Close"><X className="w-3.5 h-3.5" /></button>
         </div>
       )}
     </div>

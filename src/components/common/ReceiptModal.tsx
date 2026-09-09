@@ -92,12 +92,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const handlePrint = () => {
     if (docType === 'fullTax') {
       if (!taxInfo.name.trim()) {
-        setTaxValidationError(isTh ? '⚠️ กรุณาระบุชื่อผู้ซื้อจริง (ห้ามเว้นว่าง หรือไม่ประสงค์ออกนาม)' : '⚠️ Please enter actual buyer name');
+        setTaxValidationError(isTh ? 'กรุณาระบุชื่อผู้ซื้อจริง (ห้ามเว้นว่าง หรือไม่ประสงค์ออกนาม)' : 'Please enter actual buyer name');
         setShowTaxForm(true);
         return;
       }
       if (!taxInfo.address.trim()) {
-        setTaxValidationError(isTh ? '⚠️ กรุณาระบุที่อยู่ผู้ซื้อจริงให้ครบถ้วน' : '⚠️ Please enter actual buyer address');
+        setTaxValidationError(isTh ? 'กรุณาระบุที่อยู่ผู้ซื้อจริงให้ครบถ้วน' : 'Please enter actual buyer address');
         setShowTaxForm(true);
         return;
       }
