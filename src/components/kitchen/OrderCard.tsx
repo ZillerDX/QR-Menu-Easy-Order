@@ -377,7 +377,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 type="button"
                 disabled={isUpdating}
                 onClick={() => handleStepUpdate('completed', 'paid', activePayMethod, language === 'th' ? `กำลังปิดบิล (${activePayMethod === 'promptpay' ? 'QR พร้อมเพย์' : activePayMethod === 'credit_card' ? 'บัตรเครดิต' : 'เงินสด'})...` : 'Closing bill...')}
-                className={`w-full py-3.5 px-4 rounded-2xl text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md active:scale-95 transition cursor-pointer disabled:opacity-50 ring-1 ring-white/10 ${
+                className={`w-full py-3.5 px-3 rounded-2xl text-white font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition cursor-pointer disabled:opacity-50 ring-1 ring-white/10 whitespace-nowrap overflow-hidden ${
                   activePayMethod === 'promptpay'
                     ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-500/20'
                     : activePayMethod === 'credit_card'
@@ -386,30 +386,30 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 }`}
               >
                 {isUpdating ? (
-                  <Loader2 className="w-4 h-4 text-white animate-spin" />
+                  <Loader2 className="w-4 h-4 text-white animate-spin shrink-0" />
                 ) : activePayMethod === 'promptpay' ? (
-                  <QrCode className="w-4 h-4 text-white" />
+                  <QrCode className="w-4 h-4 text-white shrink-0" />
                 ) : activePayMethod === 'credit_card' ? (
-                  <CreditCard className="w-4 h-4 text-white" />
+                  <CreditCard className="w-4 h-4 text-white shrink-0" />
                 ) : (
-                  <Banknote className="w-4 h-4 text-white" />
+                  <Banknote className="w-4 h-4 text-white shrink-0" />
                 )}
-                <span>
+                <span className="whitespace-nowrap tracking-tight">
                   {isUpdating 
                     ? updatingLabel 
                     : activePayMethod === 'promptpay'
                     ? (language === 'th' ? `ปิดบิล • ลูกค้าชำระด้วย QR พร้อมเพย์ (฿${order.totalPrice.toLocaleString()})` : `Close Bill • Paid via QR PromptPay (฿${order.totalPrice.toLocaleString()})`)
                     : activePayMethod === 'credit_card'
-                    ? (language === 'th' ? `ปิดบิล • ลูกค้าชำระด้วย บัตรเครดิต (฿${order.totalPrice.toLocaleString()})` : `Close Bill • Paid with Credit Card (฿${order.totalPrice.toLocaleString()})`)
-                    : (language === 'th' ? `ปิดบิล • ลูกค้าชำระด้วย เงินสด (฿${order.totalPrice.toLocaleString()})` : `Close Bill • Paid with Cash (฿${order.totalPrice.toLocaleString()})`)}
+                    ? (language === 'th' ? `ปิดบิล • ลูกค้าชำระด้วยบัตรเครดิต (฿${order.totalPrice.toLocaleString()})` : `Close Bill • Paid with Credit Card (฿${order.totalPrice.toLocaleString()})`)
+                    : (language === 'th' ? `ปิดบิล • ลูกค้าชำระด้วยเงินสด (฿${order.totalPrice.toLocaleString()})` : `Close Bill • Paid with Cash (฿${order.totalPrice.toLocaleString()})`)}
                 </span>
               </button>
             </div>
           )}
 
           {order.status === 'completed' && (
-            <div className="flex items-center gap-2">
-              <div className={`flex-1 py-2.5 px-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 border ${
+            <div className="flex items-center gap-1.5">
+              <div className={`flex-1 min-w-0 py-2.5 px-2.5 rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 border whitespace-nowrap overflow-hidden ${
                 order.paymentMethod === 'promptpay'
                   ? 'bg-blue-50/80 border-blue-200 text-blue-800'
                   : order.paymentMethod === 'credit_card'
@@ -417,15 +417,15 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                   : 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
               }`}>
                 {order.paymentMethod === 'promptpay' ? (
-                  <QrCode className="w-3.5 h-3.5 text-blue-600" />
+                  <QrCode className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                 ) : order.paymentMethod === 'credit_card' ? (
-                  <CreditCard className="w-3.5 h-3.5 text-purple-600" />
+                  <CreditCard className="w-3.5 h-3.5 text-purple-600 shrink-0" />
                 ) : (
-                  <Banknote className="w-3.5 h-3.5 text-emerald-600" />
+                  <Banknote className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                 )}
-                <span>
+                <span className="whitespace-nowrap truncate tracking-tight text-[11px] sm:text-xs">
                   {language === 'th'
-                    ? `ปิดบิลแล้ว • ชำระด้วย ${order.paymentMethod === 'promptpay' ? 'QR พร้อมเพย์' : order.paymentMethod === 'credit_card' ? 'บัตรเครดิต' : 'เงินสด'}`
+                    ? `ปิดบิลแล้ว • ชำระด้วย${order.paymentMethod === 'promptpay' ? ' QR พร้อมเพย์' : order.paymentMethod === 'credit_card' ? 'บัตรเครดิต' : 'เงินสด'}`
                     : `Bill Closed • Paid via ${order.paymentMethod === 'promptpay' ? 'QR PromptPay' : order.paymentMethod === 'credit_card' ? 'Credit Card' : 'Cash'}`}
                 </span>
               </div>
@@ -433,11 +433,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 type="button"
                 disabled={isUpdating}
                 onClick={() => handleStepUpdate('ready', 'paid', order.paymentMethod, language === 'th' ? 'เปิดบิลใหม่...' : 'Reopening bill...')}
-                className="px-3 py-2.5 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs transition cursor-pointer flex items-center gap-1 active:scale-95 border border-stone-200/80"
+                className="px-2.5 py-2.5 rounded-2xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs transition cursor-pointer flex items-center gap-1 active:scale-95 border border-stone-200/80 shrink-0 whitespace-nowrap"
                 title={language === 'th' ? 'ย้อนกลับไปพร้อมเสิร์ฟ' : 'Reopen Bill'}
               >
-                <Undo2 className="w-3.5 h-3.5 text-stone-500" />
-                <span className="text-[11px]">{language === 'th' ? 'เปิดบิลใหม่' : 'Reopen'}</span>
+                <Undo2 className="w-3.5 h-3.5 text-stone-500 shrink-0" />
+                <span className="text-[11px] whitespace-nowrap">{language === 'th' ? 'เปิดบิลใหม่' : 'Reopen'}</span>
               </button>
             </div>
           )}
