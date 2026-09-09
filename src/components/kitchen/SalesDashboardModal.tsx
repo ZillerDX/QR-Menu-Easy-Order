@@ -10,7 +10,7 @@ import {
 import { Order, Language } from '../../types';
 import { t } from '../../utils/i18n';
 import { 
-  generateSalesCSV, 
+  generateSalesInfographicExcel, 
   downloadReportFile, 
   SalesReportData 
 } from '../../utils/reportExport';
@@ -329,17 +329,17 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
   };
 
 
-  // Clean Standard CSV Export (.csv)
+  // Executive-Grade Infographic Report Export (Opens in Excel / Spreadsheets with full visual styling)
   const handleExportCSV = () => {
     if (filteredOrders.length === 0) return;
     const data = buildReportData();
-    const csvContent = generateSalesCSV(data);
+    const excelContent = generateSalesInfographicExcel(data);
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10);
     downloadReportFile(
-      csvContent,
-      `Sales_Analytics_${preset}_${dateStr}.csv`,
-      'text/csv;charset=utf-8;'
+      excelContent,
+      `Sales_Report_Infographic_${preset}_${dateStr}.xls`,
+      'application/vnd.ms-excel;charset=utf-8;'
     );
   };
 
@@ -432,10 +432,10 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
             <button
               onClick={handleExportCSV}
               className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-emerald-950/40 border border-emerald-400/30"
-              title={language === 'th' ? 'ส่งออกรายงาน CSV' : 'Export CSV Report'}
+              title={language === 'th' ? 'ส่งออกรายงาน Infographic สวยงามสำหรับผู้บริหาร' : 'Export Executive Infographic Report'}
             >
               <Download className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>CSV</span>
+              <span>CSV (Infographic)</span>
             </button>
             <button
               onClick={onClose}
