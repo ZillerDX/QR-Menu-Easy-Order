@@ -5,10 +5,16 @@ import {
   Award, Clock, Download, BarChart3, 
   ArrowRight, CheckCircle2, Flame, ShoppingBag,
   CalendarRange, ChevronLeft, ChevronRight,
-  Lightbulb, Utensils
+  Lightbulb, Utensils, FileSpreadsheet
 } from 'lucide-react';
 import { Order, Language } from '../../types';
 import { t } from '../../utils/i18n';
+import { 
+  generateSalesInfographicExcel, 
+  generateSalesCSV, 
+  downloadReportFile, 
+  SalesReportData 
+} from '../../utils/reportExport';
 
 interface SalesDashboardModalProps {
   isOpen: boolean;
@@ -299,116 +305,56 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
     }
   };
 
-  // 4. Infographic-Structured CSV Report Export
-  const handleExportCSV = () => {
-    if (filteredOrders.length === 0) return;
-
+  // 4. Report Data Builder (Shared by Excel and CSV exports)
+  const buildReportData = (): SalesReportData => {
     const isTh = language === 'th';
     const now = new Date();
     const generatedDate = now.toLocaleString(isTh ? 'th-TH' : 'en-US');
     const rangeLabel = preset === 'custom'
-      ? `${formatDisplayDate(customStart)} - ${formatDisplayDate(customEnd)} (${daysSelectedCount} ${isTh ? 'วัน' : 'days'})`
+      ? `${formatDisplayDate(customStart)} - ${formatDisplayDate(customEnd)}`
       : getPresetLabel(preset);
+    const dateRangeLabel = preset === 'custom'
+      ? `${daysSelectedCount} ${isTh ? 'วัน' : 'days'}`
+      : '';
 
-    const escapeCsv = (str: string | number | undefined | null) => {
-      const s = String(str ?? '');
-      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
-        return `"${s.replace(/"/g, '""')}"`;
-      }
-      return s;
+    return {
+      language,
+      preset,
+      presetLabel: rangeLabel,
+      dateRangeLabel,
+      generatedDate,
+      metrics,
+      orders: filteredOrders,
+      storeName: 'Cafe Order',
     };
+  };
 
-    const lines: string[] = [];
+  // Infographic Excel Spreadsheet Export (.xls)
+  const handleExportExcel = () => {
+    if (filteredOrders.length === 0) return;
+    const data = buildReportData();
+    const excelContent = generateSalesInfographicExcel(data);
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10);
+    downloadReportFile(
+      excelContent,
+      `Sales_Report_Infographic_${preset}_${dateStr}.xls`,
+      'application/vnd.ms-excel;charset=utf-8;'
+    );
+  };
 
-    // Header Banner
-    lines.push(escapeCsv('════════════════════════════════════════════════════════════════════════════════════════'));
-    lines.push(escapeCsv(isTh ? 'รายงานสรุปผลประกอบการ & สถิติยอดขาย (EXECUTIVE SALES & BUSINESS REPORT)' : 'EXECUTIVE SALES & BUSINESS ANALYTICS REPORT'));
-    lines.push(escapeCsv('════════════════════════════════════════════════════════════════════════════════════════'));
-    lines.push(`${escapeCsv(isTh ? 'วันที่ออกรายงาน (Generated Date)' : 'Generated Date')},${escapeCsv(generatedDate)}`);
-    lines.push(`${escapeCsv(isTh ? 'รอบเวลาที่วิเคราะห์ (Timeframe)' : 'Selected Timeframe')},${escapeCsv(rangeLabel)}`);
-    lines.push(`${escapeCsv(isTh ? 'สถานะรายงาน (Report Status)' : 'Report Status')},${escapeCsv(isTh ? 'เสร็จสมบูรณ์ (Verified Data)' : 'Verified Realtime Data')}`);
-    lines.push('');
-
-    // Section 1: KPI Summary
-    lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
-    lines.push(escapeCsv(isTh ? '1. สรุปตัวชี้วัดประสิทธิภาพหลัก (KEY PERFORMANCE INDICATORS)' : '1. KEY PERFORMANCE INDICATORS (KPIs)'));
-    lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
-    lines.push(`${escapeCsv(isTh ? 'ตัวชี้วัด (Metric)' : 'Metric')},${escapeCsv(isTh ? 'มูลค่า (Value)' : 'Value')},${escapeCsv(isTh ? 'หน่วย (Unit)' : 'Unit')},${escapeCsv(isTh ? 'คำอธิบาย (Notes)' : 'Notes')}`);
-    lines.push(`${escapeCsv(isTh ? 'ยอดขายรวมสุทธิ (Total Revenue)' : 'Total Revenue')},${metrics.totalSales},${escapeCsv(isTh ? 'บาท (THB)' : 'THB')},${escapeCsv(isTh ? 'ยอดบิลทั้งหมดที่เสร็จสิ้น' : 'Total completed sales')}`);
-    lines.push(`${escapeCsv(isTh ? 'จำนวนออเดอร์ทั้งหมด (Total Orders)' : 'Total Orders')},${metrics.totalBills},${escapeCsv(isTh ? 'บิล (Bills)' : 'Bills')},${escapeCsv(isTh ? 'ออเดอร์ที่ไม่ถูกยกเลิก' : 'Non-cancelled orders')}`);
-    lines.push(`${escapeCsv(isTh ? 'ยอดเฉลี่ยต่อบิล (Avg. Ticket Size)' : 'Average Ticket Size')},${metrics.avgTicket},${escapeCsv(isTh ? 'บาท / บิล (THB/Bill)' : 'THB/Bill')},${escapeCsv(isTh ? 'ค่าเฉลี่ยการใช้จ่ายต่อโต๊ะ' : 'Average spend per table')}`);
-    lines.push(`${escapeCsv(isTh ? 'ยอดชำระด้วยพร้อมเพย์ (PromptPay)' : 'PromptPay Revenue')},${metrics.promptpaySales},${escapeCsv(isTh ? 'บาท (THB)' : 'THB')},${escapeCsv(`${metrics.promptpayPercent}% (${metrics.promptpayCount} ${isTh ? 'บิล' : 'bills'})`)}`);
-    lines.push(`${escapeCsv(isTh ? 'ยอดชำระด้วยเงินสด (Cash)' : 'Cash Revenue')},${metrics.cashSales},${escapeCsv(isTh ? 'บาท (THB)' : 'THB')},${escapeCsv(`${metrics.cashPercent}% (${metrics.cashCount} ${isTh ? 'บิล' : 'bills'})`)}`);
-    lines.push('');
-
-    // Section 2: Top Best Sellers
-    lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
-    lines.push(escapeCsv(isTh ? '2. 5 อันดับเมนูขายดีที่สุด (TOP 5 BEST SELLING MENU ITEMS)' : '2. TOP 5 BEST SELLING DISHES'));
-    lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
-    lines.push(`${escapeCsv(isTh ? 'อันดับ (Rank)' : 'Rank')},${escapeCsv(isTh ? 'ชื่อเมนู (Menu Name)' : 'Menu Name (TH)')},${escapeCsv(isTh ? 'ชื่อภาษาอังกฤษ (English Name)' : 'English Name')},${escapeCsv(isTh ? 'จำนวนที่ขายได้ (Qty Sold)' : 'Qty Sold')},${escapeCsv(isTh ? 'ยอดขายรวม (Total Revenue THB)' : 'Total Revenue (THB)')},${escapeCsv(isTh ? 'สัดส่วนยอดขาย (% Share)' : '% Revenue Share')}`);
-    metrics.topItems.forEach((item, idx) => {
-      const share = metrics.totalSales > 0 ? ((item.revenue / metrics.totalSales) * 100).toFixed(1) : '0';
-      lines.push(`${escapeCsv(`#${idx + 1}`)},${escapeCsv(item.name)},${escapeCsv(item.nameEn || '-')},${item.count},${item.revenue},${escapeCsv(`${share}%`)}`);
-    });
-    lines.push('');
-
-    // Section 3: 24-Hour Hourly Peak Traffic
-    lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
-    lines.push(escapeCsv(isTh ? '3. สถิติยอดขายรายชั่วโมง 24 ชม. (24-HOUR PEAK HOURLY TRAFFIC)' : '3. 24-HOUR HOURLY TRAFFIC & REVENUE'));
-    lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
-    lines.push(`${escapeCsv(isTh ? 'ช่วงเวลา (Time Window)' : 'Time Window')},${escapeCsv(isTh ? 'จำนวนบิล (Orders)' : 'Orders Count')},${escapeCsv(isTh ? 'ยอดขาย (Revenue THB)' : 'Revenue (THB)')},${escapeCsv(isTh ? 'ระดับความหนาแน่น (Traffic Level)' : 'Traffic Level')}`);
-    metrics.hourlySales.forEach((sales, hr) => {
-      if (sales > 0 || metrics.hourlyCounts[hr] > 0) {
-        const hrStart = String(hr).padStart(2, '0') + ':00';
-        const hrEnd = String(hr).padStart(2, '0') + ':59';
-        const isPeak = sales === metrics.maxHourlySales && sales > 0;
-        const level = isPeak ? (isTh ? 'ช่วงพีคสูงสุด (Peak Traffic)' : 'PEAK TRAFFIC') : (isTh ? 'ปกติ (Normal)' : 'Normal');
-        lines.push(`${escapeCsv(`${hrStart} - ${hrEnd}`)},${metrics.hourlyCounts[hr]},${sales},${escapeCsv(level)}`);
-      }
-    });
-    lines.push('');
-
-    // Section 4: Detailed Order Receipts Log
-    lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
-    lines.push(escapeCsv(isTh ? '4. รายการบิลออเดอร์ทั้งหมด (DETAILED ORDER RECEIPTS LOG)' : '4. DETAILED ORDER RECEIPTS LOG'));
-    lines.push(escapeCsv('----------------------------------------------------------------------------------------'));
-    lines.push(`${escapeCsv(isTh ? 'เลขออเดอร์ (Order #)' : 'Order #')},${escapeCsv(isTh ? 'โต๊ะ/ประเภท (Table/Type)' : 'Table/Type')},${escapeCsv(isTh ? 'วันและเวลา (Date & Time)' : 'Date & Time')},${escapeCsv(isTh ? 'รายการอาหาร (Items Ordered)' : 'Items Ordered')},${escapeCsv(isTh ? 'วิธีชำระเงิน (Payment Method)' : 'Payment Method')},${escapeCsv(isTh ? 'สถานะ (Status)' : 'Status')},${escapeCsv(isTh ? 'ยอดสุทธิ (Total THB)' : 'Total (THB)')}`);
-
-    filteredOrders.forEach((o) => {
-      const itemsList = (o.items || [])
-        .map((i) => `${(isTh ? i.menuItem?.name : (i.menuItem?.nameEn || i.menuItem?.name)) || 'Item'} (x${i.quantity || 1})`)
-        .join('; ');
-      
-      const payMethodLabel = o.paymentMethod === 'promptpay' 
-        ? (isTh ? 'พร้อมเพย์ (PromptPay)' : 'PromptPay') 
-        : o.paymentMethod === 'credit_card'
-        ? (isTh ? 'บัตรเครดิต (Credit Card)' : 'Credit Card')
-        : (isTh ? 'เงินสด (Cash)' : 'Cash');
-      const statusLabel = o.status === 'completed' ? (isTh ? 'เสร็จสิ้น' : 'Completed') : o.status === 'ready' ? (isTh ? 'พร้อมเสิร์ฟ' : 'Ready') : (isTh ? 'กำลังทำ' : 'Cooking');
-      const tableLabel = o.tableNumber === 'TAKEAWAY' ? (isTh ? 'สั่งกลับบ้าน (Takeaway)' : 'Takeaway') : `${isTh ? 'โต๊ะ' : 'Table'} ${o.tableNumber || '-'}`;
-
-      lines.push([
-        escapeCsv(o.orderNumber || '-'),
-        escapeCsv(tableLabel),
-        escapeCsv(new Date(o.createdAt).toLocaleString(isTh ? 'th-TH' : 'en-US')),
-        escapeCsv(itemsList),
-        escapeCsv(payMethodLabel),
-        escapeCsv(statusLabel),
-        o.totalPrice || 0,
-      ].join(','));
-    });
-
-    // Generate Downloadable CSV with UTF-8 BOM
-    const csvContent = '\uFEFF' + lines.join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Sales_Analytics_Infographic_${preset}_${now.toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  // Clean Standard CSV Export (.csv)
+  const handleExportCSV = () => {
+    if (filteredOrders.length === 0) return;
+    const data = buildReportData();
+    const csvContent = generateSalesCSV(data);
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10);
+    downloadReportFile(
+      csvContent,
+      `Sales_Analytics_${preset}_${dateStr}.csv`,
+      'text/csv;charset=utf-8;'
+    );
   };
 
   const handleSelectCalendarDate = (dateStr: string) => {
@@ -495,12 +441,20 @@ export const SalesDashboardModal: React.FC<SalesDashboardModalProps> = ({
             </div>
           </div>
 
-          {/* Action Tools (CSV only + Single X Close Button) */}
+          {/* Action Tools (Excel Infographic + CSV + Single X Close Button) */}
           <div className="flex items-center gap-2 relative z-10">
             <button
+              onClick={handleExportExcel}
+              className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-md shadow-emerald-950/40 border border-emerald-400/30"
+              title={language === 'th' ? 'ส่งออกรายงาน Excel รูปแบบ Infographic สวยงาม' : 'Export Excel Infographic Report'}
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>{language === 'th' ? 'Excel (Infographic)' : 'Excel Report'}</span>
+            </button>
+            <button
               onClick={handleExportCSV}
-              className="px-3.5 py-2 rounded-2xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 hover:text-emerald-200 text-xs font-black flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-emerald-500/30 shadow-2xs"
-              title="Export CSV Data"
+              className="px-3 py-2 rounded-2xl bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white text-xs font-black flex items-center gap-1.5 transition cursor-pointer active:scale-95 border border-stone-700 shadow-2xs"
+              title={language === 'th' ? 'ส่งออกข้อมูลดิบ CSV' : 'Export Raw CSV Data'}
             >
               <Download className="w-3.5 h-3.5" />
               <span>CSV</span>
