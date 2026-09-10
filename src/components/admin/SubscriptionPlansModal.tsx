@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   Check, 
@@ -50,7 +51,7 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
   const shopId = storeConfig.id || 'cafe-order';
   const subStatus = syncManager.getSubscriptionStatus(storeConfig);
@@ -106,7 +107,7 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
       comparison: language === 'th' ? 'ประหยัด 839 บาท (เทียบรายเดือน)' : 'Save 839 THB vs Monthly',
       discount: '20%',
       isFeatured: true,
-      buttonText: language === 'th' ? 'เลือกแพ็กเกจรายปี (คุ้มค่าสุด)' : 'Subscribe Yearly (Best)',
+      buttonText: language === 'th' ? 'เลือกแพ็กเกจรายปี (สุดคุ้ม)' : 'Subscribe Yearly (Best)',
       buttonStyle: 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-md shadow-orange-500/25',
     },
   ];
@@ -156,9 +157,9 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
     },
   ];
 
-  return (
+  const modalContent = (
     <div 
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-stone-900/60 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-200"
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-stone-900/60 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div 
@@ -226,9 +227,6 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
                       : subStatus.isExpired 
                         ? (language === 'th' ? 'สถานะ: สิ้นสุดระยะเวลาทดลอง / แพ็กเกจหมดอายุ' : 'Status: Trial or Subscription Expired') 
                         : (language === 'th' ? `แพ็กเกจปัจจุบัน: ${subStatus.plan}` : `Current Plan: ${subStatus.plan}`)}
-                  </span>
-                  <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-white/70 border border-current">
-                    Store: {shopId}
                   </span>
                 </div>
                 <p className="text-xs mt-0.5 opacity-90">
@@ -331,10 +329,10 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleSelectPlan(plan.id)}
-                    className={`w-full py-3 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 ${plan.buttonStyle}`}
+                    className={`w-full py-3 px-3 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 whitespace-nowrap ${plan.buttonStyle}`}
                   >
-                    <span>{plan.buttonText}</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span className="whitespace-nowrap truncate">{plan.buttonText}</span>
+                    <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                   </button>
                   <p className="text-[10px] text-center text-stone-400 font-medium mt-1.5">
                     {language === 'th' ? 'ชำระปลอดภัยผ่าน Stripe (บัตร/PromptPay)' : 'Secure checkout via Stripe'}
@@ -419,4 +417,6 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };

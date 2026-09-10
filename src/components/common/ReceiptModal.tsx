@@ -55,14 +55,16 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   useEffect(() => {
     if (isOpen && order && qrCanvasRef.current && storeConfig.promptpayNumber) {
       const payload = generatePromptPayPayload(storeConfig.promptpayNumber, order.totalPrice);
-      QRCode.toCanvas(qrCanvasRef.current, payload, {
-        width: 140,
-        margin: 1,
-        color: {
-          dark: '#000000',
-          light: '#ffffff',
-        },
-      });
+      if (payload) {
+        QRCode.toCanvas(qrCanvasRef.current, payload, {
+          width: 140,
+          margin: 1,
+          color: {
+            dark: '#000000',
+            light: '#ffffff',
+          },
+        }).catch((err) => console.warn('QR render error:', err));
+      }
     }
   }, [isOpen, order, storeConfig.promptpayNumber, docType]);
 

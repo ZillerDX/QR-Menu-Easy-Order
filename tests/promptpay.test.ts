@@ -20,4 +20,12 @@ describe('PromptPay EMVCo Payload Generator', () => {
     expect(payload).toContain('0066812345678');
     expect(payload).not.toContain('5406');
   });
+
+  it('should handle null, undefined, and empty target gracefully', () => {
+    expect(generatePromptPayPayload('')).toBe('');
+    expect(generatePromptPayPayload(null)).toBe('');
+    expect(generatePromptPayPayload(undefined)).toBe('');
+    expect(generatePromptPayPayload('   ')).toBe('');
+    expect(generatePromptPayPayload('abc-xyz')).toBe('');
+  });
 });

@@ -11,12 +11,14 @@
 **Easy Menu & Easy Order** is a responsive, local-first restaurant management and dine-in web application. It connects customer self-ordering with back-of-house kitchen operations in real time without requiring any app downloads or app-store installs.
 
 * **Customer Dine-In & Takeaway:** Browse visual menus, customize orders (sweetness, milk alternatives, extra shots, toppings), and track live cooking status in real time.
-* **Flexible Payments:** Integrated Thai QR (PromptPay EMVCo with CRC16 checksum), Cash at counter, and Credit Card options with thermal receipt and full tax invoice printing.
-* **Kitchen Display System (KDS):** Symmetrical 4-lane ticket board with Web Audio harmonic sound alert synthesizer, live KPI counters, date filtering (Today, Yesterday, Past 7 Days, Custom Date), and automatic new-day refresh.
+* **Redesigned Acrylic Table QR Stands:** Restaurant-grade table stand cards with store branding, table hero badge, 3-step customer micro-guide, and direct smartphone camera scanning (zero messy URL exposure). Supports single & batch printing formatted for 5x7" / A5 / A6 acrylic holders.
+* **Flexible Payments:** Integrated Thai QR (PromptPay EMVCo with CRC16 checksum), Cash at counter, and Credit Card options with thermal receipt (80mm) and full legal tax invoice (A4) printing.
+* **Kitchen Display System (KDS):** Symmetrical 4-lane ticket board with Web Audio harmonic chime synthesizer, live KPI counters, date filtering (Today, Yesterday, Past 7 Days, Custom Date), and automatic new-day refresh.
 * **Menu & Store Admin:** Manage menu items with direct image uploads, customize categories with 29 curated vector icons, toggle live stock availability, and configure store branding.
-* **Table QR Generator:** Generate and print high-resolution branded table stand QR cards with store routing protection.
-* **Staff Authentication:** Secure Supabase Auth with password recovery for authorized store portal access.
-* **Subscription & Anti-Abuse QR Anchoring:** 14-day free trial for new stores, 3 tiered plans (Monthly ฿349/mo, 6-Month ฿1,889/6mo, Yearly ฿3,349/yr) integrated with live Stripe checkout. Anchors printed table stands to unique Store IDs, guaranteeing zero re-printing of acrylic/wooden QR stands upon renewal and preventing trial-reset abuse.
+* **CSV Executive Infographic Report:** One-click export of sales summaries, billing metrics, hourly peak analysis, and top-selling menus formatted for executives.
+* **Hardened Database Security (PostgreSQL RLS):** Strict Row Level Security policies where anonymous customers are restricted to `SELECT` and valid order insertions, while all administrative mutations enforce authenticated role with store ownership checks.
+* **Staff Authentication:** Secure Supabase Auth with password recovery and top-level portaled dialogs.
+* **SaaS Subscription & Anti-Abuse QR Anchoring:** 14-day free trial for new stores, 3 tiered plans (Monthly ฿349/mo, 6-Month ฿1,889/6mo, Yearly ฿3,349/yr) integrated with Stripe hosted checkout. Anchors printed table stands to unique Store IDs, guaranteeing zero re-printing upon renewal and preventing trial-reset abuse.
 
 ---
 
@@ -86,8 +88,9 @@ flowchart TD
 | **Realtime & Sync** | BroadcastChannel API (tab sync), LocalStorage (offline cache), Supabase Realtime |
 | **Backend & DB** | Supabase (PostgreSQL 15, Auth, Row-Level Security) |
 | **Audio** | Web Audio API (6 customizable harmonic chime presets) |
-| **Testing** | Vitest 4.1, Testing Library, JSDOM (10 test suites, 38 passing tests) |
+| **Testing** | Vitest 4.1, Testing Library, JSDOM (13 test suites, 64 passing tests) |
 | **CI/CD & Hosting** | GitHub Actions ➔ GitHub Pages |
+| **License** | Business Source License 1.1 (BSL 1.1) |
 
 ---
 
@@ -98,6 +101,8 @@ flowchart TD
 3. **Optimized KDS Render Performance:** All order filters and date checks are memoized with `useMemo`, preventing redundant `new Date()` allocations and isolating 30s timers to active tickets only.
 4. **Zero-Stuck Number Inputs:** Custom price delta inputs in admin modals gracefully handle empty values on backspace without locking at `0`.
 5. **Clean Vector Design System:** 100% vector iconography using Lucide SVGs without Unicode emoji clutter in production interfaces.
+6. **Full-Screen Modal Portaling:** All dialogs and popups are rendered directly to `document.body` via `createPortal` with `z-[99999]`, preventing stacking context trapping and backdrop clipping.
+7. **Hardened PostgreSQL RLS:** Database tables strictly isolate authenticated merchant modifications from anonymous diner reads.
 
 ---
 
@@ -131,22 +136,26 @@ qr-menu-app/
 │   ├── App.tsx                 # Root application controller & realtime event subscriptions
 │   ├── index.css               # Global styles & Tailwind CSS directives
 │   └── main.tsx                # Application bootstrap entry point
-├── tests/                      # Automated test suite (Vitest + JSDOM)
-│   ├── authForgotPassword.test.ts # Auth & password reset test cases
-│   ├── categoryIcons.test.ts   # Category icon dictionary validation
-│   ├── comprehensiveAudit.test.ts # Storage, tax calculation & promptpay validation
-│   ├── favicon.test.ts         # Favicon link tags & assets
-│   ├── i18n.test.ts            # Translation dictionary completeness
-│   ├── kdsDateFilter.test.ts   # KDS date filtering & revenue scoping
-│   ├── orderFlow.test.ts       # Order lifecycle & status transitions
-│   ├── paymentMethods.test.ts  # Payment method selection & bill closing
-│   ├── promptpay.test.ts       # EMVCo QR code payload & CRC16 checks
-│   ├── subscription.test.ts    # 14-day trial, pricing math, Stripe extension & QR anchoring
-│   └── taxInvoice.test.ts      # Thermal slip formatting & tax math
-├── index.html                  # HTML shell & SEO/PWA meta headers
-├── package.json                # Project dependencies & scripts
-├── tailwind.config.js          # Tailwind CSS theme & plugin config
-└── vite.config.ts              # Vite configuration & chunk splitting
+│   ├── tests/                  # Automated test suite (13 suites, 64 passing tests)
+│   │   ├── authForgotPassword.test.ts
+│   │   ├── categoryIcons.test.ts
+│   │   ├── comprehensiveAudit.test.ts
+│   │   ├── favicon.test.ts
+│   │   ├── i18n.test.ts
+│   │   ├── kdsDateFilter.test.ts
+│   │   ├── orderFlow.test.ts
+│   │   ├── paymentMethods.test.ts
+│   │   ├── promptpay.test.ts
+│   │   ├── saas-subscription-security.test.ts
+│   │   ├── salesReportExport.test.ts
+│   │   ├── subscription.test.ts
+│   │   └── taxInvoice.test.ts
+│   ├── .env.example            # Safe environment variable configuration template
+│   ├── LICENSE                 # Business Source License 1.1 (BSL 1.1)
+│   ├── index.html              # HTML shell & SEO/PWA meta headers
+│   ├── package.json            # Project dependencies, scripts & license
+│   ├── tailwind.config.js      # Tailwind CSS theme & plugin config
+│   └── vite.config.ts          # Vite configuration & chunk splitting
 ```
 
 ---
@@ -188,4 +197,19 @@ npm run build
 # 5. Preview production build locally
 npm run preview
 ```
+
+---
+
+## 📄 License
+
+This project is licensed under the **Business Source License 1.1 (BSL 1.1)**. See the [LICENSE](LICENSE) file for the full license text.
+
+### Summary of Terms:
+* **Non-Commercial, Personal & Evaluation Use:** Free to copy, modify, test, research, and evaluate.
+* **Single-Store Self-Hosting:** Independent cafe and restaurant owners may deploy and run this software for their own physical dining establishment without additional licensing fees.
+* **Commercial Multi-Tenant & SaaS Restrictions:** You may **not** provide this software as a commercial paid multi-tenant cloud service, resell the platform to third-party businesses, or offer paid white-label instances without an explicit commercial license from the Licensor.
+* **Open Source Transition:** On the Change Date (**2030-01-01**), the software automatically transitions to the **Apache License, Version 2.0** (or GNU GPL v2.0+).
+
+For commercial licensing inquiries, contact **Tanathon Chanapha** ([@ZillerDX](https://github.com/ZillerDX)).
+
 

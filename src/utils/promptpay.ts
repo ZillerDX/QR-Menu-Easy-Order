@@ -16,9 +16,11 @@ function formatTag(id: string, value: string): string {
   return `${id}${length}${value}`;
 }
 
-export function generatePromptPayPayload(target: string, amount?: number): string {
+export function generatePromptPayPayload(target?: string | null, amount?: number): string {
+  if (!target || typeof target !== 'string') return '';
   // Format mobile number or National ID
   const cleanTarget = target.replace(/[^0-9]/g, '');
+  if (!cleanTarget) return '';
   let subTag = '';
   
   if (cleanTarget.length === 10 && cleanTarget.startsWith('0')) {
@@ -30,7 +32,7 @@ export function generatePromptPayPayload(target: string, amount?: number): strin
     subTag = formatTag('02', cleanTarget);
   } else {
     // Fallback: use mobile format
-    const formattedMobile = '0066' + cleanTarget;
+    const formattedMobile = cleanTarget.startsWith('0') ? '0066' + cleanTarget.substring(1) : '0066' + cleanTarget;
     subTag = formatTag('01', formattedMobile);
   }
 

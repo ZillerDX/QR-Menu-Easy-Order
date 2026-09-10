@@ -180,23 +180,25 @@
     justify-content: center !important;
     visibility: visible !important;
     position: static !important;
-    width: 130mm !important;
+    width: 120mm !important;
     max-width: 100% !important;
-    margin: 15mm auto !important;
-    padding: 10mm !important;
-    border: 2px solid #000000 !important;
-    border-radius: 16px !important;
+    margin: 8mm auto !important;
+    padding: 7mm !important;
+    border: 2px solid #1c1917 !important;
+    border-radius: 20px !important;
     text-align: center !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
   }
 
   /* Batch Print Grid for all tables (up to 50 tables) */
   .all-tables-qr-print-grid {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: 6mm !important;
-    padding: 6mm !important;
+    gap: 5mm !important;
+    padding: 4mm !important;
     width: 100% !important;
     margin: 0 auto !important;
   }
@@ -204,11 +206,12 @@
   .table-qr-card-item {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    border: 1.5px solid #000000 !important;
-    border-radius: 12px !important;
-    padding: 5mm !important;
+    border: 1.5px solid #1c1917 !important;
+    border-radius: 16px !important;
+    padding: 4.5mm !important;
     text-align: center !important;
     background: #ffffff !important;
+    box-shadow: none !important;
   }
 
   /* QR Codes & Images High Contrast */

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
-import { Download, Printer, QrCode, ExternalLink, ChevronDown, Store, ChevronLeft, ChevronRight, ShieldCheck, CheckCircle2, Grid, Layers, Sparkles, Sliders } from 'lucide-react';
+import { Download, Printer, QrCode, ExternalLink, ChevronDown, Store, ChevronLeft, ChevronRight, ShieldCheck, CheckCircle2, Grid, Layers, Sparkles, Sliders, Smartphone, ShoppingBag, Zap, UtensilsCrossed } from 'lucide-react';
 import { StoreConfig, Language } from '../../types';
 import { t } from '../../utils/i18n';
 import { syncManager } from '../../utils/storage';
@@ -462,40 +462,83 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
           {/* Grid: Preview Card & Actions */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             {/* Printable Card Stand Preview */}
-            <div className="table-qr-print-container bg-white rounded-3xl p-8 border-2 border-orange-100/90 shadow-xl flex flex-col items-center text-center space-y-4 relative overflow-hidden print:border-2 print:border-black print:shadow-none hover:shadow-2xl transition-shadow duration-300">
-              <div className="w-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 text-white py-3.5 px-5 rounded-2xl shadow-md print:bg-none print:text-black print:border-b-2 print:border-black">
-                <h3 className="font-black text-xl tracking-wide print:text-black">
+            <div className="table-qr-print-container bg-white rounded-3xl p-6 sm:p-7 border-2 border-stone-200/90 shadow-xl flex flex-col items-center text-center space-y-3.5 relative overflow-hidden print:border-2 print:border-stone-800 print:shadow-none print:p-6 hover:shadow-2xl transition-shadow duration-300">
+              {/* Card Brand Header */}
+              <div className="w-full bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 text-white py-3.5 px-4 rounded-2xl shadow-sm print:bg-stone-900 print:text-white flex flex-col items-center justify-center">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 text-[9.5px] font-bold text-amber-300 uppercase tracking-widest mb-1 print:text-white print:border print:border-stone-700">
+                  <Sparkles className="w-3 h-3 text-amber-400 print:text-white shrink-0" />
+                  <span>{language === 'th' ? 'สแกนสั่งอาหาร • Contactless Menu' : 'Scan to Order • Contactless Menu'}</span>
+                </div>
+                <h3 className="font-black text-xl sm:text-2xl tracking-tight text-white print:text-white">
                   {language === 'en' ? storeConfig.nameEn || storeConfig.name : storeConfig.name}
                 </h3>
-                <p className="text-xs text-orange-100 print:text-black font-medium mt-0.5">
+                <p className="text-[11px] text-stone-300 font-medium mt-0.5 print:text-stone-300">
                   {language === 'en' ? storeConfig.taglineEn || storeConfig.tagline : storeConfig.tagline}
                 </p>
               </div>
 
-              <div className="p-3 bg-white border-2 border-stone-100 print:border-black rounded-3xl shadow-inner group">
-                <canvas ref={canvasRef} className="rounded-2xl mx-auto" />
+              {/* Table Designation Hero */}
+              <div className="inline-flex items-center gap-2 px-5 py-1.5 rounded-full bg-stone-900 text-white shadow-xs print:bg-stone-900 print:text-white">
+                {selectedTable === 'TAKEAWAY' ? (
+                  <div className="flex items-center gap-1.5 font-black text-sm tracking-wide">
+                    <ShoppingBag className="w-4 h-4 text-orange-400 print:text-white shrink-0" />
+                    <span>{language === 'th' ? 'สั่งกลับบ้าน (Takeaway)' : 'TAKEAWAY ORDER'}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-orange-400 print:text-stone-300">
+                      {language === 'th' ? 'โต๊ะ' : 'TABLE'}
+                    </span>
+                    <span className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                      {selectedTable}
+                    </span>
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-1">
-                <div className="text-[11px] font-black text-stone-400 print:text-black uppercase tracking-wider">
-                  {selectedTable === 'TAKEAWAY' ? (language === 'th' ? 'ออเดอร์กลับบ้าน' : 'TAKEAWAY ORDER') : (language === 'th' ? 'หมายเลขโต๊ะ' : 'TABLE NUMBER')}
+              {/* QR Code Container with Frame */}
+              <div className="p-3.5 bg-white border-2 border-stone-200 print:border-stone-800 rounded-3xl shadow-inner relative group">
+                <canvas ref={canvasRef} className="rounded-2xl mx-auto block" />
+              </div>
+
+              {/* Scan Prompt (No Raw HTTP URL) */}
+              <div className="text-[11px] text-stone-600 print:text-stone-700 font-bold flex items-center justify-center gap-1.5">
+                <Smartphone className="w-3.5 h-3.5 text-orange-500 print:text-stone-700 shrink-0" />
+                <span>
+                  {language === 'th'
+                    ? 'เปิดกล้องมือถือสแกนเพื่อดูเมนูและสั่งอาหาร'
+                    : 'Point smartphone camera to view menu & order'}
+                </span>
+              </div>
+
+              {/* 3-Step Micro-Guide */}
+              <div className="w-full grid grid-cols-3 gap-2 pt-2.5 border-t border-stone-100 print:border-stone-300">
+                <div className="flex flex-col items-center p-2 rounded-xl bg-stone-50/90 print:bg-transparent text-center">
+                  <div className="w-5 h-5 rounded-full bg-stone-900 text-white print:border print:border-stone-700 print:bg-stone-900 print:text-white flex items-center justify-center text-[10px] font-black mb-1 shrink-0">1</div>
+                  <span className="text-[11px] font-black text-stone-800 print:text-black">{language === 'th' ? 'สแกน QR' : 'Scan QR'}</span>
+                  <span className="text-[9px] text-stone-500 print:text-stone-600">{language === 'th' ? 'เปิดกล้องมือถือ' : 'Open Camera'}</span>
                 </div>
-                <div className="text-4xl font-black text-stone-900 print:text-black tracking-tight">
-                  {selectedTable === 'TAKEAWAY' ? (language === 'th' ? 'กลับบ้าน (Takeaway)' : 'TAKEAWAY') : (language === 'th' ? `โต๊ะ ${selectedTable}` : `Table ${selectedTable}`)}
+                <div className="flex flex-col items-center p-2 rounded-xl bg-stone-50/90 print:bg-transparent text-center">
+                  <div className="w-5 h-5 rounded-full bg-stone-900 text-white print:border print:border-stone-700 print:bg-stone-900 print:text-white flex items-center justify-center text-[10px] font-black mb-1 shrink-0">2</div>
+                  <span className="text-[11px] font-black text-stone-800 print:text-black">{language === 'th' ? 'เลือกเมนู' : 'Select Food'}</span>
+                  <span className="text-[9px] text-stone-500 print:text-stone-600">{language === 'th' ? 'กดส่งออเดอร์' : 'Send Order'}</span>
                 </div>
-                <div className="text-[10px] text-stone-400 print:text-black font-mono break-all px-4 pt-1">
-                  {currentUrl}
+                <div className="flex flex-col items-center p-2 rounded-xl bg-stone-50/90 print:bg-transparent text-center">
+                  <div className="w-5 h-5 rounded-full bg-stone-900 text-white print:border print:border-stone-700 print:bg-stone-900 print:text-white flex items-center justify-center text-[10px] font-black mb-1 shrink-0">3</div>
+                  <span className="text-[11px] font-black text-stone-800 print:text-black">{language === 'th' ? 'รอเสิร์ฟ' : 'Food Served'}</span>
+                  <span className="text-[9px] text-stone-500 print:text-stone-600">{language === 'th' ? 'เสิร์ฟถึงโต๊ะ' : 'At Your Table'}</span>
                 </div>
               </div>
 
-              {/* Verified Store Security Stamp on Card */}
-              <div className="w-full pt-2 border-t border-stone-100 print:border-stone-400 flex items-center justify-center gap-1.5 text-[10.5px] font-bold text-stone-500 print:text-black">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 print:text-black" />
-                <span>{language === 'th' ? 'รหัสร้านค้า:' : 'Store ID:'} <span className="font-mono font-black">{shopSlug}</span> • {language === 'th' ? 'ออเดอร์ตรงสู่ร้าน' : 'Direct Kitchen Routing'}</span>
-              </div>
-
-              <div className="text-xs text-stone-600 print:text-black max-w-xs leading-relaxed bg-stone-50 print:bg-white p-3 rounded-2xl border border-stone-100 print:border-none font-medium">
-                {t('qrScanInstruction', language)}
+              {/* Card Footer */}
+              <div className="w-full pt-2 flex items-center justify-between text-[10px] text-stone-500 print:text-stone-700 border-t border-stone-100 print:border-stone-200">
+                <div className="flex items-center gap-1 font-medium">
+                  <Zap className="w-3 h-3 text-amber-500 print:text-stone-700 shrink-0" />
+                  <span>{language === 'th' ? 'สั่งตรงถึงครัว รวดเร็ว ถูกต้อง' : 'Direct Kitchen Routing'}</span>
+                </div>
+                <span className="font-bold text-stone-800 print:text-black">
+                  {language === 'th' ? 'ทานให้อร่อยนะคะ' : 'Enjoy your meal!'}
+                </span>
               </div>
             </div>
 
@@ -673,48 +716,85 @@ export const QRGenerator: React.FC<QRGeneratorProps> = ({ storeConfig, language,
               return (
                 <div
                   key={tbl}
-                  className="table-qr-card-item bg-white rounded-3xl p-6 border-2 border-stone-200/90 shadow-md flex flex-col items-center text-center space-y-3 relative overflow-hidden print:border-2 print:border-black print:shadow-none hover:border-orange-300 hover:shadow-xl transition-all duration-200"
+                  className="table-qr-card-item bg-white rounded-3xl p-5 border-2 border-stone-200/90 shadow-md flex flex-col items-center text-center space-y-3 relative overflow-hidden print:border-2 print:border-stone-800 print:shadow-none hover:border-stone-400 hover:shadow-xl transition-all duration-200"
                 >
-                  {/* Card Header */}
-                  <div className="w-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 text-white py-2.5 px-4 rounded-xl shadow-xs print:bg-none print:text-black print:border-b print:border-black">
-                    <h4 className="font-black text-base tracking-wide print:text-black">
+                  {/* Card Brand Header */}
+                  <div className="w-full bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 text-white py-2.5 px-3 rounded-xl shadow-xs print:bg-stone-900 print:text-white flex flex-col items-center justify-center">
+                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 text-[8.5px] font-bold text-amber-300 uppercase tracking-widest mb-0.5 print:text-white print:border print:border-stone-700">
+                      <Sparkles className="w-2.5 h-2.5 text-amber-400 print:text-white shrink-0" />
+                      <span>{language === 'th' ? 'สแกนสั่งอาหาร' : 'Scan to Order'}</span>
+                    </div>
+                    <h4 className="font-black text-sm sm:text-base tracking-tight text-white print:text-white">
                       {language === 'en' ? storeConfig.nameEn || storeConfig.name : storeConfig.name}
                     </h4>
-                    <p className="text-[10px] text-orange-100 print:text-black font-medium">
+                    <p className="text-[9.5px] text-stone-300 font-medium print:text-stone-300">
                       {language === 'en' ? storeConfig.taglineEn || storeConfig.tagline : storeConfig.tagline}
                     </p>
                   </div>
 
-                  {/* QR Image Box */}
-                  <div className="p-2 bg-white border-2 border-stone-100 print:border-black rounded-2xl shadow-2xs">
-                    {cardQrData ? (
-                      <img src={cardQrData} alt={`QR Table ${tbl}`} className="w-44 h-44 object-contain rounded-xl mx-auto" />
+                  {/* Table Designation Hero */}
+                  <div className="inline-flex items-center gap-1.5 px-4 py-1 rounded-full bg-stone-900 text-white shadow-xs print:bg-stone-900 print:text-white">
+                    {tbl === 'TAKEAWAY' ? (
+                      <div className="flex items-center gap-1 font-black text-xs tracking-wide">
+                        <ShoppingBag className="w-3.5 h-3.5 text-orange-400 print:text-white shrink-0" />
+                        <span>{language === 'th' ? 'สั่งกลับบ้าน (Takeaway)' : 'TAKEAWAY'}</span>
+                      </div>
                     ) : (
-                      <div className="w-44 h-44 flex items-center justify-center text-xs text-stone-400 font-bold animate-pulse">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-orange-400 print:text-stone-300">
+                          {language === 'th' ? 'โต๊ะ' : 'TABLE'}
+                        </span>
+                        <span className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                          {tbl}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* QR Image Box */}
+                  <div className="p-2 bg-white border-2 border-stone-200 print:border-stone-800 rounded-2xl shadow-2xs">
+                    {cardQrData ? (
+                      <img src={cardQrData} alt={`QR Table ${tbl}`} className="w-40 h-40 object-contain rounded-xl mx-auto block" />
+                    ) : (
+                      <div className="w-40 h-40 flex items-center justify-center text-xs text-stone-400 font-bold animate-pulse">
                         Generating QR...
                       </div>
                     )}
                   </div>
 
-                  {/* Table Label */}
-                  <div className="space-y-0.5">
-                    <div className="text-[9px] font-black text-stone-400 print:text-black uppercase tracking-wider">
-                      {tbl === 'TAKEAWAY' ? (language === 'th' ? 'ออเดอร์กลับบ้าน' : 'TAKEAWAY ORDER') : (language === 'th' ? 'หมายเลขโต๊ะ' : 'TABLE NUMBER')}
+                  {/* Scan Prompt */}
+                  <div className="text-[10px] text-stone-600 print:text-stone-700 font-bold flex items-center justify-center gap-1">
+                    <Smartphone className="w-3 h-3 text-orange-500 print:text-stone-700 shrink-0" />
+                    <span>
+                      {language === 'th' ? 'เปิดกล้องมือถือสแกนเพื่อสั่งอาหาร' : 'Scan with camera to order'}
+                    </span>
+                  </div>
+
+                  {/* 3-Step Micro-Guide */}
+                  <div className="w-full grid grid-cols-3 gap-1 pt-2 border-t border-stone-100 print:border-stone-300 text-center">
+                    <div className="p-1 rounded-lg bg-stone-50/80 print:bg-transparent">
+                      <div className="text-[9px] font-black text-stone-800 print:text-black">1. {language === 'th' ? 'สแกน QR' : 'Scan'}</div>
+                      <div className="text-[8px] text-stone-500 print:text-stone-600">{language === 'th' ? 'กล้องมือถือ' : 'Camera'}</div>
                     </div>
-                    <div className="text-2xl font-black text-stone-900 print:text-black tracking-tight">
-                      {tbl === 'TAKEAWAY' ? (language === 'th' ? 'กลับบ้าน' : 'TAKEAWAY') : (language === 'th' ? `โต๊ะ ${tbl}` : `Table ${tbl}`)}
+                    <div className="p-1 rounded-lg bg-stone-50/80 print:bg-transparent">
+                      <div className="text-[9px] font-black text-stone-800 print:text-black">2. {language === 'th' ? 'เลือกเมนู' : 'Menu'}</div>
+                      <div className="text-[8px] text-stone-500 print:text-stone-600">{language === 'th' ? 'กดสั่งทันที' : 'Order'}</div>
+                    </div>
+                    <div className="p-1 rounded-lg bg-stone-50/80 print:bg-transparent">
+                      <div className="text-[9px] font-black text-stone-800 print:text-black">3. {language === 'th' ? 'รอเสิร์ฟ' : 'Served'}</div>
+                      <div className="text-[8px] text-stone-500 print:text-stone-600">{language === 'th' ? 'ถึงที่โต๊ะ' : 'At Table'}</div>
                     </div>
                   </div>
 
-                  {/* Security Verification Stamp on Each Card */}
-                  <div className="w-full pt-2 border-t border-stone-100 print:border-stone-400 flex items-center justify-center gap-1 text-[9.5px] font-bold text-stone-500 print:text-black">
-                    <ShieldCheck className="w-3 h-3 text-emerald-600 print:text-black" />
-                    <span>{language === 'th' ? 'รหัสร้าน:' : 'Store ID:'} <span className="font-mono font-black">{shopSlug}</span></span>
-                  </div>
-
-                  {/* Scan Instruction */}
-                  <div className="text-[10px] text-stone-600 print:text-black leading-snug bg-stone-50 print:bg-white p-2 rounded-xl border border-stone-100 print:border-none font-medium w-full">
-                    {t('qrScanInstruction', language)}
+                  {/* Hospitality Footer */}
+                  <div className="w-full pt-1.5 flex items-center justify-between text-[9px] text-stone-500 print:text-stone-700 border-t border-stone-100 print:border-stone-200">
+                    <div className="flex items-center gap-1 font-medium">
+                      <Zap className="w-2.5 h-2.5 text-amber-500 print:text-stone-700 shrink-0" />
+                      <span>{language === 'th' ? 'สั่งตรงถึงครัว' : 'Direct Kitchen'}</span>
+                    </div>
+                    <span className="font-bold text-stone-800 print:text-black">
+                      {language === 'th' ? 'ทานให้อร่อยนะคะ' : 'Enjoy your meal!'}
+                    </span>
                   </div>
 
                   {/* Quick Action Buttons (Hidden on Print) */}

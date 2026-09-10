@@ -2,6 +2,7 @@
   "name": "qr-menu-prototype",
   "private": true,
   "version": "1.4.5",
+  "license": "BSL-1.1",
   "type": "module",
   "scripts": {
     "dev": "vite",

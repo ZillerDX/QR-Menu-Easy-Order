@@ -2,7 +2,7 @@ import { Order, MenuItem, MenuCategory, StoreConfig, SubscriptionPlan, Subscript
 import { initialMenuItems, initialCategories, initialStoreConfig } from '../data/initialMenu';
 import { CAFE_ORDER_LOGO_DATA_URI } from '../data/logoData';
 
-const DEFAULT_SHOP_ID = 'cafe-order';
+export const DEFAULT_SHOP_ID = 'cafe-order';
 
 const getOrdersKey = (shopId = DEFAULT_SHOP_ID) => `qr_menu_orders_${shopId}_v4`;
 const getMenuKey = (shopId = DEFAULT_SHOP_ID) => `qr_menu_items_${shopId}_v4`;
@@ -23,7 +23,7 @@ type EventListener = (event: SyncEventType) => void;
 // Safe In-Memory Storage Fallback for SSR / Node Testing / Incognito
 const memoryStorage = new Map<string, string>();
 
-const safeStorage = {
+export const safeStorage = {
   getItem: (key: string): string | null => {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
@@ -59,6 +59,27 @@ const safeStorage = {
     memoryStorage.delete(key);
   },
 };
+
+export const HIGH_WATER_KEY = 'qr_menu_high_water_timestamp_v1';
+
+export function getAuthoritativeTimestamp(): number {
+  const currentNow = Date.now();
+  let highWater = 0;
+  try {
+    const raw = safeStorage.getItem(HIGH_WATER_KEY);
+    if (raw) {
+      highWater = parseInt(raw, 10) || 0;
+    }
+  } catch {}
+
+  const effectiveTime = Math.max(currentNow, highWater);
+  if (currentNow > highWater) {
+    try {
+      safeStorage.setItem(HIGH_WATER_KEY, currentNow.toString());
+    } catch {}
+  }
+  return effectiveTime;
+}
 
 class RealtimeSyncManager {
   private channel: BroadcastChannel | null = null;
@@ -391,7 +412,7 @@ class RealtimeSyncManager {
       expiresAtStr = config.trialExpiresAt;
     }
     
-    const now = Date.now();
+    const now = getAuthoritativeTimestamp();
     let expiresAtDate: Date | null = null;
     let daysLeft = 14;
 

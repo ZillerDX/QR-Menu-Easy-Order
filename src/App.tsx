@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { MenuItem, MenuCategory, CartItem, Order, OrderStatus, SelectedOption, Language, StoreConfig, PaymentMethod, SubscriptionPlan } from './types';
 import { initialMenuItems, initialCategories, initialStoreConfig } from './data/initialMenu';
 import { CAFE_ORDER_LOGO_DATA_URI } from './data/logoData';
-import { syncManager } from './utils/storage';
+import { syncManager, DEFAULT_SHOP_ID } from './utils/storage';
+import { verifyAndActivateStripeSession, validateShopOwnership } from './utils/subscriptionService';
 import { soundService, SoundPreset } from './utils/sound';
 import { t, getInitialLanguage, saveLanguagePreference } from './utils/i18n';
 import { Header } from './components/common/Header';
@@ -216,13 +217,20 @@ function AppContent() {
           subscriptionPlan: existing.subscription_plan || 'free_trial',
           subscriptionStatus: existing.subscription_status || 'trialing',
           trialStartedAt: existing.trial_started_at || existing.created_at || new Date().toISOString(),
-          trialExpiresAt: existing.trial_expires_at || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+          trialExpiresAt: existing.trial_expires_at || new Date(new Date(existing.trial_started_at || existing.created_at || Date.now()).getTime() + 14 * 24 * 60 * 60 * 1000).toISOString(),
           subscriptionExpiresAt: existing.subscription_expires_at,
           stripeCustomerId: existing.stripe_customer_id,
           stripeSubscriptionId: existing.stripe_subscription_id,
           originalOwnerEmail: existing.original_owner_email || currentUser.email || '',
           hasActiveQRsPrinted: existing.has_active_qrs_printed || syncManager.hasPrintedQRs(existing.id),
         };
+
+        // Anti-Abuse Ownership Validation
+        const ownershipCheck = validateShopOwnership(mappedConfig, currentUser.id, currentUser.email);
+        if (!ownershipCheck.isAllowed) {
+          console.warn('Shop ownership warning:', ownershipCheck.reason);
+        }
+
         return { shopId: existing.id, config: mappedConfig };
       }
 
@@ -256,7 +264,7 @@ function AppContent() {
         hasActiveQRsPrinted: false,
       };
 
-      // 3. Insert store_config
+      // 3. Insert store_config with permanent subscription & anti-abuse columns
       await supabase.from('store_config').upsert({
         id: newShopId,
         user_id: currentUser.id,
@@ -274,6 +282,12 @@ function AppContent() {
         branch_number: newStoreConfig.branchNumber,
         phone: newStoreConfig.phone,
         company_legal_name: newStoreConfig.companyLegalName,
+        subscription_plan: 'free_trial',
+        subscription_status: 'trialing',
+        trial_started_at: now.toISOString(),
+        trial_expires_at: trialExpires.toISOString(),
+        original_owner_email: currentUser.email || '',
+        has_active_qrs_printed: false,
         updated_at: new Date().toISOString(),
       });
 
@@ -731,33 +745,56 @@ function AppContent() {
     };
   }, [fetchOrdersOnly, fetchStoreData, hasTableParam, resolveUserStore, shopId]);
 
-  // Stripe Checkout return detection
+  // Secure Stripe Checkout return detection & cryptographic verification
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    const isSubscribed = params.get('subscribed') === 'true' || params.has('session_id');
+    const sessionId = params.get('session_id');
     const planParam = params.get('plan') as SubscriptionPlan | null;
 
-    if (isSubscribed) {
-      const plan: SubscriptionPlan = (planParam === 'yearly' || planParam === 'half_year' || planParam === 'monthly') ? planParam : 'monthly';
-      const durationDays = plan === 'yearly' ? 365 : plan === 'half_year' ? 180 : 30;
-      const newExpiry = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
-
-      const updated = syncManager.updateSubscription(shopId, plan, 'active', newExpiry);
-      setStoreConfig(updated);
-
+    const cleanUrl = () => {
       const newUrl = new URL(window.location.href);
       newUrl.searchParams.delete('subscribed');
       newUrl.searchParams.delete('session_id');
       newUrl.searchParams.delete('plan');
       window.history.replaceState(null, '', newUrl.toString());
+    };
 
+    if (sessionId) {
       setErrorToast(
         language === 'th'
-          ? '🎉 ขอบคุณที่ต่ออายุแพ็กเกจ! ระบบเปิดใช้งานแพ็กเกจให้ร้านค้าของคุณเรียบร้อยแล้ว'
-          : '🎉 Thank you for subscribing! Your store license is now active.'
+          ? '⏳ กำลังตรวจสอบสถานะการชำระเงินกับ Stripe อย่างปลอดภัย...'
+          : '⏳ Securely verifying Stripe payment status...'
       );
-      setTimeout(() => setErrorToast(null), 6000);
+
+      verifyAndActivateStripeSession({ sessionId, shopId, planParam })
+        .then((result) => {
+          cleanUrl();
+          if (result.success && result.plan && result.expiresAt) {
+            const updated = syncManager.updateSubscription(shopId, result.plan, 'active', result.expiresAt);
+            setStoreConfig(updated);
+            setErrorToast(
+              language === 'th'
+                ? '🎉 ยืนยันการชำระเงินสำเร็จ! ระบบเปิดใช้งานแพ็กเกจให้ร้านค้าของคุณเรียบร้อยแล้ว'
+                : '🎉 Payment confirmed! Your store subscription is now active.'
+            );
+          } else {
+            setErrorToast(
+              language === 'th'
+                ? `⚠️ การยืนยันสิทธิ์ไม่สำเร็จ: ${result.message || 'รหัสชำระเงินไม่ถูกต้องหรือถูกใช้ไปแล้ว'}`
+                : `⚠️ Verification failed: ${result.message || 'Invalid or already redeemed session'}`
+            );
+          }
+          setTimeout(() => setErrorToast(null), 7000);
+        })
+        .catch((err) => {
+          cleanUrl();
+          setErrorToast(language === 'th' ? '⚠️ เกิดข้อผิดพลาดในการตรวจสอบการชำระเงิน' : '⚠️ Error verifying payment');
+          setTimeout(() => setErrorToast(null), 5000);
+        });
+    } else if (params.get('subscribed') === 'true') {
+      // Reject spoofing attempts: ?subscribed=true alone is stripped without granting license
+      cleanUrl();
     }
   }, [shopId, language]);
 
@@ -891,6 +928,19 @@ function AppContent() {
 
   const handleFinalizeOrder = async () => {
     if (cart.length === 0) return;
+
+    // Strict Subscription Guard: Expired stores cannot accept order submissions
+    const sub = syncManager.getSubscriptionStatus(storeConfig);
+    if (sub.isExpired) {
+      setErrorToast(
+        language === 'th'
+          ? 'ร้านค้านี้กำลังอัปเกรดระบบเพื่อความต่อเนื่อง กรุณาสั่งอาหารโดยตรงกับพนักงานที่เคาน์เตอร์นะคะ'
+          : 'Store system is updating. Please order directly with the staff at the counter.'
+      );
+      setTimeout(() => setErrorToast(null), 6000);
+      setIsCountdownOpen(false);
+      return;
+    }
 
     const subtotal = cart.reduce((sum, item) => sum + item.totalItemPrice, 0);
     const orderNumber = `#${Math.floor(1000 + Math.random() * 9000)}`;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Language } from '../../types';
 import { authService } from '../../utils/supabaseClient';
 import { KeyRound, Lock, CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react';
@@ -40,7 +41,7 @@ export const UpdatePasswordModal: React.FC<UpdatePasswordModalProps> = ({
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +84,7 @@ export const UpdatePasswordModal: React.FC<UpdatePasswordModalProps> = ({
     }
   };
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 animate-in fade-in duration-200">
       {/* Backdrop */}
       <div
@@ -191,4 +192,6 @@ export const UpdatePasswordModal: React.FC<UpdatePasswordModalProps> = ({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };

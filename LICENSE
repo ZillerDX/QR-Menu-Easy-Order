@@ -1,0 +1,51 @@
+Business Source License 1.1
+
+Parameters
+
+Licensor:             Tanathon Chanapha (GitHub: @ZillerDX)
+Licensed Work:         Cafe Order - Contactless QR Menu & Kitchen Ordering System
+                      (including all source code, components, designs, and documentation
+                      in this repository).
+Additional Use Grant:  You may make copies of the Licensed Work, modify the Licensed Work,
+                      and run the Licensed Work for evaluation, educational, personal,
+                      research, and non-commercial testing purposes.
+                      You may also self-host and deploy the Licensed Work for a single,
+                      independent restaurant or cafe owned and operated directly by you.
+                      Commercial multi-tenant hosting, reselling the software as a paid
+                      service, offering paid white-label instances, or operating a commercial
+                      SaaS ordering platform to third parties requires an explicit commercial
+                      license or written agreement from the Licensor.
+Change Date:          2030-01-01
+Change License:       Apache License, Version 2.0 (or at your option, GNU General Public
+                      License v2.0 or later)
+
+Terms
+
+The Licensor hereby grants you the right to copy, modify, create derivative
+works, redistribute, and make non-production use of the Licensed Work. The
+Licensor may make an Additional Use Grant, above, permitting limited production
+use.
+
+Effective on the Change Date, or the fourth anniversary of the first publicly
+available distribution of a specific version of the Licensed Work under this
+License, whichever comes first, the Licensor hereby grants you rights under the
+terms of the Change License, and the rights granted in the first paragraph of
+this License shall terminate.
+
+If your use of the Licensed Work does not comply with the requirements
+currently in effect as described in this License, you must purchase a
+commercial license from the Licensor, its affiliated companies, or authorized
+resellers, or you must refrain from using the Licensed Work.
+
+All copies of original and modified work, and derivative works of the Licensed
+Work, must include this License. This License will be granted under the terms of
+the Change License if the Change Date has arrived, or if the Licensor fails to
+meet its obligations under this License.
+
+To the extent permissible by law, the Licensed Work is provided "as is" and
+without warranties of any kind. If a warranty is required by law, the warranty
+shall be limited to sixty (60) days from the date you first used the Licensed
+Work.
+
+For more information, see the Business Source License FAQ at
+https://mariadb.com/bsl-faq-adopting/
