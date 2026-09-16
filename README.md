@@ -180,11 +180,11 @@ All **64 automated tests** pass with **Exit Code 0** across 13 test suites:
 
 | Security Layer | Implementation & Hardening | Status |
 | :--- | :--- | :---: |
-| **Row Level Security (RLS)** | PostgreSQL policies enforce read-only (`SELECT`) for public diners. All administrative mutations (`INSERT`, `UPDATE`, `DELETE`) require authenticated staff with store ownership checks (`user_id = auth.uid()::text`). | 🟢 **Hardened** |
-| **Order Immutability** | Customers can only create valid orders (`INSERT`). Orders cannot be deleted anonymously, preventing kitchen ticket tampering. | 🟢 **Hardened** |
-| **API Secret Isolation** | Zero backend secrets (`service_role`, Stripe secret keys `sk_...`) are exposed in client bundles. Only browser-safe public keys are loaded. | 🟢 **Zero Leaks** |
-| **Git & Secret Hygiene** | Comprehensive `.gitignore` strictly rejects `.env`, `.env.*`, `*.pem`, `*.key`, `*.secret`, and `credentials.json`. Safe `.env.example` template provided. | 🟢 **Zero Leaks** |
-| **XSS & Injection Protection** | 100% native React JSX escaping; zero instances of `dangerouslySetInnerHTML` or raw DOM injection. | 🟢 **Protected** |
+| **Row Level Security (RLS)** | PostgreSQL policies enforce read-only (`SELECT`) for public diners. All administrative mutations (`INSERT`, `UPDATE`, `DELETE`) require authenticated staff with store ownership checks (`user_id = auth.uid()::text`). | 🟢<br>**Hardened** |
+| **Order Immutability** | Customers can only create valid orders (`INSERT`). Orders cannot be deleted anonymously, preventing kitchen ticket tampering. | 🟢<br>**Hardened** |
+| **API Secret Isolation** | Zero backend secrets (`service_role`, Stripe secret keys `sk_...`) are exposed in client bundles. Only browser-safe public keys are loaded. | 🟢<br>**Zero&nbsp;Leaks** |
+| **Git & Secret Hygiene** | Comprehensive `.gitignore` strictly rejects `.env`, `.env.*`, `*.pem`, `*.key`, `*.secret`, and `credentials.json`. Safe `.env.example` template provided. | 🟢<br>**Zero&nbsp;Leaks** |
+| **XSS & Injection Protection** | 100% native React JSX escaping; zero instances of `dangerouslySetInnerHTML` or raw DOM injection. | 🟢<br>**Protected** |
 
 ### 3. Cross-Device Visual Verification (Playwright)
 * **Desktop (1280px):** Verified 0 uncaught console errors; clean responsive grid and floating dock.
