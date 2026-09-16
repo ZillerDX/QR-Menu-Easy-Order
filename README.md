@@ -30,28 +30,28 @@
 ### 3. Solution (The Value Proposition)
 * **Zero-Install Web App:** Customers scan the table QR code with their camera, browse visual menus with real-time stock, customize modifiers, and send orders directly to the kitchen.
 * **0% Marketplace Fees:** Payments go directly into the merchant's PromptPay bank account via EMVCo QR with zero intermediary deductions.
-* **Sub-Second Multi-Tab Local-First Sync:** Powered by \BroadcastChannel\ API and \LocalStorage\ with Supabase PostgreSQL Realtime WebSocket fallback.
-* **Permanent Table QR Protection:** Printed acrylic table stands are permanently bound to the unique Store ID (\?shop=...\), guaranteeing zero re-printing of table stands upon plan renewal and preventing free-trial reset abuse.
+* **Sub-Second Multi-Tab Local-First Sync:** Powered by `BroadcastChannel` API and `LocalStorage` with Supabase PostgreSQL Realtime WebSocket fallback.
+* **Permanent Table QR Protection:** Printed acrylic table stands are permanently bound to the unique Store ID (`?shop=...`), guaranteeing zero re-printing of table stands upon plan renewal and preventing free-trial reset abuse.
 
 ---
 
 ### 4. Features (Functional Highlights)
 * **Customer Dining Experience:**
-  * Direct smartphone camera scan with table detection (\?table=01\).
+  * Direct smartphone camera scan with table detection (`?table=01`).
   * Visual menu cards with photos, prices, dietary badges, and search filtering.
   * Deep item customization modal (sweetness levels, milk alternatives, extra espresso shots, toppings).
   * 3-second undo countdown modal before final dispatch.
-  * Real-time live order progress tracker (\Pending\ ➔ \Cooking\ ➔ \Ready\ ➔ \Completed\).
+  * Real-time live order progress tracker (`Pending` ➔ `Cooking` ➔ `Ready` ➔ `Completed`).
   * Instant bilingual toggle (Thai 🇹🇭 / English 🇬🇧).
 * **Redesigned Acrylic Table Stand QR Generator:**
-  * Restaurant-grade acrylic table tent stand format (5x7\" / A5 / A6 compatible).
+  * Restaurant-grade acrylic table tent stand format (5x7" / A5 / A6 compatible).
   * Brand header with store name, tagline, and contactless menu emblem.
-  * Prominent high-contrast table hero badge (\TABLE โต๊ะ 01\ / \สั่งกลับบ้าน • TAKEAWAY\).
+  * Prominent high-contrast table hero badge (`TABLE โต๊ะ 01` / `สั่งกลับบ้าน • TAKEAWAY`).
   * Framed QR centerpiece with camera scanning cue (zero messy raw URL exposure).
   * 3-step visual customer micro-guide (1. Scan QR ➔ 2. Select Menu ➔ 3. Food Served).
   * Single and batch card printing (up to 50 tables) with print CSS rules preventing page breaks.
 * **Kitchen Display System (KDS):**
-  * Symmetrical 4-lane ticket board: \Pending Queue\ ➔ \Cooking Lane\ ➔ \Ready to Serve\ ➔ \Completed\.
+  * Symmetrical 4-lane ticket board: `Pending Queue` ➔ `Cooking Lane` ➔ `Ready to Serve` ➔ `Completed`.
   * Built-in Web Audio API harmonic sound synthesizer (6 presets: Chime, Bell, Marimba, Modern Pulse, Kitchen Gong, Elegant Harp).
   * Multi-timeframe KPI filters: Today, Yesterday, Past 7 Days, and Custom Date Range.
   * Automatic midnight day-rollover with real-time order count and revenue aggregation.
@@ -67,7 +67,7 @@
   * Visual category manager with 29 curated food & beverage Lucide icons.
   * Menu item CRUD with direct image uploads and real-time stock toggles.
   * Store branding, operating hours, contact info, and tax registration settings.
-  * Top-level portaled dialogs (\createPortal(modal, document.body)\ with \z-[99999]\) preventing stacking context clipping.
+  * Top-level portaled dialogs (`createPortal(modal, document.body)` with `z-[99999]`) preventing stacking context clipping.
 * **SaaS Subscription & Tenant Isolation:**
   * 14-day free trial for new stores with live countdown status.
   * 3 tiered plans: Monthly (฿349/mo), 6-Month (฿1,889/6mo - 10% discount), Yearly (฿3,349/yr - 20% discount).
@@ -93,58 +93,58 @@
 
 ### 6. Architecture & System Flow
 
-\\\mermaid
+```mermaid
 flowchart TD
-    subgraph Customer [\"👤 Customer (Mobile / Dine-in)\"]
-        C1[\"Scan Table QR Code (No App Install)\"] --> C2[\"Browse Categorized Menu & Live Stock\"]
-        C2 --> C3[\"Customize Modifiers (Sweetness, Milk, Shots)\"]
-        C3 --> C4[\"Cart Review & Checkout\"]
-        C4 --> C5[\"3s Undo Countdown Modal\"]
-        C5 --> C6[\"Live Order Tracker (Realtime Progress)\"]
+    subgraph Customer ["👤 Customer (Mobile / Dine-in)"]
+        C1["Scan Table QR Code (No App Install)"] --> C2["Browse Categorized Menu & Live Stock"]
+        C2 --> C3["Customize Modifiers (Sweetness, Milk, Shots)"]
+        C3 --> C4["Cart Review & Checkout"]
+        C4 --> C5["3s Undo Countdown Modal"]
+        C5 --> C6["Live Order Tracker (Realtime Progress)"]
     end
 
-    subgraph SyncEngine [\"⚡ Local-First Engine & Broadcast\"]
-        S1[\"LocalStorage Cache (Offline Fallback)\"]
-        S2[\"BroadcastChannel API (Sub-millisecond Tab Sync)\"]
-        S3[\"Optimistic UI Updates (Zero Lag)\"]
+    subgraph SyncEngine ["⚡ Local-First Engine & Broadcast"]
+        S1["LocalStorage Cache (Offline Fallback)"]
+        S2["BroadcastChannel API (Sub-millisecond Tab Sync)"]
+        S3["Optimistic UI Updates (Zero Lag)"]
     end
 
-    subgraph Kitchen [\"👨‍🍳 Kitchen Display System (KDS)\"]
-        K1[\"Incoming Order Audio Chime (Web Audio Synthesizer)\"]
-        K2[\"Pending Queue (Review Items & Notes)\"]
-        K3[\"Cooking Lane (Preparation)\"]
-        K4[\"Ready to Serve Lane\"]
+    subgraph Kitchen ["👨‍🍳 Kitchen Display System (KDS)"]
+        K1["Incoming Order Audio Chime (Web Audio Synthesizer)"]
+        K2["Pending Queue (Review Items & Notes)"]
+        K3["Cooking Lane (Preparation)"]
+        K4["Ready to Serve Lane"]
         K1 --> K2 --> K3 --> K4
     end
 
-    subgraph Cashier [\"🧾 Cashier & Store Administration\"]
-        CS1[\"Payment Method Selection (PromptPay / Cash / Card)\"]
-        CS2[\"Bill Settlement & Paid Status\"]
-        CS3[\"80mm Thermal Receipt / Legal A4 Tax Invoice\"]
-        CS4[\"CSV Executive Infographic Sales Reporting\"]
+    subgraph Cashier ["🧾 Cashier & Store Administration"]
+        CS1["Payment Method Selection (PromptPay / Cash / Card)"]
+        CS2["Bill Settlement & Paid Status"]
+        CS3["80mm Thermal Receipt / Legal A4 Tax Invoice"]
+        CS4["CSV Executive Infographic Sales Reporting"]
         CS1 --> CS2 --> CS3
         CS2 --> CS4
     end
 
-    subgraph Cloud [\"☁️ Cloud Backend (Supabase)\"]
-        DB1[(\"PostgreSQL 15 Database (Hardened RLS)\")]
-        DB2[\"Realtime WebSocket Engine\"]
-        DB3[\"Auth & Merchant Ownership Verification\"]
+    subgraph Cloud ["☁️ Cloud Backend (Supabase)"]
+        DB1[("PostgreSQL 15 Database (Hardened RLS)")]
+        DB2["Realtime WebSocket Engine"]
+        DB3["Auth & Merchant Ownership Verification"]
     end
 
-    C5 -->|\"Dispatch Order\"| S2
-    S2 -->|\"Local Broadcast\"| S1
-    S2 -->|\"Instant Notify\"| K1
-    S2 -->|\"Cloud Sync\"| DB1
-    DB1 -->|\"Postgres Changes\"| DB2
-    DB2 -->|\"Remote Realtime Sync\"| K2
-    K3 -->|\"Status: Cooking\"| S2
-    K4 -->|\"Status: Ready\"| S2
-    S2 -->|\"Live Progress\"| C6
-    K4 -->|\"Ready for Payment\"| CS1
-    CS2 -->|\"Status: Completed\"| S2
-    S2 -->|\"Save State\"| DB1
-\\\
+    C5 -->|"Dispatch Order"| S2
+    S2 -->|"Local Broadcast"| S1
+    S2 -->|"Instant Notify"| K1
+    S2 -->|"Cloud Sync"| DB1
+    DB1 -->|"Postgres Changes"| DB2
+    DB2 -->|"Remote Realtime Sync"| K2
+    K3 -->|"Status: Cooking"| S2
+    K4 -->|"Status: Ready"| S2
+    S2 -->|"Live Progress"| C6
+    K4 -->|"Ready for Payment"| CS1
+    CS2 -->|"Status: Completed"| S2
+    S2 -->|"Save State"| DB1
+```
 
 ---
 
@@ -157,35 +157,34 @@ flowchart TD
 
 ## 🛡️ Engineering Evidence & Quality Gates
 
-### 1. Automated Test Suite (\
-px vitest run\)
+### 1. Automated Test Suite (`npx vitest run`)
 All **64 automated tests** pass with **Exit Code 0** across 13 test suites:
 
 | Test Suite | Tests | Status | Scope |
 | :--- | :---: | :---: | :--- |
-| \	ests/taxInvoice.test.ts\ | 3 | ✅ Pass | 80mm thermal receipt math, VAT 7% extraction & A4 legal invoice generation |
-| \	ests/salesReportExport.test.ts\ | 8 | ✅ Pass | UTF-8 BOM CSV generation, sales metrics, peak hour analysis & bestsellers |
-| \	ests/saas-subscription-security.test.ts\ | 12 | ✅ Pass | Subscription status calculation, trial countdown, Stripe links & QR anchoring |
-| \	ests/subscription.test.ts\ | 5 | ✅ Pass | 14-day free trial math, plan durations, pricing discounts & store binding |
-| \	ests/comprehensiveAudit.test.ts\ | 10 | ✅ Pass | Storage persistence, fallback sync, tax calculation & promptpay validation |
-| \	ests/kdsDateFilter.test.ts\ | 4 | ✅ Pass | Date filtering (Today, Yesterday, 7 Days, Custom Date) & revenue isolation |
-| \	ests/authForgotPassword.test.ts\ | 4 | ✅ Pass | Supabase email password reset flow & form validation |
-| \	ests/orderFlow.test.ts\ | 3 | ✅ Pass | Order state machine (\pending\ ➔ \cooking\ ➔ \eady\ ➔ \completed\) |
-| \	ests/paymentMethods.test.ts\ | 2 | ✅ Pass | PromptPay, cash, card transitions & bill settlement |
-| \	ests/promptpay.test.ts\ | 4 | ✅ Pass | EMVCo payload format, CRC16 checksum & null/empty target protection |
-| \	ests/favicon.test.ts\ | 3 | ✅ Pass | Browser favicon, vector SVG link tags & PWA icon assets |
-| \	ests/i18n.test.ts\ | 2 | ✅ Pass | Bilingual dictionary parity & language switching |
-| \	ests/categoryIcons.test.ts\ | 4 | ✅ Pass | 29 curated food & beverage Lucide icon mappings |
+| `tests/taxInvoice.test.ts` | 3 | ✅ Pass | 80mm thermal receipt math, VAT 7% extraction & A4 legal invoice generation |
+| `tests/salesReportExport.test.ts` | 8 | ✅ Pass | UTF-8 BOM CSV generation, sales metrics, peak hour analysis & bestsellers |
+| `tests/saas-subscription-security.test.ts` | 12 | ✅ Pass | Subscription status calculation, trial countdown, Stripe links & QR anchoring |
+| `tests/subscription.test.ts` | 5 | ✅ Pass | 14-day free trial math, plan durations, pricing discounts & store binding |
+| `tests/comprehensiveAudit.test.ts` | 10 | ✅ Pass | Storage persistence, fallback sync, tax calculation & promptpay validation |
+| `tests/kdsDateFilter.test.ts` | 4 | ✅ Pass | Date filtering (Today, Yesterday, 7 Days, Custom Date) & revenue isolation |
+| `tests/authForgotPassword.test.ts` | 4 | ✅ Pass | Supabase email password reset flow & form validation |
+| `tests/orderFlow.test.ts` | 3 | ✅ Pass | Order state machine (`pending` ➔ `cooking` ➔ `ready` ➔ `completed`) |
+| `tests/paymentMethods.test.ts` | 2 | ✅ Pass | PromptPay, cash, card transitions & bill settlement |
+| `tests/promptpay.test.ts` | 4 | ✅ Pass | EMVCo payload format, CRC16 checksum & null/empty target protection |
+| `tests/favicon.test.ts` | 3 | ✅ Pass | Browser favicon, vector SVG link tags & PWA icon assets |
+| `tests/i18n.test.ts` | 2 | ✅ Pass | Bilingual dictionary parity & language switching |
+| `tests/categoryIcons.test.ts` | 4 | ✅ Pass | 29 curated food & beverage Lucide icon mappings |
 
 ### 2. Security & Zero-Leak Protection Matrix
 
 | Security Layer | Implementation & Hardening | Status |
 | :--- | :--- | :---: |
-| **Row Level Security (RLS)** | PostgreSQL policies enforce read-only (\SELECT\) for public diners. All administrative mutations (\INSERT\, \UPDATE\, \DELETE\) require authenticated staff with store ownership checks (\user_id = auth.uid()::text\). | 🟢 **Hardened** |
-| **Order Immutability** | Customers can only create valid orders (\INSERT\). Orders cannot be deleted anonymously, preventing kitchen ticket tampering. | 🟢 **Hardened** |
-| **API Secret Isolation** | Zero backend secrets (\service_role\, Stripe secret keys \sk_...\) are exposed in client bundles. Only browser-safe public keys are loaded. | 🟢 **Zero Leaks** |
-| **Git & Secret Hygiene** | Comprehensive \.gitignore\ strictly rejects \.env\, \.env.*\, \*.pem\, \*.key\, \*.secret\, and \credentials.json\. Safe \.env.example\ template provided. | 🟢 **Zero Leaks** |
-| **XSS & Injection Protection** | 100% native React JSX escaping; zero instances of \dangerouslySetInnerHTML\ or raw DOM injection. | 🟢 **Protected** |
+| **Row Level Security (RLS)** | PostgreSQL policies enforce read-only (`SELECT`) for public diners. All administrative mutations (`INSERT`, `UPDATE`, `DELETE`) require authenticated staff with store ownership checks (`user_id = auth.uid()::text`). | 🟢 **Hardened** |
+| **Order Immutability** | Customers can only create valid orders (`INSERT`). Orders cannot be deleted anonymously, preventing kitchen ticket tampering. | 🟢 **Hardened** |
+| **API Secret Isolation** | Zero backend secrets (`service_role`, Stripe secret keys `sk_...`) are exposed in client bundles. Only browser-safe public keys are loaded. | 🟢 **Zero Leaks** |
+| **Git & Secret Hygiene** | Comprehensive `.gitignore` strictly rejects `.env`, `.env.*`, `*.pem`, `*.key`, `*.secret`, and `credentials.json`. Safe `.env.example` template provided. | 🟢 **Zero Leaks** |
+| **XSS & Injection Protection** | 100% native React JSX escaping; zero instances of `dangerouslySetInnerHTML` or raw DOM injection. | 🟢 **Protected** |
 
 ### 3. Cross-Device Visual Verification (Playwright)
 * **Desktop (1280px):** Verified 0 uncaught console errors; clean responsive grid and floating dock.
@@ -215,7 +214,7 @@ All **64 automated tests** pass with **Exit Code 0** across 13 test suites:
 
 ## 📂 Annotated Folder Tree
 
-\\\	ext
+```text
 qr-menu-app/
 ├── public/                     # Static assets, official favicons & brand logos
 │   ├── favicon.ico             # Multi-size legacy browser favicon
@@ -264,13 +263,13 @@ qr-menu-app/
 ├── package.json                # Project dependencies, scripts & license
 ├── tailwind.config.js          # Tailwind CSS theme & plugin config
 └── vite.config.ts              # Vite configuration & chunk splitting
-\\\
+```
 
 ---
 
 ## ⚡ Commands
 
-\\\ash
+```bash
 # 1. Install dependencies
 npm install
 
@@ -285,7 +284,7 @@ npm run build
 
 # 5. Preview production build locally
 npm run preview
-\\\
+```
 
 ---
 
