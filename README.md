@@ -9,6 +9,20 @@
 
 ---
 
+## 📸 Visual Showcase & Interface Gallery
+
+| 📱 Mobile Diner Self-Ordering (Table 01) | 👨‍🍳 Real-Time Kitchen Display System (KDS) |
+| :---: | :---: |
+| <img src="docs/screenshots/01-customer-mobile-menu.png" alt="Mobile Diner Self-Ordering Menu" width="380" /> | <img src="docs/screenshots/02-kitchen-display-system.png" alt="Kitchen Display System Board" width="600" /> |
+| **Zero-Install Web App:** Diners scan the table QR code, browse live categorized menus, configure drink sweetness/milk choices, and track preparation progress in real-time. | **4-Lane Live Ticket Board:** Incoming order Web Audio acoustic chime, preparation lanes (`Pending` ➔ `Cooking` ➔ `Ready` ➔ `Completed`), and elapsed ticket timers. |
+
+| 🏷️ Acrylic Table Stand QR Generator (5x7" / A5 / A6) | 📊 Executive Sales Analytics & Infographic Report |
+| :---: | :---: |
+| <img src="docs/screenshots/03-table-qr-stand.png" alt="Printable Acrylic Table Stand QR Generator" width="480" /> | <img src="docs/screenshots/04-sales-analytics-modal.png" alt="Executive Sales Analytics & Infographic CSV" width="520" /> |
+| **Permanent Restaurant-Grade Table Tent:** High-contrast table badge (`TABLE โต๊ะ 01`), clean framed QR code without messy raw URLs, 3-step diner guide, and batch printing. | **Executive Financial Intelligence:** Total sales, average ticket size, payment channel breakdown (PromptPay / Cash / Card), and 1-click UTF-8 BOM CSV export for Excel. |
+
+---
+
 ## 🏛️ The 7 Product Pillars
 
 ### 1. Who (Target Stakeholders & Personas)
@@ -150,8 +164,10 @@ flowchart TD
 
 ### 7. Demo & Live Previews
 * **Live GitHub Pages Production URL:** [https://zillerdx.github.io/QR-Menu-Easy-Order/](https://zillerdx.github.io/QR-Menu-Easy-Order/)
+* **Simulated Customer QR Scan:** [https://zillerdx.github.io/QR-Menu-Easy-Order/?table=01](https://zillerdx.github.io/QR-Menu-Easy-Order/?table=01) (Table 01 Diner Session)
+* **Kitchen KDS Dashboard Demo:** [https://zillerdx.github.io/QR-Menu-Easy-Order/?role=kitchen](https://zillerdx.github.io/QR-Menu-Easy-Order/?role=kitchen) (Realtime 4-Lane Ticket Board)
+* **Printable Table Stand QR Generator:** [https://zillerdx.github.io/QR-Menu-Easy-Order/?role=qr](https://zillerdx.github.io/QR-Menu-Easy-Order/?role=qr) (Acrylic Tent Stand Cards)
 * **Local Development Preview:** [http://localhost:5173/](http://localhost:5173/)
-* **Simulated Customer QR Scan:** [http://localhost:5173/?table=01](http://localhost:5173/?table=01) (Table 01 Diner Session)
 
 ---
 
@@ -216,6 +232,8 @@ All **64 automated tests** pass with **Exit Code 0** across 13 test suites:
 
 ```text
 qr-menu-app/
+├── docs/                       # Visual assets & showcase documentation
+│   └── screenshots/            # High-res interface screenshots (Mobile, KDS, Table QR, Analytics)
 ├── public/                     # Static assets, official favicons & brand logos
 │   ├── favicon.ico             # Multi-size legacy browser favicon
 │   ├── favicon.svg             # Vector brand favicon for modern browsers

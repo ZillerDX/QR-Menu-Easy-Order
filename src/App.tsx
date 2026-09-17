@@ -122,8 +122,24 @@ function AppContent() {
     return '01';
   });
 
-  const [activeRole, setActiveRole] = useState<AppRole>('customer');
-  const [isSimulatorMode, setIsSimulatorMode] = useState(false);
+  const [isSimulatorMode, setIsSimulatorMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('demo') === 'true' || params.has('role');
+    }
+    return false;
+  });
+
+  const [activeRole, setActiveRole] = useState<AppRole>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const r = params.get('role') as AppRole;
+      if (['customer', 'kitchen', 'admin', 'settings', 'qr'].includes(r)) {
+        return r;
+      }
+    }
+    return 'customer';
+  });
 
   const [storeConfig, setStoreConfig] = useState<StoreConfig>(() => syncManager.getStoreConfig(shopId));
   const [categories, setCategories] = useState<MenuCategory[]>(() => syncManager.getCategories(shopId));
@@ -541,6 +557,13 @@ function AppContent() {
         currentActiveShop = userShop;
         setShopId(userShop);
         setStoreConfig(userConfig);
+      } else if (roleParam && ['customer', 'kitchen', 'admin', 'settings', 'qr'].includes(roleParam)) {
+        setActiveRole(roleParam as AppRole);
+        setIsSimulatorMode(true);
+        if (urlShopParam) {
+          currentActiveShop = urlShopParam;
+          setShopId(urlShopParam);
+        }
       } else if (urlShopParam) {
         currentActiveShop = urlShopParam;
         setShopId(urlShopParam);
@@ -808,7 +831,7 @@ function AppContent() {
   };
 
   const handleSelectRole = (role: AppRole) => {
-    if (role !== 'customer' && !user) {
+    if (role !== 'customer' && !user && !isSimulatorMode) {
       setIsSimulatorMode(false);
       setActiveRole('customer');
       return;
@@ -1450,7 +1473,7 @@ function AppContent() {
           )}
 
           {/* VIEW 2: KITCHEN DISPLAY SYSTEM (KDS) */}
-          {activeRole === 'kitchen' && user && (
+          {activeRole === 'kitchen' && (user || isSimulatorMode) && (
             <KitchenDashboard
               orders={orders}
               menuItems={menuItems}
@@ -1467,7 +1490,7 @@ function AppContent() {
           )}
 
           {/* VIEW 3: MENU & CATEGORY ADMIN */}
-          {activeRole === 'admin' && user && (
+          {activeRole === 'admin' && (user || isSimulatorMode) && (
             <MenuAdmin
               menuItems={menuItems}
               categories={categories}
@@ -1481,7 +1504,7 @@ function AppContent() {
           )}
 
           {/* VIEW 4: STORE SETTINGS */}
-          {activeRole === 'settings' && user && (
+          {activeRole === 'settings' && (user || isSimulatorMode) && (
             <StoreSettings
               storeConfig={storeConfig}
               language={language}
@@ -1493,7 +1516,7 @@ function AppContent() {
           )}
 
           {/* VIEW 5: TABLE QR GENERATOR */}
-          {activeRole === 'qr' && user && (
+          {activeRole === 'qr' && (user || isSimulatorMode) && (
             <QRGenerator
               storeConfig={storeConfig}
               language={language}
@@ -1510,7 +1533,7 @@ function AppContent() {
           onSelectRole={handleSelectRole}
           language={language}
           pendingOrdersCount={pendingCount}
-          isAuthenticated={!!user}
+          isAuthenticated={Boolean(user || isSimulatorMode)}
         />
       )}
 
